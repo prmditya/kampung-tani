@@ -1,0 +1,64 @@
+# Multi-service stack for Kampung Tani IoT Monitoring
+# Uses environment variables from .env file for security
+# - frontend: Next.js (port 3000 -> external port from .env)
+# - backend: Flask (port 5000 -> external port from .env)
+# - db: PostgreSQL (port 5432 -> external port from .env)
+# - mqtt: Mosquitto (port 1883, running on host)
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: kampungtani_frontend
+    ports:
+      - "${FRONTEND_EXTERNAL_PORT}:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - CHOKIDAR_USEPOLLING=${HOT_RELOAD}
+      - NODE_ENV=${NODE_ENV}
+    command: "npm run dev"
+
+  backend:
+    build: ./backend
+    container_name: kampungtani_backend
+    ports:
+      - "${BACKEND_EXTERNAL_PORT}:${API_PORT}"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - MQTT_PORT=${MQTT_BROKER_PORT}
+      - MQTT_HOST=${MQTT_BROKER_HOST}
+      - MQTT_TOPIC=${MQTT_TOPIC_SENSOR}
+      - MQTT_CLIENT_ID=${MQTT_CLIENT_ID}
+      - FLASK_ENV=${FLASK_ENV}
+      - FLASK_DEBUG=${FLASK_DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - LOG_LEVEL=${LOG_LEVEL}
+    volumes:
+      - ./backend:/app
+
+  db:
+    image: postgres:15
+    container_name: kampungtani_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${DB_EXTERNAL_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+volumes:
+  pgdata:
