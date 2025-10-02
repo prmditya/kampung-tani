@@ -27,8 +27,9 @@ import {
 } from "../components/ui/card";
 import { useSensorData, type SensorData } from "../hooks/useApiOptimized";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { withAuth } from "../hooks/useAuth";
 
-export default function HistoricalData() {
+function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
@@ -518,3 +519,5 @@ export default function HistoricalData() {
     </>
   );
 }
+
+export default withAuth(HistoricalData);

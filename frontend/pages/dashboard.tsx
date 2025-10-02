@@ -17,8 +17,9 @@ import { LoadingSpinner } from "../components/ui/loading-spinner";
 import { ErrorMessage } from "../components/ui/error-message";
 import { useDeviceStats, useSensorData } from "../hooks/useApiData";
 import { useDashboardPreferences } from "../hooks/useLocalStorage";
+import { withAuth } from "../hooks/useAuth";
 
-export default function Dashboard() {
+function Dashboard() {
   const [preferences] = useDashboardPreferences();
 
   const { data: sensorData, isLoading, error, refetch } = useSensorData();
@@ -212,3 +213,5 @@ export default function Dashboard() {
     </DashboardLayout>
   );
 }
+
+export default withAuth(Dashboard);

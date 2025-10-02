@@ -5,12 +5,10 @@ import {
   MdBarChart,
   MdDashboard,
   MdDevices,
-  MdPerson,
-  MdSettings,
 } from "react-icons/md";
 import { cn } from "../lib/utils";
 import { ModeToggle } from "./mode-toggle";
-import { Button } from "./ui/button";
+import { UserMenu } from "./user-menu";
 
 interface SidebarProps {
   className?: string;
@@ -126,21 +124,9 @@ export function Sidebar({ className, onClose }: SidebarProps) {
 
       {/* Bottom Section */}
       <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4">
-        <div className="flex items-center space-x-3 px-3 mb-3">
-          <div className="rounded-full bg-gray-200 dark:bg-gray-700 p-2">
-            <MdPerson className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-              Admin User
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              admin@kampungtani.com
-            </p>
-          </div>
-          <div className="flex space-x-1">
-            <ModeToggle />
-          </div>
+        <div className="flex items-center justify-between">
+          <UserMenu />
+          <ModeToggle />
         </div>
       </div>
     </div>

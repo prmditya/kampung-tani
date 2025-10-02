@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
+import { withAuth } from "../hooks/useAuth";
 import {
   useDevices,
   useDeviceStats,
@@ -117,7 +118,7 @@ const DeviceStatusIndicator: React.FC<DeviceStatusIndicatorProps> = React.memo(
 
 DeviceStatusIndicator.displayName = "DeviceStatusIndicator";
 
-export default function DeviceMonitoring() {
+function DeviceMonitoring() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
 
   // Custom hooks untuk data fetching
@@ -421,3 +422,5 @@ export default function DeviceMonitoring() {
     </>
   );
 }
+
+export default withAuth(DeviceMonitoring);
