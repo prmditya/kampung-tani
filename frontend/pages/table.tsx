@@ -33,10 +33,11 @@ import { ErrorMessage } from "@/components/ui/error-message";
 
 function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage] = useState(10); // Items per page for grouped data display
   const [searchTerm, setSearchTerm] = useState("");
   const [deviceFilter, setDeviceFilter] = useState("all");
 
+  // Fetch more raw data to ensure we have enough for grouping
   const {
     data: sensorData,
     pagination,
@@ -45,7 +46,7 @@ function HistoricalData() {
     refetch,
     nextPage,
     prevPage,
-  } = useSensorData(false, 30000, currentPage, itemsPerPage);
+  } = useSensorData(false, 30000, 1, 200); // Fetch 200 records for better grouping
 
   // Get device statistics for actual active device count
   const { data: deviceStats } = useDeviceStats();
@@ -113,17 +114,12 @@ function HistoricalData() {
     return matchesSearch && matchesDevice;
   });
 
-  const currentData = filteredGroupedData;
-
-  // Use pagination data from API
-  const totalItems = pagination?.total || 0;
-  const totalPages = pagination?.pages || 1;
-  const startIndex =
-    ((pagination?.page || 1) - 1) * (pagination?.limit || itemsPerPage);
-  const endIndex = Math.min(
-    startIndex + (pagination?.limit || itemsPerPage),
-    totalItems
-  );
+  // Client-side pagination for grouped data
+  const totalFilteredItems = filteredGroupedData.length;
+  const totalPages = Math.ceil(totalFilteredItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalFilteredItems);
+  const currentData = filteredGroupedData.slice(startIndex, endIndex);
 
   // Get unique devices for filter from current page data
   const uniqueDevices = Array.from(
@@ -135,13 +131,13 @@ function HistoricalData() {
   );
 
   const handleRefresh = async () => {
-    await refetch(1, itemsPerPage);
+    await refetch(1, 200); // Always fetch from first page with more data
     setCurrentPage(1);
   };
 
-  const handlePageChange = async (newPage: number) => {
+  const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    await refetch(newPage, itemsPerPage);
+    // No need to call API, we handle pagination client-side
   };
 
   const formatValue = (
@@ -341,10 +337,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  {totalItems || 0}
+                  {sensorData?.length || 0}
                 </div>
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Total Records
+                  Raw Records
                 </p>
               </CardContent>
             </Card>
@@ -371,10 +367,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  {currentData.length}
+                  {totalFilteredItems}
                 </div>
                 <p className="text-sm text-purple-600 dark:text-purple-400">
-                  Current Page
+                  Grouped Records
                 </p>
               </CardContent>
             </Card>
@@ -448,8 +444,8 @@ function HistoricalData() {
                 Sensor Data Table
               </CardTitle>
               <CardDescription>
-                Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
-                {totalItems} records (Page {pagination?.page || 1} of{" "}
+                Showing {startIndex + 1}-{endIndex} of{" "}
+                {totalFilteredItems} grouped records (Page {currentPage} of{" "}
                 {totalPages})
               </CardDescription>
             </CardHeader>
@@ -594,8 +590,8 @@ function HistoricalData() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-6 pt-4 p-6 border-t">
                   <div className="text-sm text-gray-600">
-                    Page {pagination?.page || 1} of {totalPages} ({totalItems}{" "}
-                    total records)
+                    Page {currentPage} of {totalPages} ({totalFilteredItems}{" "}
+                    grouped records)
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
