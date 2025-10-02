@@ -7,9 +7,11 @@ Subscribes to MQTT topics and saves sensor data to database
 import json
 import logging
 import time
+import threading
 from typing import Dict, Any
 import paho.mqtt.client as mqtt
 from app.core.database import get_db_cursor
+from app.services.device_status_service import DeviceStatusService
 import signal
 import sys
 
@@ -149,11 +151,8 @@ def save_device_readings(device_name: str, readings: list, timestamp: str):
                     return
             else:
                 device_id = device_row['id']
-                # Update device status to online
-                cursor.execute(
-                    "UPDATE devices SET status = %s, updated_at = NOW() WHERE id = %s",
-                    ('online', device_id)
-                )
+                # Update device status to online and last_seen timestamp
+                DeviceStatusService.update_device_last_seen(device_id)
             
             # Save each sensor reading
             saved_count = 0
@@ -284,10 +283,31 @@ def signal_handler(sig, frame):
     client.disconnect()
     sys.exit(0)
 
+def device_status_monitor():
+    """Background thread to monitor device status and mark offline devices"""
+    logger.info("Starting device status monitor thread")
+    
+    while True:
+        try:
+            # Check for offline devices every minute
+            time.sleep(60)
+            offline_devices = DeviceStatusService.check_offline_devices()
+            
+            if offline_devices:
+                logger.info(f"Marked {len(offline_devices)} devices as offline")
+            
+        except Exception as e:
+            logger.error(f"Error in device status monitor: {e}")
+            time.sleep(60)  # Wait before retrying
+
 if __name__ == "__main__":
     # Set up signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Start device status monitor thread
+    status_monitor_thread = threading.Thread(target=device_status_monitor, daemon=True)
+    status_monitor_thread.start()
     
     # Create MQTT client
     client = mqtt.Client()

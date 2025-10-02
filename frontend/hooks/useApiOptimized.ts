@@ -19,6 +19,7 @@ interface Device {
   location: string;
   device_type: string;
   status: string;
+  last_seen: string;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -27,7 +28,17 @@ interface Device {
 interface DeviceStatusHistory {
   status: string;
   uptime_seconds: number | null;
+  uptime_formatted?: string;
   created_at: string | null;
+}
+
+interface DeviceStatusHistoryResponse {
+  device_id: number;
+  device_name: string;
+  current_uptime_seconds: number | null;
+  current_uptime_formatted: string;
+  history: DeviceStatusHistory[];
+  total_records: number;
 }
 
 interface DeviceStats {
@@ -408,9 +419,9 @@ export const useDeviceStatusHistory = (deviceId: number | null): UseApiResult<De
 
     try {
       setError(null);
-      const result = await fetchApi<DeviceStatusHistory[]>(`/devices/${deviceId}/status-history`, abortSignal);
+      const result = await fetchApi<DeviceStatusHistoryResponse>(`/devices/${deviceId}/status-history`, abortSignal);
       if (!abortSignal?.aborted) {
-        setData(result);
+        setData(result.history); // Extract history array from response
       }
     } catch (err) {
       if (abortSignal?.aborted) {
@@ -443,7 +454,8 @@ export const useDeviceStatusHistory = (deviceId: number | null): UseApiResult<De
 export type { 
   SensorData, 
   Device, 
-  DeviceStatusHistory, 
+  DeviceStatusHistory,
+  DeviceStatusHistoryResponse, 
   DeviceStats, 
   SensorCalibration, 
   UseApiResult, 

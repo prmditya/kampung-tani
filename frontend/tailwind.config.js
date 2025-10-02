@@ -10,8 +10,9 @@ module.exports = {
   safelist: [
     // Sensor card colors - prevent purging
     {
-      pattern: /(bg|text|border)-(blue|green|purple|orange|amber|yellow|red|pink|indigo|emerald|lime|sky|rose)-(50|100|200|300|400|500|600|700|800|900)/,
-      variants: ['dark', 'hover', 'focus'],
+      pattern:
+        /(bg|text|border)-(blue|green|purple|orange|amber|yellow|red|pink|indigo|emerald|lime|sky|rose)-(50|100|200|300|400|500|600|700|800|900)/,
+      variants: ["dark", "hover", "focus"],
     },
     // Gradient directions
     {
@@ -19,8 +20,9 @@ module.exports = {
     },
     // Gradient from/via/to
     {
-      pattern: /(from|via|to)-(blue|green|purple|orange|amber|yellow|red|pink|indigo|emerald|lime|sky|rose)-(50|100|200|300|400|500|600|700|800|900)/,
-      variants: ['dark'],
+      pattern:
+        /(from|via|to)-(blue|green|purple|orange|amber|yellow|red|pink|indigo|emerald|lime|sky|rose)-(50|100|200|300|400|500|600|700|800|900)/,
+      variants: ["dark"],
     },
   ],
   theme: {
@@ -71,6 +73,30 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: [
+          "Geist",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "Noto Sans",
+          "sans-serif",
+        ],
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "Courier New",
+          "monospace",
+        ],
       },
       keyframes: {
         "accordion-down": {

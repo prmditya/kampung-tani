@@ -9,6 +9,7 @@ import math
 
 from app.core.database import get_db_cursor
 from app.core.security import get_current_user
+from app.services.device_status_service import DeviceStatusService
 from app.schemas import (
     DeviceCreate,
     DeviceUpdate,
@@ -361,3 +362,102 @@ async def delete_device(
         return MessageResponse(
             message=f"Device '{device['name']}' deleted successfully"
         )
+
+
+@router.get(
+    "/{device_id}/status-history",
+    summary="Get Device Status History",
+    description="Get status history for a specific device with uptime information"
+)
+async def get_device_status_history(
+    device_id: int,
+    limit: int = Query(50, ge=1, le=200, description="Number of history records to return"),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Get status history for a specific device.
+    
+    Returns historical status changes with uptime information:
+    - Status changes (online/offline/maintenance)
+    - Uptime duration for each online session
+    - Timestamps of status changes
+    """
+    
+    with get_db_cursor() as cursor:
+        # Verify device belongs to user
+        cursor.execute(
+            "SELECT id, name FROM devices WHERE id = %s AND user_id = %s",
+            (device_id, current_user["id"])
+        )
+        
+        device = cursor.fetchone()
+        if not device:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Device not found"
+            )
+        
+        # Get status history
+        history = DeviceStatusService.get_device_status_history(device_id, limit)
+        
+        # Get current uptime if device is online
+        current_uptime = DeviceStatusService.get_device_current_uptime(device_id)
+        
+        return {
+            "device_id": device_id,
+            "device_name": device["name"],
+            "current_uptime_seconds": current_uptime,
+            "current_uptime_formatted": DeviceStatusService.format_uptime(current_uptime),
+            "history": [
+                {
+                    **record,
+                    "uptime_formatted": DeviceStatusService.format_uptime(record.get("uptime_seconds"))
+                }
+                for record in history
+            ],
+            "total_records": len(history)
+        }
+
+
+@router.post(
+    "/{device_id}/ping",
+    summary="Ping Device",
+    description="Manually ping a device to update its last_seen timestamp"
+)
+async def ping_device(
+    device_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Manually ping a device to update its last_seen timestamp.
+    
+    This endpoint can be used to manually mark a device as active
+    when sensor data is not being sent but the device is still responsive.
+    """
+    
+    with get_db_cursor() as cursor:
+        # Verify device belongs to user
+        cursor.execute(
+            "SELECT id, name FROM devices WHERE id = %s AND user_id = %s",
+            (device_id, current_user["id"])
+        )
+        
+        device = cursor.fetchone()
+        if not device:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Device not found"
+            )
+        
+        # Update last_seen and mark as online
+        success = DeviceStatusService.update_device_last_seen(device_id)
+        
+        if success:
+            return MessageResponse(
+                message=f"Device '{device['name']}' pinged successfully"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to ping device"
+            )

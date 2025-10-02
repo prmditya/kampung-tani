@@ -1,11 +1,8 @@
 import type { AppProps } from "next/app";
-import { Inter } from "next/font/google";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "../components/theme-provider";
 import { AuthProvider } from "@/hooks/useAuth";
 import "../styles/globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export default function App({ Component, pageProps }: AppProps) {
   const [mounted, setMounted] = useState(false);
@@ -19,7 +16,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <div className={inter.className}>
+    <div>
       <ThemeProvider
         attribute="class"
         defaultTheme="system"

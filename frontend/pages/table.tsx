@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { useSensorData, type SensorData } from "../hooks/useApiOptimized";
+import { useDeviceStats } from "../hooks/useApiData";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { withAuth } from "../hooks/useAuth";
 
@@ -44,6 +45,9 @@ function HistoricalData() {
     nextPage,
     prevPage,
   } = useSensorData(false, 30000, currentPage, itemsPerPage);
+
+  // Get device statistics for actual active device count
+  const { data: deviceStats } = useDeviceStats();
 
   // Group sensor data by device and timestamp
   const groupSensorData = (sensors: typeof sensorData) => {
@@ -357,7 +361,7 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-                  {uniqueDevices.length}
+                  {deviceStats?.online_devices || 0}
                 </div>
                 <p className="text-sm text-green-600 dark:text-green-400">
                   Active Devices

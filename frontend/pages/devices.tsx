@@ -151,8 +151,12 @@ function DeviceMonitoring() {
     refetch: refetchStats,
   } = useDeviceStats();
 
-  const { data: statusHistory, loading: historyLoading } =
-    useDeviceStatusHistory(selectedDeviceId);
+  const {
+    data: statusHistory,
+    loading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useDeviceStatusHistory(selectedDeviceId);
 
   // Auto refresh every 30 seconds
   useEffect(() => {
@@ -373,7 +377,15 @@ function DeviceMonitoring() {
                                 {device.device_type}
                               </span>
                               <span>Location: {device.location}</span>
-                              <span>Description: {device.description}</span>
+                              {device.description && (
+                                <span>Description: {device.description}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Last seen:{" "}
+                              {device.last_seen
+                                ? new Date(device.last_seen).toLocaleString()
+                                : "Never"}
                             </div>
                           </div>
                           <div className="text-right space-y-1">
@@ -425,10 +437,8 @@ function DeviceMonitoring() {
                 devices={devices ?? null}
                 statusHistory={statusHistory ?? null}
                 loading={historyLoading}
-                formatUptime={formatUptime}
-                renderStatusIndicator={(status) => (
-                  <DeviceStatusIndicator status={status} />
-                )}
+                error={historyError}
+                onRefresh={refetchHistory}
               />
             </TabsContent>
           </Tabs>
