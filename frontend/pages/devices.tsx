@@ -35,6 +35,7 @@ import {
   useDeviceStatusHistory,
 } from "../hooks/useApiOptimized";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ErrorMessage } from "@/components/ui/error-message";
 
 const DeviceHistoryPanel = dynamic(
   () => import("../components/devices/device-history-panel"),
@@ -189,19 +190,12 @@ function DeviceMonitoring() {
   if (combinedError) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center space-y-4">
-            <div className="text-red-500">Error: {combinedError}</div>
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              className="inline-flex items-center gap-2"
-            >
-              <MdRefresh className="w-4 h-4" />
-              Try Again
-            </Button>
-          </div>
-        </div>
+        <ErrorMessage
+          title="Failed to load dashboard data"
+          message={combinedError}
+          retry={handleRefresh}
+          className="max-w-md mx-auto mt-8"
+        />
       </DashboardLayout>
     );
   }

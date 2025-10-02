@@ -29,6 +29,7 @@ import { useSensorData, type SensorData } from "../hooks/useApiOptimized";
 import { useDeviceStats } from "../hooks/useApiData";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { withAuth } from "../hooks/useAuth";
+import { ErrorMessage } from "@/components/ui/error-message";
 
 function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -276,18 +277,12 @@ function HistoricalData() {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto text-red-500 mb-4 flex items-center justify-center">
-            <MdError className="h-16 w-16" />
-          </div>
-          <div className="text-red-600 dark:text-red-400 mb-4">
-            Error loading data: {error}
-          </div>
-          <Button onClick={handleRefresh} variant="outline">
-            <MdRefresh className="mr-2 h-4 w-4" />
-            Retry
-          </Button>
-        </div>
+        <ErrorMessage
+          title="Failed to load dashboard data"
+          message={error}
+          retry={handleRefresh}
+          className="max-w-md mx-auto mt-8"
+        />
       </DashboardLayout>
     );
   }
