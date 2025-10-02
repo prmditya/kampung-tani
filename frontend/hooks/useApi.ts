@@ -42,11 +42,20 @@ export function useApi<T>(
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authorization header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
         signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {

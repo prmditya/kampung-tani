@@ -15,24 +15,32 @@ import { Button } from "../components/ui/button";
 import { SensorCard } from "../components/ui/sensor-card";
 import { LoadingSpinner } from "../components/ui/loading-spinner";
 import { ErrorMessage } from "../components/ui/error-message";
-import { useDeviceStats, useSensorData } from "../hooks/useApiData";
+import { useDeviceStats, useSensorData } from "../hooks/useApiOptimized";
 import { useDashboardPreferences } from "../hooks/useLocalStorage";
 import { withAuth } from "../hooks/useAuth";
 
 function Dashboard() {
   const [preferences] = useDashboardPreferences();
 
-  const { data: sensorData, isLoading, error, refetch } = useSensorData();
+  const {
+    data: sensorData,
+    loading: isLoading,
+    error,
+    refetch,
+  } = useSensorData(true, 5000, 1, 20);
 
-  const { data: deviceStats, isLoading: statsLoading } = useDeviceStats();
+  const { data: deviceStats, loading: statsLoading } = useDeviceStats();
 
   // Helper to get latest value for a sensor type
   const getLatestSensorValue = (sensorType: string): number | null => {
     if (!sensorData || sensorData.length === 0) return null;
-    const latestData = sensorData[0]; // Get most recent data
-    return (
-      (latestData[sensorType as keyof typeof latestData] as number) || null
+
+    // Find the most recent sensor reading for the given type
+    const latestSensor = sensorData.find(
+      (sensor) => sensor.sensor_type.toLowerCase() === sensorType.toLowerCase()
     );
+
+    return latestSensor ? latestSensor.value : null;
   };
 
   const handleRefresh = async () => {
@@ -78,8 +86,8 @@ function Dashboard() {
     { type: "salinity" as const, title: "Salinity", icon: MdWaterDrop },
   ];
 
-  const onlineCount = deviceStats?.status_counts?.online ?? 0;
-  const offlineCount = deviceStats?.status_counts?.offline ?? 0;
+  const onlineCount = deviceStats?.online_devices ?? 0;
+  const offlineCount = deviceStats?.offline_devices ?? 0;
   const totalDevices = deviceStats?.total_devices ?? 0;
   const isSystemOnline = onlineCount > 0;
 

@@ -4,7 +4,7 @@
 
 // ===== API CONFIGURATION =====
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
   REFRESH_INTERVALS: {
     SENSOR_DATA: 10000, // 10 seconds
     DEVICE_STATS: 10000, // 10 seconds
@@ -28,6 +28,8 @@ export const SENSOR_CONFIG = {
     phosphorus: { min: 10, max: 30 },
     potassium: { min: 80, max: 150 },
     salinity: { min: 0, max: 2 },
+    light: { min: 200, max: 800 },
+    tds: { min: 50, max: 500 },
   },
   UNITS: {
     moisture: '%',
@@ -38,6 +40,7 @@ export const SENSOR_CONFIG = {
     phosphorus: ' mg/kg',
     potassium: ' mg/kg',
     salinity: ' ppt',
+    light: ' lux',
     tds: ' ppm',
   },
   DESCRIPTIONS: {
@@ -49,6 +52,7 @@ export const SENSOR_CONFIG = {
     phosphorus: 'Phosphorus content',
     potassium: 'Potassium content',
     salinity: 'Salt concentration',
+    light: 'Light intensity',
     tds: 'Total dissolved solids',
   },
 } as const;
@@ -95,6 +99,16 @@ export const THEME_COLORS = {
       text: 'text-blue-700 dark:text-blue-300',
       bg: 'bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 dark:from-sky-900 dark:via-blue-900 dark:to-indigo-900',
       icon: 'bg-gradient-to-r from-sky-500 to-blue-600 dark:from-sky-400 dark:to-blue-500',
+    },
+    light: {
+      text: 'text-yellow-700 dark:text-yellow-300',
+      bg: 'bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-100 dark:from-yellow-900 dark:via-amber-900 dark:to-orange-900',
+      icon: 'bg-gradient-to-r from-yellow-500 to-amber-600 dark:from-yellow-400 dark:to-amber-500',
+    },
+    tds: {
+      text: 'text-cyan-700 dark:text-cyan-300',
+      bg: 'bg-gradient-to-br from-cyan-50 via-teal-50 to-blue-100 dark:from-cyan-900 dark:via-teal-900 dark:to-blue-900',
+      icon: 'bg-gradient-to-r from-cyan-500 to-teal-600 dark:from-cyan-400 dark:to-teal-500',
     },
   },
   STATUS: {

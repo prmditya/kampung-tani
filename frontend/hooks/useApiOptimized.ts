@@ -5,33 +5,23 @@ import { useState, useEffect, useCallback } from 'react';
 interface SensorData {
   id: number;
   device_id: number;
-  device_name: string;
-  user_name: string;
-  created_at: string | null;
-  // Sensor measurements
-  moisture: number | null;
-  temperature: number | null;
-  conductivity: number | null;
-  ph: number | null;
-  nitrogen: number | null;
-  phosphorus: number | null;
-  potassium: number | null;
-  salinity: number | null;
-  tds: number | null;
+  sensor_type: string;
+  value: number;
+  unit: string;
+  metadata: any;
+  timestamp: string;
 }
 
 interface Device {
   id: number;
   name: string;
-  address: number;
-  baud_rate: number;
-  type: string;
+  description: string;
+  location: string;
+  device_type: string;
   status: string;
-  last_seen: string | null;
-  uptime_seconds: number | null;
-  user_name: string;
-  created_at: string | null;
-  updated_at: string | null;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface DeviceStatusHistory {
@@ -42,12 +32,18 @@ interface DeviceStatusHistory {
 
 interface DeviceStats {
   total_devices: number;
-  status_counts: {
-    online: number;
-    offline: number;
-    restarted: number;
-  };
+  online_devices: number;
+  offline_devices: number;
+  maintenance_devices: number;
   recent_data_count: number;
+  status_distribution: Array<{
+    status: string;
+    count: number;
+  }>;
+  type_distribution: Array<{
+    device_type: string;
+    count: number;
+  }>;
 }
 
 interface ApiPaginationResponse<T> {
@@ -105,7 +101,21 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 // ===== UTILITIES =====
 
 const fetchApi = async <T>(endpoint: string, signal?: AbortSignal): Promise<T> => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { signal });
+  // Get auth token from localStorage
+  const token = localStorage.getItem('auth_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, { 
+    signal,
+    headers 
+  });
   
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -183,10 +193,15 @@ const createPaginatedApiHook = <T>(baseEndpoint: string) => {
       try {
         setError(null);
         const endpoint = `${baseEndpoint}?page=${page}&limit=${limit}`;
-        const result = await fetchApi<ApiPaginationResponse<T>>(endpoint, abortSignal);
+        const result = await fetchApi<{items: T[], total: number, page: number, size: number, pages: number}>(endpoint, abortSignal);
         if (!abortSignal?.aborted) {
-          setData(result.data);
-          setPagination(result.pagination);
+          setData(result.items);
+          setPagination({
+            page: result.page,
+            limit: result.size,
+            total: result.total,
+            pages: result.pages
+          });
           setCurrentPage(page);
           setCurrentLimit(limit);
         }
@@ -250,10 +265,15 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
     setLoading(true);
     try {
       setError(null);
-      const result = await fetchApi<ApiPaginationResponse<SensorData>>(`/api/sensors/?page=${pageNum}&limit=${limitNum}`, abortSignal);
+      const result = await fetchApi<{items: SensorData[], total: number, page: number, size: number, pages: number}>(`/sensors/?page=${pageNum}&limit=${limitNum}`, abortSignal);
       if (!abortSignal?.aborted) {
-        setData(result.data);
-        setPagination(result.pagination);
+        setData(result.items);
+        setPagination({
+          page: result.page,
+          limit: result.size,
+          total: result.total,
+          pages: result.pages
+        });
         setCurrentPage(pageNum);
         setCurrentLimit(limitNum);
       }
@@ -312,8 +332,8 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
 };
 
 // Hooks menggunakan factory untuk consistency - Updated untuk RESTful API
-export const useDevices = createPaginatedApiHook<Device>('/api/devices/');
-export const useSensorCalibrations = createApiHook<SensorCalibration[]>('/api/sensor-calibrations');
+export const useDevices = createPaginatedApiHook<Device>('/devices/');
+export const useSensorCalibrations = createApiHook<SensorCalibration[]>('/sensor-calibrations');
 
 // Hook untuk device stats menggunakan RESTful endpoint
 export const useDeviceStats = (autoRefresh = false, interval = 5000): UseApiResult<DeviceStats> => {
@@ -325,9 +345,9 @@ export const useDeviceStats = (autoRefresh = false, interval = 5000): UseApiResu
     setLoading(true);
     try {
       setError(null);
-      const result = await fetchApi<ApiResponse<DeviceStats>>('/api/devices/stats', abortSignal);
+      const result = await fetchApi<DeviceStats>('/devices/stats', abortSignal);
       if (!abortSignal?.aborted) {
-        setData(result.data);
+        setData(result);
       }
     } catch (err) {
       if (abortSignal?.aborted) {
@@ -388,9 +408,9 @@ export const useDeviceStatusHistory = (deviceId: number | null): UseApiResult<De
 
     try {
       setError(null);
-      const result = await fetchApi<ApiResponse<DeviceStatusHistory[]>>(`/api/devices/${deviceId}/status-history`, abortSignal);
+      const result = await fetchApi<DeviceStatusHistory[]>(`/devices/${deviceId}/status-history`, abortSignal);
       if (!abortSignal?.aborted) {
-        setData(result.data);
+        setData(result);
       }
     } catch (err) {
       if (abortSignal?.aborted) {

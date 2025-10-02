@@ -38,10 +38,10 @@ CREATE INDEX idx_sensor_data_device_id ON sensor_data(device_id);
 CREATE INDEX idx_sensor_data_timestamp ON sensor_data(timestamp DESC);
 CREATE INDEX idx_sensor_data_type ON sensor_data(sensor_type);
 
--- Insert sample admin user (password: admin123)
+-- Insert sample admin user (password: admin123 for admin, user123 for user1)
 INSERT INTO users (username, email, password_hash, role) VALUES 
-('admin', 'admin@kampungtani.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeiwH5oBXVFW0.aeW', 'admin'),
-('user1', 'user@kampungtani.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeiwH5oBXVFW0.aeW', 'user');
+('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'admin'),
+('user1', 'user@kampungtani.com', '$2b$12$6aJph2tLyWOIlrt9Hargs.QBGqvYTnXchyWkQRXpVf2iTGT7pRuuC', 'user');
 
 -- Insert sample devices
 INSERT INTO devices (user_id, name, description, location, device_type, status) VALUES 

@@ -45,18 +45,70 @@ function HistoricalData() {
     prevPage,
   } = useSensorData(false, 30000, currentPage, itemsPerPage);
 
+  // Group sensor data by device and timestamp
+  const groupSensorData = (sensors: typeof sensorData) => {
+    if (!sensors) return [];
+
+    const grouped = new Map();
+
+    sensors.forEach((sensor) => {
+      const deviceName =
+        sensor.metadata?.device || `Device ${sensor.device_id}`;
+      // Group by device and rounded timestamp (to group readings from same time)
+      const timeKey = new Date(sensor.timestamp).toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+      const key = `${deviceName}-${timeKey}`;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          id: sensor.id,
+          device_name: deviceName,
+          device_id: sensor.device_id,
+          timestamp: sensor.timestamp,
+          sensors: {},
+        });
+      }
+
+      const group = grouped.get(key);
+      group.sensors[sensor.sensor_type.toLowerCase()] = {
+        value: sensor.value,
+        unit: sensor.unit,
+      };
+    });
+
+    return Array.from(grouped.values()).sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  };
+
   // Filter and search data (now done client-side for current page)
   const filteredData =
     sensorData?.filter((item) => {
+      const deviceName = item.metadata?.device || `Device ${item.device_id}`;
       const matchesSearch =
-        item.device_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.sensor_type.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesDevice =
-        deviceFilter === "all" || item.device_name === deviceFilter;
+        deviceFilter === "all" || deviceName === deviceFilter;
 
       return matchesSearch && matchesDevice;
     }) || [];
+
+  // Group sensor data by device and timestamp
+  const groupedData = groupSensorData(filteredData);
+
+  // Filter and search grouped data
+  const filteredGroupedData = groupedData.filter((item) => {
+    const matchesSearch = item.device_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesDevice =
+      deviceFilter === "all" || item.device_name === deviceFilter;
+    return matchesSearch && matchesDevice;
+  });
+
+  const currentData = filteredGroupedData;
 
   // Use pagination data from API
   const totalItems = pagination?.total || 0;
@@ -67,11 +119,14 @@ function HistoricalData() {
     startIndex + (pagination?.limit || itemsPerPage),
     totalItems
   );
-  const currentData = filteredData;
 
   // Get unique devices for filter from current page data
   const uniqueDevices = Array.from(
-    new Set(sensorData?.map((item) => item.device_name) || [])
+    new Set(
+      sensorData?.map(
+        (item) => item.metadata?.device || `Device ${item.device_id}`
+      ) || []
+    )
   );
 
   const handleRefresh = async () => {
@@ -121,13 +176,46 @@ function HistoricalData() {
     return <Badge className="bg-green-600 text-white">Normal</Badge>;
   };
 
+  const getSensorStatusBadge = (
+    sensorType: string,
+    value: number | null | undefined
+  ) => {
+    if (value === null || value === undefined || isNaN(value))
+      return <Badge variant="outline">No Data</Badge>;
+
+    const numValue = Number(value);
+
+    // Define ranges based on sensor type
+    switch (sensorType.toLowerCase()) {
+      case "moisture":
+        return getStatusBadge(value, 30, 70);
+      case "temperature":
+        return getStatusBadge(value, 20, 30);
+      case "ph":
+        return getStatusBadge(value, 6.0, 7.5);
+      case "conductivity":
+        return getStatusBadge(value, 100, 800);
+      case "nitrogen":
+        return getStatusBadge(value, 20, 50);
+      case "phosphorus":
+        return getStatusBadge(value, 10, 30);
+      case "potassium":
+        return getStatusBadge(value, 80, 150);
+      case "salinity":
+        return getStatusBadge(value, 0, 2);
+      case "humidity":
+        return getStatusBadge(value, 40, 80);
+      default:
+        return <Badge variant="outline">—</Badge>;
+    }
+  };
+
   const exportToCSV = () => {
-    if (!filteredData.length) return;
+    if (!groupedData.length) return;
 
     const headers = [
       "ID",
       "Device",
-      "User",
       "Timestamp",
       "Moisture (%)",
       "Temperature (°C)",
@@ -137,26 +225,27 @@ function HistoricalData() {
       "Phosphorus (mg/kg)",
       "Potassium (mg/kg)",
       "Salinity (ppt)",
-      "TDS",
+      "Humidity (%)",
+      "TDS (ppm)",
     ];
 
     const csvContent = [
       headers.join(","),
-      ...filteredData.map((row) =>
+      ...groupedData.map((row) =>
         [
           row.id,
-          `"${row.device_name || ""}"`,
-          `"${row.user_name || ""}"`,
-          `"${formatDateTime(row.created_at)}"`,
-          row.moisture ?? "",
-          row.temperature ?? "",
-          row.ph ?? "",
-          row.conductivity ?? "",
-          row.nitrogen ?? "",
-          row.phosphorus ?? "",
-          row.potassium ?? "",
-          row.salinity ?? "",
-          row.tds ?? "",
+          `"${row.device_name}"`,
+          `"${formatDateTime(row.timestamp)}"`,
+          row.sensors.moisture?.value ?? "",
+          row.sensors.temperature?.value ?? "",
+          row.sensors.ph?.value ?? "",
+          row.sensors.conductivity?.value ?? "",
+          row.sensors.nitrogen?.value ?? "",
+          row.sensors.phosphorus?.value ?? "",
+          row.sensors.potassium?.value ?? "",
+          row.sensors.salinity?.value ?? "",
+          row.sensors.humidity?.value ?? "",
+          row.sensors.tds?.value ?? "",
         ].join(",")
       ),
     ].join("\n");
@@ -283,7 +372,7 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  {filteredData.length}
+                  {currentData.length}
                 </div>
                 <p className="text-sm text-purple-600 dark:text-purple-400">
                   Current Page
@@ -409,48 +498,81 @@ function HistoricalData() {
                             {row.device_name}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {row.user_name}
+                            ID: {row.device_id}
                           </div>
                         </td>
                         <td className="p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                          {formatDateTime(row.created_at)}
+                          {formatDateTime(row.timestamp)}
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(row.moisture, "%")}
+                            {formatValue(row.sensors.moisture?.value, "%")}
                           </div>
-                          {getStatusBadge(row.moisture, 30, 70)}
+                          {getSensorStatusBadge(
+                            "moisture",
+                            row.sensors.moisture?.value
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(row.temperature, "°C")}
+                            {formatValue(row.sensors.temperature?.value, "°C")}
                           </div>
-                          {getStatusBadge(row.temperature, 20, 30)}
+                          {getSensorStatusBadge(
+                            "temperature",
+                            row.sensors.temperature?.value
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(row.ph, "", 1)}
+                            {formatValue(row.sensors.ph?.value, "", 1)}
                           </div>
-                          {getStatusBadge(row.ph, 6.0, 7.5)}
+                          {getSensorStatusBadge("ph", row.sensors.ph?.value)}
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(row.conductivity, " μS/cm", 0)}
+                            {formatValue(
+                              row.sensors.conductivity?.value,
+                              " μS/cm",
+                              0
+                            )}
                           </div>
-                          {getStatusBadge(row.conductivity, 100, 800)}
+                          {getSensorStatusBadge(
+                            "conductivity",
+                            row.sensors.conductivity?.value
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="text-xs space-y-1">
-                            <div>N: {formatValue(row.nitrogen, "", 0)}</div>
-                            <div>P: {formatValue(row.phosphorus, "", 0)}</div>
-                            <div>K: {formatValue(row.potassium, "", 0)}</div>
+                            <div>
+                              N:{" "}
+                              {formatValue(row.sensors.nitrogen?.value, "", 0)}
+                            </div>
+                            <div>
+                              P:{" "}
+                              {formatValue(
+                                row.sensors.phosphorus?.value,
+                                "",
+                                0
+                              )}
+                            </div>
+                            <div>
+                              K:{" "}
+                              {formatValue(row.sensors.potassium?.value, "", 0)}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(row.salinity, " ppt", 1)}
+                            {formatValue(
+                              row.sensors.salinity?.value,
+                              " ppt",
+                              1
+                            )}
                           </div>
-                          {getStatusBadge(row.salinity, 0, 2)}
+                          {getSensorStatusBadge(
+                            "salinity",
+                            row.sensors.salinity?.value
+                          )}
                         </td>
                       </tr>
                     ))}

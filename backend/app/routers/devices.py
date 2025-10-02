@@ -132,6 +132,90 @@ async def create_device(
 
 
 @router.get(
+    "/stats",
+    summary="Get Device Statistics",
+    description="Get overall device statistics for the current user"
+)
+async def get_device_stats(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Get overall device statistics including:
+    - Total devices
+    - Online/offline count
+    - Device status distribution
+    """
+    
+    with get_db_cursor() as cursor:
+        # Get total devices count
+        cursor.execute(
+            "SELECT COUNT(*) FROM devices WHERE user_id = %s",
+            (current_user["id"],)
+        )
+        total_devices = cursor.fetchone()["count"]
+        
+        # Get status distribution
+        cursor.execute(
+            """
+            SELECT status, COUNT(*) as count 
+            FROM devices 
+            WHERE user_id = %s 
+            GROUP BY status
+            """,
+            (current_user["id"],)
+        )
+        status_counts = cursor.fetchall()
+        
+        # Get device type distribution
+        cursor.execute(
+            """
+            SELECT device_type, COUNT(*) as count 
+            FROM devices 
+            WHERE user_id = %s 
+            GROUP BY device_type
+            """,
+            (current_user["id"],)
+        )
+        type_counts = cursor.fetchall()
+        
+        # Calculate online/offline counts
+        online_count = 0
+        offline_count = 0
+        maintenance_count = 0
+        
+        for status_row in status_counts:
+            if status_row["status"] == "online":
+                online_count = status_row["count"]
+            elif status_row["status"] == "offline":
+                offline_count = status_row["count"]
+            elif status_row["status"] == "maintenance":
+                maintenance_count = status_row["count"]
+        
+        # Get recent data count (sensors data from last hour)
+        cursor.execute(
+            """
+            SELECT COUNT(*) 
+            FROM sensor_data s
+            JOIN devices d ON s.device_id = d.id 
+            WHERE d.user_id = %s 
+            AND s.timestamp >= NOW() - INTERVAL '1 hour'
+            """,
+            (current_user["id"],)
+        )
+        recent_data_count = cursor.fetchone()["count"]
+        
+        return {
+            "total_devices": total_devices,
+            "online_devices": online_count,
+            "offline_devices": offline_count,
+            "maintenance_devices": maintenance_count,
+            "recent_data_count": recent_data_count,
+            "status_distribution": [dict(row) for row in status_counts],
+            "type_distribution": [dict(row) for row in type_counts]
+        }
+
+
+@router.get(
     "/{device_id}",
     response_model=DeviceResponse,
     summary="Get Device",

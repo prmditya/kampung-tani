@@ -34,7 +34,6 @@ import {
   useDeviceStats,
   useDeviceStatusHistory,
 } from "../hooks/useApiOptimized";
-import { formatUptime, formatLastSeen } from "@/lib/useDevices";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const DeviceHistoryPanel = dynamic(
@@ -120,6 +119,19 @@ DeviceStatusIndicator.displayName = "DeviceStatusIndicator";
 
 function DeviceMonitoring() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+
+  // Simple uptime formatter
+  const formatUptime = (seconds: number | null): string => {
+    if (!seconds) return "N/A";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
 
   // Custom hooks untuk data fetching
   const {
@@ -255,7 +267,7 @@ function DeviceMonitoring() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">
-                  {stats?.status_counts?.online || 0}
+                  {stats?.online_devices || 0}
                 </div>
                 <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1 font-medium">
                   Active devices
@@ -274,7 +286,7 @@ function DeviceMonitoring() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-900 dark:text-red-100">
-                  {stats?.status_counts?.offline || 0}
+                  {stats?.offline_devices || 0}
                 </div>
                 <p className="text-sm text-red-600 dark:text-red-300 mt-1 font-medium">
                   Inactive devices
@@ -358,28 +370,31 @@ function DeviceMonitoring() {
                             </div>
                             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                               <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                {device.type}
+                                {device.device_type}
                               </span>
-                              <span>Address: {device.address}</span>
-                              <span>Baudrate: {device.baud_rate}</span>
-                              <span>User: {device.user_name}</span>
+                              <span>Location: {device.location}</span>
+                              <span>Description: {device.description}</span>
                             </div>
                           </div>
                           <div className="text-right space-y-1">
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Uptime:
+                                Created:
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {formatUptime(device.uptime_seconds)}
+                                {new Date(
+                                  device.created_at
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Last seen:
+                                Updated:
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {formatLastSeen(device.last_seen)}
+                                {new Date(
+                                  device.updated_at
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                           </div>

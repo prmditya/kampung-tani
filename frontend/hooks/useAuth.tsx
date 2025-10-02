@@ -1,12 +1,18 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useRouter } from 'next/router';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { useRouter } from "next/router";
 
 // Types
 interface User {
   id: number;
   username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   created_at: string;
 }
 
@@ -24,7 +30,7 @@ interface RegisterData {
   username: string;
   email: string;
   password: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
 }
 
 interface LoginResponse {
@@ -38,18 +44,21 @@ interface LoginResponse {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth Provider
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedToken = localStorage.getItem("auth_token");
+    const storedUser = localStorage.getItem("auth_user");
 
     if (storedToken && storedUser) {
       setToken(storedToken);
@@ -62,28 +71,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (username: string, password: string): Promise<void> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+        throw new Error(errorData.detail || "Login failed");
       }
 
       const data: LoginResponse = await response.json();
-      
+
       // Store auth data
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      
+      localStorage.setItem("auth_token", data.access_token);
+      localStorage.setItem("auth_user", JSON.stringify(data.user));
+
       setToken(data.access_token);
       setUser(data.user);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       throw error;
     }
   };
@@ -92,33 +101,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (userData: RegisterData): Promise<void> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Registration failed');
+        throw new Error(errorData.detail || "Registration failed");
       }
 
       // Registration successful, but don't auto-login
       // User needs to login manually
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
       throw error;
     }
   };
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
     setToken(null);
     setUser(null);
-    router.push('/login');
+    router.push("/login");
   };
 
   // Check if user is authenticated
@@ -134,18 +143,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // useAuth hook
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -153,7 +158,7 @@ export const useAuth = (): AuthContextType => {
 // Higher-order component for protected routes
 export const withAuth = <P extends object>(
   WrappedComponent: React.ComponentType<P>,
-  requiredRole?: 'admin'
+  requiredRole?: "admin"
 ) => {
   const AuthenticatedComponent: React.FC<P> = (props) => {
     const { isAuthenticated, user, isLoading } = useAuth();
@@ -162,12 +167,12 @@ export const withAuth = <P extends object>(
     useEffect(() => {
       if (!isLoading) {
         if (!isAuthenticated) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
         if (requiredRole && user?.role !== requiredRole) {
-          router.push('/dashboard'); // Redirect to dashboard if role doesn't match
+          router.push("/dashboard"); // Redirect to dashboard if role doesn't match
           return;
         }
       }

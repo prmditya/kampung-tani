@@ -1,11 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-  MdBarChart,
-  MdDashboard,
-  MdDevices,
-} from "react-icons/md";
+import { MdBarChart, MdDashboard, MdDevices } from "react-icons/md";
 import { cn } from "../lib/utils";
 import { ModeToggle } from "./mode-toggle";
 import { UserMenu } from "./user-menu";

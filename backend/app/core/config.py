@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     MQTT_PORT: int = 1883
     MQTT_USERNAME: Optional[str] = None
     MQTT_PASSWORD: Optional[str] = None
-    MQTT_TOPICS: list = ["sensors/+/data", "devices/+/status"]
+    MQTT_TOPICS: list = ["sensors/+/data", "sensor/+/data", "devices/+/status"]
     
     # CORS Configuration
     CORS_ORIGINS: list = ["*"]  # In production, specify exact origins

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../hooks/useAuth';
-import { LoadingSpinner } from '../components/ui/loading-spinner';
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "../components/ui/loading-spinner";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -10,9 +10,9 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
-        router.push('/login');
+        router.push("/login");
       }
     }
   }, [isAuthenticated, isLoading, router]);

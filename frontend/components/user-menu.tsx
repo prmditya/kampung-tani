@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  MdAccountCircle, 
-  MdLogout, 
-  MdSettings, 
+import React, { useState, useRef, useEffect } from "react";
+import {
+  MdAccountCircle,
+  MdLogout,
+  MdSettings,
   MdPerson,
-  MdKeyboardArrowDown 
-} from 'react-icons/md';
-import { useAuth } from '../hooks/useAuth';
+  MdKeyboardArrowDown,
+} from "react-icons/md";
+import { useAuth } from "../hooks/useAuth";
 
 export const UserMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,14 +16,17 @@ export const UserMenu: React.FC = () => {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -37,7 +40,9 @@ export const UserMenu: React.FC = () => {
   };
 
   const getRoleColor = (role: string) => {
-    return role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
+    return role === "admin"
+      ? "bg-red-100 text-red-800"
+      : "bg-blue-100 text-blue-800";
   };
 
   if (!user) return null;
@@ -60,16 +65,16 @@ export const UserMenu: React.FC = () => {
             {user.role}
           </p>
         </div>
-        <MdKeyboardArrowDown 
+        <MdKeyboardArrowDown
           className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
+            isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+        <div className="absolute left-full bottom-0 ml-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
           {/* User Info Header */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -83,7 +88,11 @@ export const UserMenu: React.FC = () => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   {user.email}
                 </p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
+                    user.role
+                  )}`}
+                >
                   {user.role}
                 </span>
               </div>
@@ -98,7 +107,7 @@ export const UserMenu: React.FC = () => {
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Navigate to profile page
-                console.log('Navigate to profile');
+                console.log("Navigate to profile");
               }}
             >
               <MdPerson className="w-4 h-4 mr-3" />
@@ -111,7 +120,7 @@ export const UserMenu: React.FC = () => {
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Navigate to settings page
-                console.log('Navigate to settings');
+                console.log("Navigate to settings");
               }}
             >
               <MdSettings className="w-4 h-4 mr-3" />
