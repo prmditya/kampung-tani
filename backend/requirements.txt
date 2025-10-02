@@ -1,5 +1,23 @@
-flask
-psycopg2-binary
-paho-mqtt
-flask-cors
-flask-restx
+# FastAPI Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+psycopg2-binary==2.9.9
+asyncpg==0.29.0  # For async database operations
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Pydantic (comes with FastAPI but pinned for stability)
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# MQTT Client (unchanged)
+paho-mqtt==1.6.1
+
+# Development & Monitoring
+python-dotenv==1.0.0
