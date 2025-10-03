@@ -25,6 +25,10 @@ export default function Document() {
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
         {apiOrigin && (
           <>
             <link rel="dns-prefetch" href={apiOrigin} />

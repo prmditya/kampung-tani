@@ -28,13 +28,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
+import { withAuth } from "../hooks/useAuth";
 import {
   useDevices,
   useDeviceStats,
   useDeviceStatusHistory,
 } from "../hooks/useApiOptimized";
-import { formatUptime, formatLastSeen } from "@/lib/useDevices";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ErrorMessage } from "@/components/ui/error-message";
 
 const DeviceHistoryPanel = dynamic(
   () => import("../components/devices/device-history-panel"),
@@ -117,8 +118,66 @@ const DeviceStatusIndicator: React.FC<DeviceStatusIndicatorProps> = React.memo(
 
 DeviceStatusIndicator.displayName = "DeviceStatusIndicator";
 
-export default function DeviceMonitoring() {
+function DeviceMonitoring() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+
+  // Simple uptime formatter
+  const formatUptime = (seconds: number | null): string => {
+    if (!seconds) return "N/A";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  // Format date to WIB timezone
+  const formatDateTimeWIB = (timestamp: string): string => {
+    try {
+      const date = new Date(timestamp);
+      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000); // Add 7 hours for WIB
+      return (
+        wibTime.toLocaleString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }) + " WIB"
+      );
+    } catch {
+      return "Invalid";
+    }
+  };
+
+  // Calculate duration since last status change
+  const getStatusDuration = (device: any): string => {
+    const now = new Date();
+    const lastSeen = new Date(device.last_seen || device.updated_at);
+    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+
+    if (diffSeconds < 0) return "0s"; // Handle future dates
+
+    const days = Math.floor(diffSeconds / 86400);
+    const hours = Math.floor((diffSeconds % 86400) / 3600);
+    const minutes = Math.floor((diffSeconds % 3600) / 60);
+    const seconds = diffSeconds % 60;
+
+    if (days > 0) {
+      return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    } else if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    } else if (minutes > 0) {
+      return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
 
   // Custom hooks untuk data fetching
   const {
@@ -138,8 +197,12 @@ export default function DeviceMonitoring() {
     refetch: refetchStats,
   } = useDeviceStats();
 
-  const { data: statusHistory, loading: historyLoading } =
-    useDeviceStatusHistory(selectedDeviceId);
+  const {
+    data: statusHistory,
+    loading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useDeviceStatusHistory(selectedDeviceId);
 
   // Auto refresh every 30 seconds
   useEffect(() => {
@@ -172,19 +235,12 @@ export default function DeviceMonitoring() {
   if (combinedError) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center space-y-4">
-            <div className="text-red-500">Error: {combinedError}</div>
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              className="inline-flex items-center gap-2"
-            >
-              <MdRefresh className="w-4 h-4" />
-              Try Again
-            </Button>
-          </div>
-        </div>
+        <ErrorMessage
+          title="Failed to load dashboard data"
+          message={combinedError}
+          retry={handleRefresh}
+          className="max-w-md mx-auto mt-8"
+        />
       </DashboardLayout>
     );
   }
@@ -254,7 +310,7 @@ export default function DeviceMonitoring() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">
-                  {stats?.status_counts?.online || 0}
+                  {stats?.online_devices || 0}
                 </div>
                 <p className="text-sm text-emerald-600 dark:text-emerald-300 mt-1 font-medium">
                   Active devices
@@ -273,7 +329,7 @@ export default function DeviceMonitoring() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-900 dark:text-red-100">
-                  {stats?.status_counts?.offline || 0}
+                  {stats?.offline_devices || 0}
                 </div>
                 <p className="text-sm text-red-600 dark:text-red-300 mt-1 font-medium">
                   Inactive devices
@@ -357,20 +413,35 @@ export default function DeviceMonitoring() {
                             </div>
                             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                               <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                {device.type}
+                                {device.device_type}
                               </span>
-                              <span>Address: {device.address}</span>
-                              <span>Baudrate: {device.baud_rate}</span>
-                              <span>User: {device.user_name}</span>
+                              <span>Location: {device.location}</span>
+                              {device.description && (
+                                <span>Description: {device.description}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {device.status === "online" ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                  Status: Online
+                                </span>
+                              ) : (
+                                <span className="text-red-600 dark:text-red-400 font-medium">
+                                  Status: Offline
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right space-y-1">
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Uptime:
+                                {device.status === "online"
+                                  ? "Online for:"
+                                  : "Offline for:"}
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {formatUptime(device.uptime_seconds)}
+                                {device.current_uptime_formatted ||
+                                  getStatusDuration(device)}
                               </span>
                             </div>
                             <div className="text-sm">
@@ -378,7 +449,9 @@ export default function DeviceMonitoring() {
                                 Last seen:
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {formatLastSeen(device.last_seen)}
+                                {formatDateTimeWIB(
+                                  device.last_seen || device.updated_at
+                                )}
                               </span>
                             </div>
                           </div>
@@ -409,10 +482,8 @@ export default function DeviceMonitoring() {
                 devices={devices ?? null}
                 statusHistory={statusHistory ?? null}
                 loading={historyLoading}
-                formatUptime={formatUptime}
-                renderStatusIndicator={(status) => (
-                  <DeviceStatusIndicator status={status} />
-                )}
+                error={historyError}
+                onRefresh={refetchHistory}
               />
             </TabsContent>
           </Tabs>
@@ -421,3 +492,5 @@ export default function DeviceMonitoring() {
     </>
   );
 }
+
+export default withAuth(DeviceMonitoring);
