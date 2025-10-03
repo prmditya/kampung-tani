@@ -214,7 +214,7 @@ export const useSensorData = (
     setLoading(true);
     try {
       setError(null);
-      const result = await fetchApi<{items: SensorData[], total: number, page: number, size: number, pages: number}>(`/sensors/?page=${pageNum}&limit=${limitNum}`, abortSignal);
+      const result = await fetchApi<{items: SensorData[], total: number, page: number, size: number, pages: number}>(`/sensors/?page=${pageNum}&size=${limitNum}`, abortSignal);
       if (!abortSignal?.aborted) {
         setData(result.items);
         setPagination({

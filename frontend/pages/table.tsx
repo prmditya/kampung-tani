@@ -36,12 +36,10 @@ import { ErrorMessage } from "@/components/ui/error-message";
 
 function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // Show 10 grouped records per page
   const [searchTerm, setSearchTerm] = useState("");
   const [deviceFilter, setDeviceFilter] = useState("all");
 
-  // Fetch more raw data from API to ensure enough data for proper grouping
-  // We'll handle pagination client-side after grouping
+  // Fetch sensor data with standard pagination
   const {
     data: sensorData,
     pagination: apiPagination,
@@ -50,77 +48,31 @@ function HistoricalData() {
     refetch,
     nextPage,
     prevPage,
-  } = useSensorData(false, 30000, 1, 500); // Fetch 500 records for better grouping
+  } = useSensorData(false, 30000, 1, 20); // Standard pagination
 
   // Get device statistics for actual active device count
   const { data: deviceStats } = useDeviceStats();
 
-  // Group sensor data by device and timestamp
-  const groupSensorData = (sensors: typeof sensorData) => {
-    if (!sensors) return [];
+  // Use sensor data directly without grouping
+  const displayData = sensorData || [];
 
-    const grouped = new Map();
-
-    sensors.forEach((sensor) => {
-      const deviceName =
-        sensor.metadata?.device || `Device ${sensor.device_id}`;
-
-      // Group by device and exact timestamp (without rounding)
-      // This will show individual sensor readings
-      const date = new Date(sensor.timestamp);
-      const timeKey = date.toISOString().slice(0, 19); // YYYY-MM-DDTHH:mm:ss
-      const key = `${deviceName}-${timeKey}`;
-
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          id: sensor.id,
-          device_name: deviceName,
-          device_id: sensor.device_id,
-          timestamp: sensor.timestamp,
-          sensors: {},
-        });
-      }
-
-      const group = grouped.get(key);
-      group.sensors[sensor.sensor_type.toLowerCase()] = {
-        value: sensor.value,
-        unit: sensor.unit,
-      };
-    });
-
-    const result = Array.from(grouped.values()).sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    return result;
-  };
-
-  // Group sensor data by device and timestamp first
-  const groupedData = groupSensorData(sensorData);
-
-  // Then filter and search the grouped data
-  const filteredGroupedData = groupedData.filter((item) => {
-    const matchesSearch = item.device_name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesDevice =
-      deviceFilter === "all" || item.device_name === deviceFilter;
+  // Filter data based on search and device filter
+  const filteredData = displayData.filter((item) => {
+    const deviceName = item.metadata?.device || `Device ${item.device_id}`;
+    const matchesSearch =
+      deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sensor_type.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDevice = deviceFilter === "all" || deviceName === deviceFilter;
     return matchesSearch && matchesDevice;
   });
 
-  // Client-side pagination for grouped data
-  const totalGroupedItems = filteredGroupedData.length;
-  const totalPages = Math.ceil(totalGroupedItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalGroupedItems);
-  const currentData = filteredGroupedData.slice(startIndex, endIndex);
+  // Use API pagination directly
+  const totalItems = apiPagination?.total || 0;
+  const totalPages = apiPagination?.pages || 1;
+  const currentApiPage = apiPagination?.page || 1;
+  const itemsPerPage = apiPagination?.limit || 50;
 
-  // Pagination info for display
-  const displayStartIndex = startIndex + 1;
-  const displayEndIndex = endIndex;
-
-  // Get unique devices for filter from current page data
+  // Get unique devices for filter
   const uniqueDevices = Array.from(
     new Set(
       sensorData?.map(
@@ -130,13 +82,13 @@ function HistoricalData() {
   );
 
   const handleRefresh = async () => {
-    await refetch(1, 500); // Fetch more data
-    setCurrentPage(1);
+    await refetch(1, 50);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    // No API call needed, just update local state
+  const handlePageChange = async (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      await refetch(newPage, 50);
+    }
   };
 
   const formatValue = (
@@ -218,41 +170,29 @@ function HistoricalData() {
   };
 
   const exportToCSV = () => {
-    if (!groupedData.length) return;
+    if (!filteredData.length) return;
 
     const headers = [
       "ID",
-      "Device",
+      "Device ID",
+      "Device Name",
+      "Sensor Type",
+      "Value",
+      "Unit",
       "Timestamp",
-      "Moisture (%)",
-      "Temperature (°C)",
-      "pH",
-      "Conductivity (μS/cm)",
-      "Nitrogen (mg/kg)",
-      "Phosphorus (mg/kg)",
-      "Potassium (mg/kg)",
-      "Salinity (ppt)",
-      "Humidity (%)",
-      "TDS (ppm)",
     ];
 
     const csvContent = [
       headers.join(","),
-      ...groupedData.map((row) =>
+      ...filteredData.map((row) =>
         [
           row.id,
-          `"${row.device_name}"`,
+          row.device_id,
+          `"${row.metadata?.device || `Device ${row.device_id}`}"`,
+          `"${row.sensor_type}"`,
+          row.value,
+          `"${row.unit}"`,
           `"${formatDateTime(row.timestamp)}"`,
-          row.sensors.moisture?.value ?? "",
-          row.sensors.temperature?.value ?? "",
-          row.sensors.ph?.value ?? "",
-          row.sensors.conductivity?.value ?? "",
-          row.sensors.nitrogen?.value ?? "",
-          row.sensors.phosphorus?.value ?? "",
-          row.sensors.potassium?.value ?? "",
-          row.sensors.salinity?.value ?? "",
-          row.sensors.humidity?.value ?? "",
-          row.sensors.tds?.value ?? "",
         ].join(",")
       ),
     ].join("\n");
@@ -343,10 +283,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  {apiPagination?.total || sensorData?.length || 0}
+                  {apiPagination?.total || 0}
                 </div>
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Total Raw Records
+                  Raw Sensor Records
                 </p>
               </CardContent>
             </Card>
@@ -373,10 +313,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  {totalGroupedItems}
+                  {filteredData.length}
                 </div>
                 <p className="text-sm text-purple-600 dark:text-purple-400">
-                  Grouped Records
+                  Filtered Records
                 </p>
               </CardContent>
             </Card>
@@ -450,9 +390,8 @@ function HistoricalData() {
                 Sensor Data Table
               </CardTitle>
               <CardDescription>
-                Showing {displayStartIndex}-{displayEndIndex} of{" "}
-                {totalGroupedItems} grouped records (Page {currentPage} of{" "}
-                {totalPages})
+                Showing page {currentApiPage} of {totalPages} ({totalItems}{" "}
+                total sensor readings)
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -467,27 +406,21 @@ function HistoricalData() {
                         Timestamp
                       </th>
                       <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        Moisture
+                        Sensor Type
                       </th>
                       <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        Temp
+                        Value
                       </th>
                       <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        pH
+                        Unit
                       </th>
                       <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        Conductivity
-                      </th>
-                      <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        N-P-K
-                      </th>
-                      <th className="text-left p-2 sm:p-3 font-semibold text-foreground text-sm whitespace-nowrap">
-                        Salinity
+                        Status
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentData.map((row, index) => (
+                    {filteredData.map((row, index) => (
                       <tr
                         key={row.id}
                         className={`border-b border-border hover:bg-muted/50 ${
@@ -496,7 +429,7 @@ function HistoricalData() {
                       >
                         <td className="p-2 sm:p-3">
                           <div className="font-medium text-foreground text-sm">
-                            {row.device_name}
+                            {row.metadata?.device || `Device ${row.device_id}`}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             ID: {row.device_id}
@@ -505,88 +438,36 @@ function HistoricalData() {
                         <td className="p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                           {formatDateTime(row.timestamp)}
                         </td>
-                        <td className="p-3">
-                          <div className="text-sm font-medium">
-                            {formatValue(row.sensors.moisture?.value, "%")}
-                          </div>
-                          {getSensorStatusBadge(
-                            "moisture",
-                            row.sensors.moisture?.value
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm font-medium">
-                            {formatValue(row.sensors.temperature?.value, "°C")}
-                          </div>
-                          {getSensorStatusBadge(
-                            "temperature",
-                            row.sensors.temperature?.value
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm font-medium">
-                            {formatValue(row.sensors.ph?.value, "", 1)}
-                          </div>
-                          {getSensorStatusBadge("ph", row.sensors.ph?.value)}
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm font-medium">
-                            {formatValue(
-                              row.sensors.conductivity?.value,
-                              " μS/cm",
-                              0
-                            )}
-                          </div>
-                          {getSensorStatusBadge(
-                            "conductivity",
-                            row.sensors.conductivity?.value
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="text-xs space-y-1">
-                            <div>
-                              N:{" "}
-                              {formatValue(row.sensors.nitrogen?.value, "", 0)}
-                            </div>
-                            <div>
-                              P:{" "}
-                              {formatValue(
-                                row.sensors.phosphorus?.value,
-                                "",
-                                0
-                              )}
-                            </div>
-                            <div>
-                              K:{" "}
-                              {formatValue(row.sensors.potassium?.value, "", 0)}
-                            </div>
+                        <td className="p-2 sm:p-3">
+                          <div className="text-sm font-medium capitalize">
+                            {row.sensor_type}
                           </div>
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 sm:p-3">
                           <div className="text-sm font-medium">
-                            {formatValue(
-                              row.sensors.salinity?.value,
-                              " ppt",
-                              1
-                            )}
+                            {formatValue(row.value, "", 1)}
                           </div>
-                          {getSensorStatusBadge(
-                            "salinity",
-                            row.sensors.salinity?.value
-                          )}
+                        </td>
+                        <td className="p-2 sm:p-3">
+                          <div className="text-sm text-muted-foreground">
+                            {row.unit}
+                          </div>
+                        </td>
+                        <td className="p-2 sm:p-3">
+                          {getSensorStatusBadge(row.sensor_type, row.value)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                {currentData.length === 0 && (
+                {filteredData.length === 0 && (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 mx-auto text-gray-300 mb-4 flex items-center justify-center">
                       <MdBarChart className="h-16 w-16" />
                     </div>
                     <p className="text-gray-500">
-                      No data found matching your filters
+                      No sensor data found matching your filters
                     </p>
                   </div>
                 )}
@@ -595,8 +476,8 @@ function HistoricalData() {
               {/* Pagination - Always show info, buttons only when needed */}
               <div className="flex items-center justify-between mt-6 pt-4 p-6 border-t">
                 <div className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages} ({totalGroupedItems}{" "}
-                  grouped records)
+                  Page {currentApiPage} of {totalPages} ({totalItems} total
+                  records)
                 </div>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
@@ -604,23 +485,23 @@ function HistoricalData() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(1)}
-                      disabled={currentPage === 1 || loading}
+                      disabled={currentApiPage === 1 || loading}
                     >
                       <MdFirstPage className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1 || loading}
+                      onClick={() => handlePageChange(currentApiPage - 1)}
+                      disabled={currentApiPage === 1 || loading}
                     >
                       <MdNavigateBefore className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages || loading}
+                      onClick={() => handlePageChange(currentApiPage + 1)}
+                      disabled={currentApiPage === totalPages || loading}
                     >
                       <MdNavigateNext className="h-4 w-4" />
                     </Button>
@@ -628,7 +509,7 @@ function HistoricalData() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(totalPages)}
-                      disabled={currentPage === totalPages || loading}
+                      disabled={currentApiPage === totalPages || loading}
                     >
                       <MdLastPage className="h-4 w-4" />
                     </Button>
