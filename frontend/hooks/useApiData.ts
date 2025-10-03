@@ -106,18 +106,4 @@ export function useDeviceStatus(deviceId: string) {
   });
 }
 
-// ===== LEGACY COMPATIBILITY HOOKS =====
-
-/**
- * @deprecated Use useSensorData instead
- */
-export function useApiOptimized(endpoint: string, refreshInterval: number = 10000) {
-  return useApi(endpoint, { refreshInterval });
-}
-
-/**
- * @deprecated Use useDevices instead
- */
-export function useDevicesLegacy() {
-  return useDevices();
-}
+// This file is deprecated and should use useApiOptimized.ts instead

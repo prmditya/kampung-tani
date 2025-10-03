@@ -25,8 +25,11 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { useSensorData, type SensorData } from "../hooks/useApiOptimized";
-import { useDeviceStats } from "../hooks/useApiData";
+import {
+  useSensorData,
+  useDeviceStats,
+  type SensorData,
+} from "../hooks/useApiOptimized";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { withAuth } from "../hooks/useAuth";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -55,19 +58,6 @@ function HistoricalData() {
   // Group sensor data by device and timestamp
   const groupSensorData = (sensors: typeof sensorData) => {
     if (!sensors) return [];
-
-    console.log("Grouping Debug:");
-    console.log("Total sensors:", sensors.length);
-
-    // Sample first few sensors to see data structure
-    sensors.slice(0, 5).forEach((sensor, index) => {
-      console.log(`Sensor ${index}:`, {
-        device_id: sensor.device_id,
-        timestamp: sensor.timestamp,
-        sensor_type: sensor.sensor_type,
-        metadata: sensor.metadata,
-      });
-    });
 
     const grouped = new Map();
 
@@ -101,15 +91,6 @@ function HistoricalData() {
     const result = Array.from(grouped.values()).sort(
       (a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-
-    console.log("Grouped result:", result.length, "groups");
-    console.log("First 3 group keys:", Array.from(grouped.keys()).slice(0, 3));
-    console.log(
-      "Unique devices found:",
-      Array.from(
-        new Set(Array.from(grouped.values()).map((g) => g.device_name))
-      )
     );
 
     return result;

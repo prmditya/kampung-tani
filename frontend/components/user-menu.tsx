@@ -107,7 +107,6 @@ export const UserMenu: React.FC = () => {
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Navigate to profile page
-                console.log("Navigate to profile");
               }}
             >
               <MdPerson className="w-4 h-4 mr-3" />
@@ -120,7 +119,6 @@ export const UserMenu: React.FC = () => {
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Navigate to settings page
-                console.log("Navigate to settings");
               }}
             >
               <MdSettings className="w-4 h-4 mr-3" />

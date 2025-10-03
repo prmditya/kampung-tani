@@ -199,7 +199,26 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {entry.created_at
-                      ? new Date(entry.created_at).toLocaleString()
+                      ? (() => {
+                          try {
+                            const date = new Date(entry.created_at);
+                            const wibTime = new Date(
+                              date.getTime() + 7 * 60 * 60 * 1000
+                            ); // Add 7 hours for WIB
+                            return (
+                              wibTime.toLocaleString("id-ID", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              }) + " WIB"
+                            );
+                          } catch {
+                            return "Invalid";
+                          }
+                        })()
                       : "Unknown"}
                   </div>
                 </div>
@@ -230,9 +249,28 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                   </div>
                   <div className="text-xs text-muted-foreground bg-white dark:bg-slate-800 px-2 py-1 rounded-md border">
                     Last seen:{" "}
-                    {new Date(
-                      selectedDevice.last_seen || selectedDevice.updated_at
-                    ).toLocaleString()}
+                    {(() => {
+                      try {
+                        const date = new Date(
+                          selectedDevice.last_seen || selectedDevice.updated_at
+                        );
+                        const wibTime = new Date(
+                          date.getTime() + 7 * 60 * 60 * 1000
+                        ); // Add 7 hours for WIB
+                        return (
+                          wibTime.toLocaleString("id-ID", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          }) + " WIB"
+                        );
+                      } catch {
+                        return "Invalid";
+                      }
+                    })()}
                   </div>
                 </div>
                 {selectedDevice.current_uptime_formatted && (

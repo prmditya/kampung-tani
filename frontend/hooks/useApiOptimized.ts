@@ -25,7 +25,7 @@ interface Device {
   updated_at: string;
   // Enhanced properties from API
   current_uptime_seconds?: number | null;
-  current_uptime_formatted?: string;
+  current_uptime_formatted?: string | null;
   device_status?: string;
   uptime_description?: string;
 }
@@ -33,15 +33,17 @@ interface Device {
 interface DeviceStatusHistory {
   status: string;
   uptime_seconds: number | null;
-  uptime_formatted?: string;
+  uptime_formatted?: string | null;
   created_at: string | null;
 }
 
 interface DeviceStatusHistoryResponse {
   device_id: number;
   device_name: string;
+  device_status: string;
   current_uptime_seconds: number | null;
-  current_uptime_formatted: string;
+  current_uptime_formatted: string | null;
+  uptime_description: string;
   history: DeviceStatusHistory[];
   total_records: number;
 }
@@ -62,22 +64,6 @@ interface DeviceStats {
   }>;
 }
 
-interface ApiPaginationResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-  status: string;
-}
-
-interface ApiResponse<T> {
-  data: T;
-  status: string;
-}
-
 interface SensorCalibration {
   id: number;
   device_id: number;
@@ -88,6 +74,7 @@ interface SensorCalibration {
   updated_at: string | null;
 }
 
+// Unified API result interfaces
 interface UseApiResult<T> {
   data: T | null;
   loading: boolean;
@@ -116,21 +103,23 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // ===== UTILITIES =====
 
-const fetchApi = async <T>(endpoint: string, signal?: AbortSignal): Promise<T> => {
-  // Get auth token from localStorage
-  const token = localStorage.getItem('auth_token');
+const getAuthHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   
-  // Add authorization header if token exists
+  const token = localStorage.getItem('auth_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  
+  return headers;
+};
 
+const fetchApi = async <T>(endpoint: string, signal?: AbortSignal): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, { 
     signal,
-    headers 
+    headers: getAuthHeaders()
   });
   
   if (!response.ok) {
@@ -146,125 +135,69 @@ const fetchApi = async <T>(endpoint: string, signal?: AbortSignal): Promise<T> =
   return result;
 };
 
-// Generic hook factory untuk mengurangi code duplication
-const createApiHook = <T>(endpoint: string) => {
-  return (): UseApiResult<T> => {
-    const [data, setData] = useState<T | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchData = useCallback(async (abortSignal?: AbortSignal) => {
-      setLoading(true);
-      try {
-        setError(null);
-        const result = await fetchApi<ApiResponse<T>>(endpoint, abortSignal);
-        if (!abortSignal?.aborted) {
-          setData(result.data);
-        }
-      } catch (err) {
-        if (abortSignal?.aborted) {
-          return;
-        }
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        console.error(`Error fetching ${endpoint}:`, err);
-      } finally {
-        if (!abortSignal?.aborted) {
-          setLoading(false);
-        }
-      }
-    }, []);
-
-    const refetch = useCallback(async () => {
-      setLoading(true);
-      await fetchData();
-    }, [fetchData]);
-
-    useEffect(() => {
-      const controller = new AbortController();
-      fetchData(controller.signal);
-      return () => controller.abort();
-    }, [fetchData]);
-
-    return { data, loading, error, refetch };
-  };
-};
-
-// Generic hook factory untuk paginated API
-const createPaginatedApiHook = <T>(baseEndpoint: string) => {
-  return (initialPage = 1, initialLimit = 50): UsePaginatedApiResult<T> => {
-    const [data, setData] = useState<T[] | null>(null);
-    const [pagination, setPagination] = useState<{
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    } | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState(initialPage);
-    const [currentLimit, setCurrentLimit] = useState(initialLimit);
-
-    const fetchData = useCallback(async (page = currentPage, limit = currentLimit, abortSignal?: AbortSignal) => {
-      setLoading(true);
-      try {
-        setError(null);
-        const endpoint = `${baseEndpoint}?page=${page}&limit=${limit}`;
-        const result = await fetchApi<{items: T[], total: number, page: number, size: number, pages: number}>(endpoint, abortSignal);
-        if (!abortSignal?.aborted) {
-          setData(result.items);
-          setPagination({
-            page: result.page,
-            limit: result.size,
-            total: result.total,
-            pages: result.pages
-          });
-          setCurrentPage(page);
-          setCurrentLimit(limit);
-        }
-      } catch (err) {
-        if (abortSignal?.aborted) {
-          return;
-        }
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        console.error(`Error fetching ${baseEndpoint}:`, err);
-      } finally {
-        if (!abortSignal?.aborted) {
-          setLoading(false);
-        }
-      }
-    }, [baseEndpoint, currentPage, currentLimit]);
-
-    const refetch = useCallback(async (page?: number, limit?: number) => {
-      setLoading(true);
-      await fetchData(page, limit);
-    }, [fetchData]);
-
-    const nextPage = useCallback(async () => {
-      if (pagination && currentPage < pagination.pages) {
-        await refetch(currentPage + 1);
-      }
-    }, [pagination, currentPage, refetch]);
-
-    const prevPage = useCallback(async () => {
-      if (currentPage > 1) {
-        await refetch(currentPage - 1);
-      }
-    }, [currentPage, refetch]);
-
-    useEffect(() => {
-      const controller = new AbortController();
-      fetchData(initialPage, initialLimit, controller.signal);
-      return () => controller.abort();
-    }, []);
-
-    return { data, pagination, loading, error, refetch, nextPage, prevPage };
-  };
-};
-
 // ===== HOOKS =====
 
-// Hook untuk sensor data dengan pagination dan auto-refresh
-export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, limit = 50): UsePaginatedApiResult<SensorData> => {
+// Unified hook for all API calls with optional auto-refresh
+const useApiData = <T>(
+  endpoint: string, 
+  autoRefresh = false, 
+  interval = 30000
+): UseApiResult<T> => {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async (abortSignal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      setError(null);
+      const result = await fetchApi<T>(endpoint, abortSignal);
+      if (!abortSignal?.aborted) {
+        setData(result);
+      }
+    } catch (err) {
+      if (abortSignal?.aborted) return;
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      if (!abortSignal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [endpoint]);
+
+  const refetch = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    if (autoRefresh) {
+      intervalId = setInterval(() => {
+        if (!controller.signal.aborted) {
+          fetchData();
+        }
+      }, interval);
+    }
+
+    return () => {
+      controller.abort();
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [fetchData, autoRefresh, interval]);
+
+  return { data, loading, error, refetch };
+};
+
+// Sensor data with pagination
+export const useSensorData = (
+  autoRefresh = false, 
+  interval = 5000, 
+  page = 1, 
+  limit = 50
+): UsePaginatedApiResult<SensorData> => {
   const [data, setData] = useState<SensorData[] | null>(null);
   const [pagination, setPagination] = useState<{
     page: number;
@@ -294,11 +227,8 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
         setCurrentLimit(limitNum);
       }
     } catch (err) {
-      if (abortSignal?.aborted) {
-        return;
-      }
+      if (abortSignal?.aborted) return;
       setError(err instanceof Error ? err.message : 'Failed to fetch sensor data');
-      console.error('Error fetching sensor data:', err);
     } finally {
       if (!abortSignal?.aborted) {
         setLoading(false);
@@ -307,7 +237,6 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
   }, [currentPage, currentLimit]);
 
   const refetch = useCallback(async (pageNum?: number, limitNum?: number) => {
-    setLoading(true);
     await fetchData(pageNum, limitNum);
   }, [fetchData]);
 
@@ -338,16 +267,14 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
 
     return () => {
       controller.abort();
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      if (intervalId) clearInterval(intervalId);
     };
   }, [autoRefresh, interval]);
 
   return { data, pagination, loading, error, refetch, nextPage, prevPage };
 };
 
-// Hooks menggunakan factory untuk consistency - Updated untuk RESTful API
+// Devices with pagination and enhanced uptime data
 export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiResult<Device> => {
   const [data, setData] = useState<Device[] | null>(null);
   const [pagination, setPagination] = useState<{
@@ -365,11 +292,7 @@ export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiR
     setLoading(true);
     try {
       setError(null);
-      const endpoint = `/devices?page=${page}&size=${limit}`;
-      console.log('Fetching devices from:', endpoint);
-      
-      const result = await fetchApi<{items: Device[], total: number, page: number, size: number, pages: number}>(endpoint, abortSignal);
-      console.log('Devices API response:', result);
+      const result = await fetchApi<{items: Device[], total: number, page: number, size: number, pages: number}>(`/devices?page=${page}&size=${limit}`, abortSignal);
       
       if (!abortSignal?.aborted) {
         setData(result.items);
@@ -383,11 +306,8 @@ export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiR
         setCurrentLimit(limit);
       }
     } catch (err) {
-      if (abortSignal?.aborted) {
-        return;
-      }
+      if (abortSignal?.aborted) return;
       setError(err instanceof Error ? err.message : 'Failed to fetch devices');
-      console.error('Error fetching devices:', err);
     } finally {
       if (!abortSignal?.aborted) {
         setLoading(false);
@@ -396,7 +316,6 @@ export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiR
   }, [currentPage, currentLimit]);
 
   const refetch = useCallback(async (page?: number, limit?: number) => {
-    setLoading(true);
     await fetchData(page, limit);
   }, [fetchData]);
 
@@ -420,113 +339,31 @@ export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiR
 
   return { data, pagination, loading, error, refetch, nextPage, prevPage };
 };
-export const useSensorCalibrations = createApiHook<SensorCalibration[]>('/sensor-calibrations');
 
-// Hook untuk device stats menggunakan RESTful endpoint
-export const useDeviceStats = (autoRefresh = false, interval = 5000): UseApiResult<DeviceStats> => {
-  const [data, setData] = useState<DeviceStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async (abortSignal?: AbortSignal) => {
-    setLoading(true);
-    try {
-      setError(null);
-      const result = await fetchApi<DeviceStats>('/devices/stats', abortSignal);
-      if (!abortSignal?.aborted) {
-        setData(result);
-      }
-    } catch (err) {
-      if (abortSignal?.aborted) {
-        return;
-      }
-      setError(err instanceof Error ? err.message : 'Failed to fetch device stats');
-      console.error('Error fetching device stats:', err);
-    } finally {
-      if (!abortSignal?.aborted) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  const refetch = useCallback(async () => {
-    setLoading(true);
-    await fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchData(controller.signal);
-    
-    // Auto-refresh setup
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    if (autoRefresh) {
-      intervalId = setInterval(() => {
-        if (!controller.signal.aborted) {
-          fetchData();
-        }
-      }, interval);
-    }
-
-    return () => {
-      controller.abort();
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [fetchData, autoRefresh, interval]);
-
-  return { data, loading, error, refetch };
+// Device stats with auto-refresh
+export const useDeviceStats = (autoRefresh = false, interval = 30000): UseApiResult<DeviceStats> => {
+  return useApiData<DeviceStats>('/devices/stats', autoRefresh, interval);
 };
 
-// Hook untuk device status history (dengan parameter)
+// Device status history
 export const useDeviceStatusHistory = (deviceId: number | null): UseApiResult<DeviceStatusHistory[]> => {
-  const [data, setData] = useState<DeviceStatusHistory[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async (abortSignal?: AbortSignal) => {
-    setLoading(true);
-    if (!deviceId) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setError(null);
-      const result = await fetchApi<DeviceStatusHistoryResponse>(`/devices/${deviceId}/status-history`, abortSignal);
-      if (!abortSignal?.aborted) {
-        setData(result.history); // Extract history array from response
-      }
-    } catch (err) {
-      if (abortSignal?.aborted) {
-        return;
-      }
-      setError(err instanceof Error ? err.message : 'Failed to fetch device history');
-      console.error('Error fetching device status history:', err);
-    } finally {
-      if (!abortSignal?.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [deviceId]);
-
-  const refetch = useCallback(async () => {
-    setLoading(true);
-    await fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchData(controller.signal);
-    return () => controller.abort();
-  }, [fetchData]);
-
-  return { data, loading, error, refetch };
+  const endpoint = deviceId ? `/devices/${deviceId}/status-history` : '';
+  const { data, loading, error, refetch } = useApiData<DeviceStatusHistoryResponse>(endpoint, false, 0);
+  
+  return {
+    data: data?.history || null,
+    loading: !deviceId ? false : loading,
+    error,
+    refetch
+  };
 };
 
-// Export interfaces for external use
+// Sensor calibrations
+export const useSensorCalibrations = (): UseApiResult<SensorCalibration[]> => {
+  return useApiData<SensorCalibration[]>('/sensor-calibrations');
+};
+
+// Export types
 export type { 
   SensorData, 
   Device, 
@@ -535,7 +372,5 @@ export type {
   DeviceStats, 
   SensorCalibration, 
   UseApiResult, 
-  UsePaginatedApiResult,
-  ApiPaginationResponse,
-  ApiResponse
+  UsePaginatedApiResult
 };

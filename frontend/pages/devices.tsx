@@ -134,6 +134,51 @@ function DeviceMonitoring() {
     return `${minutes}m`;
   };
 
+  // Format date to WIB timezone
+  const formatDateTimeWIB = (timestamp: string): string => {
+    try {
+      const date = new Date(timestamp);
+      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000); // Add 7 hours for WIB
+      return (
+        wibTime.toLocaleString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }) + " WIB"
+      );
+    } catch {
+      return "Invalid";
+    }
+  };
+
+  // Calculate duration since last status change
+  const getStatusDuration = (device: any): string => {
+    const now = new Date();
+    const lastSeen = new Date(device.last_seen || device.updated_at);
+    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+
+    if (diffSeconds < 0) return "0s"; // Handle future dates
+
+    const days = Math.floor(diffSeconds / 86400);
+    const hours = Math.floor((diffSeconds % 86400) / 3600);
+    const minutes = Math.floor((diffSeconds % 3600) / 60);
+    const seconds = diffSeconds % 60;
+
+    if (days > 0) {
+      return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    } else if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    } else if (minutes > 0) {
+      return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   // Custom hooks untuk data fetching
   const {
     data: devices,
@@ -158,74 +203,6 @@ function DeviceMonitoring() {
     error: historyError,
     refetch: refetchHistory,
   } = useDeviceStatusHistory(selectedDeviceId);
-
-  // Enhanced device data with uptime information
-  const [enhancedDevices, setEnhancedDevices] = useState(devices || []);
-
-  // Fetch uptime data for each device
-  useEffect(() => {
-    if (devices && devices.length > 0) {
-      const fetchUptimeData = async () => {
-        const token = localStorage.getItem("auth_token");
-        if (!token) return;
-
-        console.log("Fetching uptime data for devices:", devices.length);
-
-        const enhancedData = await Promise.all(
-          devices.map(async (device) => {
-            try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/devices/${device.id}/status-history?limit=1`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                  },
-                }
-              );
-
-              if (response.ok) {
-                const data = await response.json();
-                console.log(`Device ${device.id} (${device.name}) API response:`, {
-                  device_status: data.device_status,
-                  current_uptime_seconds: data.current_uptime_seconds,
-                  current_uptime_formatted: data.current_uptime_formatted,
-                  uptime_description: data.uptime_description
-                });
-                
-                return {
-                  ...device,
-                  current_uptime_seconds: data.current_uptime_seconds,
-                  current_uptime_formatted: data.current_uptime_formatted,
-                  device_status: data.device_status || device.status,
-                  uptime_description: data.uptime_description,
-                };
-              } else {
-                console.error(`Failed to fetch uptime for device ${device.id}:`, response.status);
-              }
-            } catch (error) {
-              console.error(
-                `Error fetching uptime for device ${device.id}:`,
-                error
-              );
-            }
-            return {
-              ...device,
-              current_uptime_seconds: null,
-              current_uptime_formatted: null,
-              device_status: device.status,
-              uptime_description: null,
-            };
-          })
-        );
-
-        console.log("Enhanced devices data:", enhancedData);
-        setEnhancedDevices(enhancedData);
-      };
-
-      fetchUptimeData();
-    }
-  }, [devices]);
 
   // Auto refresh every 30 seconds
   useEffect(() => {
@@ -409,7 +386,7 @@ function DeviceMonitoring() {
                   </p>
                 </div>
                 <div className="grid gap-4">
-                  {enhancedDevices?.map((device) => (
+                  {devices?.map((device) => (
                     <Card
                       key={device.id}
                       className={`hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 ${
@@ -444,28 +421,13 @@ function DeviceMonitoring() {
                               )}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {(() => {
-                                console.log(`Device ${device.id} display data:`, {
-                                  status: device.status,
-                                  device_status: device.device_status,
-                                  current_uptime_formatted: device.current_uptime_formatted,
-                                  current_uptime_seconds: device.current_uptime_seconds
-                                });
-                                return null;
-                              })()}
-                              {(device.device_status || device.status) === "online" ? (
+                              {device.status === "online" ? (
                                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                  Uptime: {
-                                    device.current_uptime_formatted ||
-                                    (device.current_uptime_seconds ? formatUptime(device.current_uptime_seconds) : "Calculating...")
-                                  }
+                                  Status: Online
                                 </span>
                               ) : (
                                 <span className="text-red-600 dark:text-red-400 font-medium">
-                                  Offline for: {
-                                    device.current_uptime_formatted ||
-                                    (device.current_uptime_seconds ? formatUptime(device.current_uptime_seconds) : "Calculating...")
-                                  }
+                                  Status: Offline
                                 </span>
                               )}
                             </div>
@@ -473,22 +435,23 @@ function DeviceMonitoring() {
                           <div className="text-right space-y-1">
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Created:
+                                {device.status === "online"
+                                  ? "Online for:"
+                                  : "Offline for:"}
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {new Date(
-                                  device.created_at
-                                ).toLocaleDateString()}
+                                {device.current_uptime_formatted ||
+                                  getStatusDuration(device)}
                               </span>
                             </div>
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                Updated:
+                                Last seen:
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {new Date(
-                                  device.updated_at
-                                ).toLocaleDateString()}
+                                {formatDateTimeWIB(
+                                  device.last_seen || device.updated_at
+                                )}
                               </span>
                             </div>
                           </div>
@@ -497,8 +460,8 @@ function DeviceMonitoring() {
                     </Card>
                   ))}
 
-                  {!enhancedDevices ||
-                    (enhancedDevices.length === 0 && (
+                  {!devices ||
+                    (devices.length === 0 && (
                       <div className="text-center text-gray-500 dark:text-gray-400 py-12">
                         <MdDeviceUnknown className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -516,7 +479,7 @@ function DeviceMonitoring() {
             <TabsContent value="history" className="space-y-6">
               <DeviceHistoryPanel
                 selectedDeviceId={selectedDeviceId}
-                devices={enhancedDevices ?? null}
+                devices={devices ?? null}
                 statusHistory={statusHistory ?? null}
                 loading={historyLoading}
                 error={historyError}
