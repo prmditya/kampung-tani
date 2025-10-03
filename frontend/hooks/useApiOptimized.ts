@@ -23,6 +23,11 @@ interface Device {
   user_id: number;
   created_at: string;
   updated_at: string;
+  // Enhanced properties from API
+  current_uptime_seconds?: number | null;
+  current_uptime_formatted?: string;
+  device_status?: string;
+  uptime_description?: string;
 }
 
 interface DeviceStatusHistory {

@@ -212,23 +212,50 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
               <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">
                 📊 Current Device Status
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {renderStatusIndicator(selectedDevice.status)}
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {selectedDevice.status === "online"
-                      ? "🟢 Currently Online"
-                      : selectedDevice.status === "offline"
-                      ? "🔴 Currently Offline"
-                      : "🟡 Under Maintenance"}
-                  </span>
+              <div className="flex flex-col space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {renderStatusIndicator(selectedDevice.device_status || selectedDevice.status)}
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {(selectedDevice.device_status || selectedDevice.status) === "online"
+                        ? "🟢 Currently Online"
+                        : (selectedDevice.device_status || selectedDevice.status) === "offline"
+                        ? "🔴 Currently Offline"
+                        : "🟡 Under Maintenance"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-white dark:bg-slate-800 px-2 py-1 rounded-md border">
+                    Last seen:{" "}
+                    {new Date(
+                      selectedDevice.last_seen || selectedDevice.updated_at
+                    ).toLocaleString()}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground bg-white dark:bg-slate-800 px-2 py-1 rounded-md border">
-                  Last seen:{" "}
-                  {new Date(
-                    selectedDevice.last_seen || selectedDevice.updated_at
-                  ).toLocaleString()}
-                </div>
+                {selectedDevice.current_uptime_formatted && (
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {(selectedDevice.device_status || selectedDevice.status) === "online" ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            ⏱️ System Uptime:
+                          </span>
+                        ) : (
+                          <span className="text-red-600 dark:text-red-400">
+                            ⏱️ Offline Duration:
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {selectedDevice.current_uptime_formatted}
+                    </div>
+                  </div>
+                )}
+                {selectedDevice.uptime_description && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-slate-700 p-2 rounded border-l-2 border-blue-400">
+                    ℹ️ {selectedDevice.uptime_description}
+                  </div>
+                )}
               </div>
             </div>
           )}

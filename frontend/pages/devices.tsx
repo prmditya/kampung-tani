@@ -159,6 +159,52 @@ function DeviceMonitoring() {
     refetch: refetchHistory,
   } = useDeviceStatusHistory(selectedDeviceId);
 
+  // Enhanced device data with uptime information
+  const [enhancedDevices, setEnhancedDevices] = useState(devices || []);
+
+  // Fetch uptime data for each device
+  useEffect(() => {
+    if (devices && devices.length > 0) {
+      const fetchUptimeData = async () => {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+
+        const enhancedData = await Promise.all(
+          devices.map(async (device) => {
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/devices/${device.id}/status-history?limit=1`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                return {
+                  ...device,
+                  current_uptime_seconds: data.current_uptime_seconds,
+                  current_uptime_formatted: data.current_uptime_formatted,
+                  device_status: data.device_status || device.status,
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching uptime for device ${device.id}:`, error);
+            }
+            return device;
+          })
+        );
+        
+        setEnhancedDevices(enhancedData);
+      };
+
+      fetchUptimeData();
+    }
+  }, [devices]);
+
   // Auto refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -341,7 +387,7 @@ function DeviceMonitoring() {
                   </p>
                 </div>
                 <div className="grid gap-4">
-                  {devices?.map((device) => (
+                  {enhancedDevices?.map((device) => (
                     <Card
                       key={device.id}
                       className={`hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 ${
@@ -376,10 +422,15 @@ function DeviceMonitoring() {
                               )}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Last seen:{" "}
-                              {device.last_seen
-                                ? new Date(device.last_seen).toLocaleString()
-                                : "Never"}
+                              {device.status === "online" ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                  🟢 Uptime: {device.current_uptime_formatted || "Calculating..."}
+                                </span>
+                              ) : (
+                                <span className="text-red-600 dark:text-red-400 font-medium">
+                                  🔴 Offline for: {device.current_uptime_formatted || "Unknown"}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right space-y-1">
@@ -409,8 +460,8 @@ function DeviceMonitoring() {
                     </Card>
                   ))}
 
-                  {!devices ||
-                    (devices.length === 0 && (
+                  {!enhancedDevices ||
+                    (enhancedDevices.length === 0 && (
                       <div className="text-center text-gray-500 dark:text-gray-400 py-12">
                         <MdDeviceUnknown className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -428,7 +479,7 @@ function DeviceMonitoring() {
             <TabsContent value="history" className="space-y-6">
               <DeviceHistoryPanel
                 selectedDeviceId={selectedDeviceId}
-                devices={devices ?? null}
+                devices={enhancedDevices ?? null}
                 statusHistory={statusHistory ?? null}
                 loading={historyLoading}
                 error={historyError}

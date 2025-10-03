@@ -179,37 +179,85 @@ class DeviceStatusService:
     
     @classmethod
     def get_device_current_uptime(cls, device_id: int) -> Optional[int]:
-        """Get current uptime in seconds for an online device"""
+        """Get current uptime in seconds for a device"""
         try:
             with get_db_cursor() as cursor:
+                # Check device current status
                 cursor.execute(
-                    """
-                    SELECT status, last_seen, 
-                           CASE 
-                               WHEN status = 'online' THEN 
-                                   EXTRACT(EPOCH FROM (NOW() - (
-                                       SELECT COALESCE(
-                                           (SELECT created_at 
-                                            FROM device_status_history 
-                                            WHERE device_id = %s AND status = 'online' 
-                                            ORDER BY created_at DESC 
-                                            LIMIT 1),
-                                           (SELECT created_at FROM devices WHERE id = %s)
-                                       )
-                                   )))::INTEGER
-                               ELSE NULL
-                           END as current_uptime_seconds
-                    FROM devices 
-                    WHERE id = %s
-                    """,
-                    (device_id, device_id, device_id)
+                    "SELECT status, last_seen FROM devices WHERE id = %s",
+                    (device_id,)
                 )
                 
-                result = cursor.fetchone()
-                if result and result['status'] == 'online':
-                    return result['current_uptime_seconds']
+                device = cursor.fetchone()
+                if not device:
+                    return None
                 
-                return None
+                if device['status'] == 'online':
+                    # For online devices, get uptime from #SYS_UPTIME sensor data
+                    cursor.execute(
+                        """
+                        SELECT value 
+                        FROM sensor_data 
+                        WHERE device_id = %s 
+                        AND sensor_type = '#SYS_UPTIME'
+                        ORDER BY timestamp DESC 
+                        LIMIT 1
+                        """,
+                        (device_id,)
+                    )
+                    
+                    uptime_data = cursor.fetchone()
+                    if uptime_data and uptime_data['value'] is not None:
+                        # Convert to integer seconds if it's not already
+                        try:
+                            return int(float(uptime_data['value']))
+                        except (ValueError, TypeError):
+                            return None
+                    
+                    # Fallback: calculate from last online status if no #SYS_UPTIME data
+                    cursor.execute(
+                        """
+                        SELECT created_at 
+                        FROM device_status_history 
+                        WHERE device_id = %s AND status = 'online' 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                        """,
+                        (device_id,)
+                    )
+                    
+                    last_online = cursor.fetchone()
+                    if last_online:
+                        cursor.execute(
+                            "SELECT EXTRACT(EPOCH FROM (NOW() - %s))::INTEGER as uptime_seconds",
+                            (last_online['created_at'],)
+                        )
+                        result = cursor.fetchone()
+                        return result['uptime_seconds'] if result else 0
+                    
+                    return 0
+                    
+                else:
+                    # For offline devices, calculate downtime from last online time
+                    cursor.execute(
+                        """
+                        SELECT last_seen 
+                        FROM devices 
+                        WHERE id = %s AND last_seen IS NOT NULL
+                        """,
+                        (device_id,)
+                    )
+                    
+                    last_seen = cursor.fetchone()
+                    if last_seen and last_seen['last_seen']:
+                        cursor.execute(
+                            "SELECT EXTRACT(EPOCH FROM (NOW() - %s))::INTEGER as offline_seconds",
+                            (last_seen['last_seen'],)
+                        )
+                        result = cursor.fetchone()
+                        return result['offline_seconds'] if result else None
+                    
+                    return None
                 
         except Exception as e:
             logger.error(f"Error getting current uptime for device {device_id}: {e}")

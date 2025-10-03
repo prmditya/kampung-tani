@@ -386,7 +386,7 @@ async def get_device_status_history(
     with get_db_cursor() as cursor:
         # Verify device belongs to user
         cursor.execute(
-            "SELECT id, name FROM devices WHERE id = %s AND user_id = %s",
+            "SELECT id, name, status FROM devices WHERE id = %s AND user_id = %s",
             (device_id, current_user["id"])
         )
         
@@ -400,14 +400,19 @@ async def get_device_status_history(
         # Get status history
         history = DeviceStatusService.get_device_status_history(device_id, limit)
         
-        # Get current uptime if device is online
-        current_uptime = DeviceStatusService.get_device_current_uptime(device_id)
+        # Get current uptime/downtime based on device status
+        current_time_value = DeviceStatusService.get_device_current_uptime(device_id)
+        
+        # Check device status to determine if it's uptime or downtime
+        device_status = device["status"] if "status" in device else "unknown"
         
         return {
             "device_id": device_id,
             "device_name": device["name"],
-            "current_uptime_seconds": current_uptime,
-            "current_uptime_formatted": DeviceStatusService.format_uptime(current_uptime),
+            "device_status": device_status,
+            "current_uptime_seconds": current_time_value,
+            "current_uptime_formatted": DeviceStatusService.format_uptime(current_time_value),
+            "uptime_description": "System uptime from #SYS_UPTIME sensor" if device_status == "online" else "Time since last seen (offline duration)",
             "history": [
                 {
                     **record,
