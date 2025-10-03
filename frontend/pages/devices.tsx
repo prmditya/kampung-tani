@@ -166,8 +166,10 @@ function DeviceMonitoring() {
   useEffect(() => {
     if (devices && devices.length > 0) {
       const fetchUptimeData = async () => {
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem("auth_token");
         if (!token) return;
+
+        console.log("Fetching uptime data for devices:", devices.length);
 
         const enhancedData = await Promise.all(
           devices.map(async (device) => {
@@ -176,28 +178,48 @@ function DeviceMonitoring() {
                 `${process.env.NEXT_PUBLIC_API_URL}/api/devices/${device.id}/status-history?limit=1`,
                 {
                   headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
                   },
                 }
               );
-              
+
               if (response.ok) {
                 const data = await response.json();
+                console.log(`Device ${device.id} (${device.name}) API response:`, {
+                  device_status: data.device_status,
+                  current_uptime_seconds: data.current_uptime_seconds,
+                  current_uptime_formatted: data.current_uptime_formatted,
+                  uptime_description: data.uptime_description
+                });
+                
                 return {
                   ...device,
                   current_uptime_seconds: data.current_uptime_seconds,
                   current_uptime_formatted: data.current_uptime_formatted,
                   device_status: data.device_status || device.status,
+                  uptime_description: data.uptime_description,
                 };
+              } else {
+                console.error(`Failed to fetch uptime for device ${device.id}:`, response.status);
               }
             } catch (error) {
-              console.error(`Error fetching uptime for device ${device.id}:`, error);
+              console.error(
+                `Error fetching uptime for device ${device.id}:`,
+                error
+              );
             }
-            return device;
+            return {
+              ...device,
+              current_uptime_seconds: null,
+              current_uptime_formatted: null,
+              device_status: device.status,
+              uptime_description: null,
+            };
           })
         );
-        
+
+        console.log("Enhanced devices data:", enhancedData);
         setEnhancedDevices(enhancedData);
       };
 
@@ -422,13 +444,28 @@ function DeviceMonitoring() {
                               )}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {device.status === "online" ? (
+                              {(() => {
+                                console.log(`Device ${device.id} display data:`, {
+                                  status: device.status,
+                                  device_status: device.device_status,
+                                  current_uptime_formatted: device.current_uptime_formatted,
+                                  current_uptime_seconds: device.current_uptime_seconds
+                                });
+                                return null;
+                              })()}
+                              {(device.device_status || device.status) === "online" ? (
                                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                  🟢 Uptime: {device.current_uptime_formatted || "Calculating..."}
+                                  Uptime: {
+                                    device.current_uptime_formatted ||
+                                    (device.current_uptime_seconds ? formatUptime(device.current_uptime_seconds) : "Calculating...")
+                                  }
                                 </span>
                               ) : (
                                 <span className="text-red-600 dark:text-red-400 font-medium">
-                                  🔴 Offline for: {device.current_uptime_formatted || "Unknown"}
+                                  Offline for: {
+                                    device.current_uptime_formatted ||
+                                    (device.current_uptime_seconds ? formatUptime(device.current_uptime_seconds) : "Calculating...")
+                                  }
                                 </span>
                               )}
                             </div>

@@ -348,7 +348,78 @@ export const useSensorData = (autoRefresh = false, interval = 5000, page = 1, li
 };
 
 // Hooks menggunakan factory untuk consistency - Updated untuk RESTful API
-export const useDevices = createPaginatedApiHook<Device>('/devices/');
+export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiResult<Device> => {
+  const [data, setData] = useState<Device[] | null>(null);
+  const [pagination, setPagination] = useState<{
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [currentLimit, setCurrentLimit] = useState(initialLimit);
+
+  const fetchData = useCallback(async (page = currentPage, limit = currentLimit, abortSignal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      setError(null);
+      const endpoint = `/devices?page=${page}&size=${limit}`;
+      console.log('Fetching devices from:', endpoint);
+      
+      const result = await fetchApi<{items: Device[], total: number, page: number, size: number, pages: number}>(endpoint, abortSignal);
+      console.log('Devices API response:', result);
+      
+      if (!abortSignal?.aborted) {
+        setData(result.items);
+        setPagination({
+          page: result.page,
+          limit: result.size,
+          total: result.total,
+          pages: result.pages
+        });
+        setCurrentPage(page);
+        setCurrentLimit(limit);
+      }
+    } catch (err) {
+      if (abortSignal?.aborted) {
+        return;
+      }
+      setError(err instanceof Error ? err.message : 'Failed to fetch devices');
+      console.error('Error fetching devices:', err);
+    } finally {
+      if (!abortSignal?.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [currentPage, currentLimit]);
+
+  const refetch = useCallback(async (page?: number, limit?: number) => {
+    setLoading(true);
+    await fetchData(page, limit);
+  }, [fetchData]);
+
+  const nextPage = useCallback(async () => {
+    if (pagination && currentPage < pagination.pages) {
+      await refetch(currentPage + 1);
+    }
+  }, [pagination, currentPage, refetch]);
+
+  const prevPage = useCallback(async () => {
+    if (currentPage > 1) {
+      await refetch(currentPage - 1);
+    }
+  }, [currentPage, refetch]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchData(initialPage, initialLimit, controller.signal);
+    return () => controller.abort();
+  }, []);
+
+  return { data, pagination, loading, error, refetch, nextPage, prevPage };
+};
 export const useSensorCalibrations = createApiHook<SensorCalibration[]>('/sensor-calibrations');
 
 // Hook untuk device stats menggunakan RESTful endpoint

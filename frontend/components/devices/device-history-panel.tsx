@@ -182,10 +182,10 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                     <div>
                       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {entry.status === "online"
-                          ? "🟢 Came Online"
+                          ? "Came Online"
                           : entry.status === "offline"
-                          ? "🔴 Went Offline"
-                          : "🟡 Maintenance Mode"}
+                          ? "Went Offline"
+                          : "Maintenance Mode"}
                       </div>
                       {entry.status === "offline" &&
                         entry.uptime_seconds !== null && (
@@ -210,18 +210,22 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
           {selectedDevice && (
             <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-gray-200 dark:border-gray-600">
               <div className="text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100">
-                📊 Current Device Status
+                Current Device Status
               </div>
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {renderStatusIndicator(selectedDevice.device_status || selectedDevice.status)}
+                    {renderStatusIndicator(
+                      selectedDevice.device_status || selectedDevice.status
+                    )}
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {(selectedDevice.device_status || selectedDevice.status) === "online"
-                        ? "🟢 Currently Online"
-                        : (selectedDevice.device_status || selectedDevice.status) === "offline"
-                        ? "🔴 Currently Offline"
-                        : "🟡 Under Maintenance"}
+                      {(selectedDevice.device_status ||
+                        selectedDevice.status) === "online"
+                        ? "Currently Online"
+                        : (selectedDevice.device_status ||
+                            selectedDevice.status) === "offline"
+                        ? "Currently Offline"
+                        : "Under Maintenance"}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground bg-white dark:bg-slate-800 px-2 py-1 rounded-md border">
@@ -235,13 +239,14 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                   <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-600">
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {(selectedDevice.device_status || selectedDevice.status) === "online" ? (
+                        {(selectedDevice.device_status ||
+                          selectedDevice.status) === "online" ? (
                           <span className="text-emerald-600 dark:text-emerald-400">
-                            ⏱️ System Uptime:
+                            System Uptime:
                           </span>
                         ) : (
                           <span className="text-red-600 dark:text-red-400">
-                            ⏱️ Offline Duration:
+                            Offline Duration:
                           </span>
                         )}
                       </span>
@@ -253,7 +258,7 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                 )}
                 {selectedDevice.uptime_description && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-slate-700 p-2 rounded border-l-2 border-blue-400">
-                    ℹ️ {selectedDevice.uptime_description}
+                    {selectedDevice.uptime_description}
                   </div>
                 )}
               </div>

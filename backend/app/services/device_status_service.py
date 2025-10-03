@@ -264,10 +264,10 @@ class DeviceStatusService:
             return None
     
     @classmethod
-    def format_uptime(cls, seconds: Optional[int]) -> str:
+    def format_uptime(cls, seconds: Optional[int]) -> Optional[str]:
         """Format uptime seconds into human readable string"""
         if seconds is None:
-            return "Unknown"
+            return None
         
         if seconds < 60:
             return f"{seconds}s"
