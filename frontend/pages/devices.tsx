@@ -204,11 +204,68 @@ function DeviceMonitoring() {
     refetch: refetchHistory,
   } = useDeviceStatusHistory(selectedDeviceId);
 
+  // State for device uptimes
+  const [deviceUptimes, setDeviceUptimes] = useState<Map<number, string>>(
+    new Map()
+  );
+
+  // Fetch uptime for each device from status-history endpoint
+  useEffect(() => {
+    if (devices && devices.length > 0) {
+      const fetchUptimes = async () => {
+        const token = localStorage.getItem("auth_token");
+        if (!token) return;
+
+        const uptimePromises = devices.map(async (device) => {
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/devices/${device.id}/status-history?limit=1`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                deviceId: device.id,
+                uptime:
+                  data.current_uptime_formatted || getStatusDuration(device),
+              };
+            }
+          } catch (error) {
+            console.error(
+              `Error fetching uptime for device ${device.id}:`,
+              error
+            );
+          }
+          return {
+            deviceId: device.id,
+            uptime: getStatusDuration(device),
+          };
+        });
+
+        const results = await Promise.all(uptimePromises);
+        const newUptimes = new Map();
+        results.forEach((result) => {
+          newUptimes.set(result.deviceId, result.uptime);
+        });
+        setDeviceUptimes(newUptimes);
+      };
+
+      fetchUptimes();
+    }
+  }, [devices]);
+
   // Auto refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       refetchDevices();
       refetchStats();
+      // Trigger uptime refresh by updating devices dependency
     }, 30000);
 
     return () => clearInterval(interval);
@@ -440,7 +497,7 @@ function DeviceMonitoring() {
                                   : "Offline for:"}
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {device.current_uptime_formatted ||
+                                {deviceUptimes.get(device.id) ||
                                   getStatusDuration(device)}
                               </span>
                             </div>
