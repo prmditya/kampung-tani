@@ -156,26 +156,32 @@ function DeviceMonitoring() {
 
   // Calculate duration since last status change
   const getStatusDuration = (device: any): string => {
-    const now = new Date();
-    const lastSeen = new Date(device.last_seen || device.updated_at);
-    const diffMs = now.getTime() - lastSeen.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
+    try {
+      const now = new Date();
+      const lastSeenUTC = new Date(device.last_seen || device.updated_at);
+      const lastSeenWIB = new Date(lastSeenUTC.getTime() + 7 * 60 * 60 * 1000);
 
-    if (diffSeconds < 0) return "0s"; // Handle future dates
+      const diffMs = now.getTime() - lastSeenWIB.getTime();
+      const diffSeconds = Math.floor(diffMs / 1000);
 
-    const days = Math.floor(diffSeconds / 86400);
-    const hours = Math.floor((diffSeconds % 86400) / 3600);
-    const minutes = Math.floor((diffSeconds % 3600) / 60);
-    const seconds = diffSeconds % 60;
+      if (diffSeconds < 0) return "0s";
 
-    if (days > 0) {
-      return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-    } else if (hours > 0) {
-      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    } else if (minutes > 0) {
-      return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-    } else {
-      return `${seconds}s`;
+      const days = Math.floor(diffSeconds / 86400);
+      const hours = Math.floor((diffSeconds % 86400) / 3600);
+      const minutes = Math.floor((diffSeconds % 3600) / 60);
+      const seconds = diffSeconds % 60;
+
+      if (days > 0) {
+        return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+      } else if (hours > 0) {
+        return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+      } else if (minutes > 0) {
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+      } else {
+        return `${seconds}s`;
+      }
+    } catch (error) {
+      return "Invalid";
     }
   };
 
@@ -497,8 +503,10 @@ function DeviceMonitoring() {
                                   : "Offline for:"}
                               </span>
                               <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                                {deviceUptimes.get(device.id) ||
-                                  getStatusDuration(device)}
+                                {device.status === "online"
+                                  ? deviceUptimes.get(device.id) ||
+                                    "Calculating..."
+                                  : getStatusDuration(device)}
                               </span>
                             </div>
                             <div className="text-sm">
