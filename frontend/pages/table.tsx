@@ -33,20 +33,21 @@ import { ErrorMessage } from "@/components/ui/error-message";
 
 function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50); // Back to reasonable API limit
+  const [itemsPerPage] = useState(10); // Show 10 grouped records per page
   const [searchTerm, setSearchTerm] = useState("");
   const [deviceFilter, setDeviceFilter] = useState("all");
 
-  // Use proper server-side pagination
+  // Fetch more raw data from API to ensure enough data for proper grouping
+  // We'll handle pagination client-side after grouping
   const {
     data: sensorData,
-    pagination,
+    pagination: apiPagination,
     loading,
     error,
     refetch,
     nextPage,
     prevPage,
-  } = useSensorData(false, 30000, currentPage, itemsPerPage);
+  } = useSensorData(false, 30000, 1, 500); // Fetch 500 records for better grouping
 
   // Get device statistics for actual active device count
   const { data: deviceStats } = useDeviceStats();
@@ -55,13 +56,29 @@ function HistoricalData() {
   const groupSensorData = (sensors: typeof sensorData) => {
     if (!sensors) return [];
 
+    console.log("Grouping Debug:");
+    console.log("Total sensors:", sensors.length);
+
+    // Sample first few sensors to see data structure
+    sensors.slice(0, 5).forEach((sensor, index) => {
+      console.log(`Sensor ${index}:`, {
+        device_id: sensor.device_id,
+        timestamp: sensor.timestamp,
+        sensor_type: sensor.sensor_type,
+        metadata: sensor.metadata,
+      });
+    });
+
     const grouped = new Map();
 
     sensors.forEach((sensor) => {
       const deviceName =
         sensor.metadata?.device || `Device ${sensor.device_id}`;
-      // Group by device and rounded timestamp (to group readings from same time)
-      const timeKey = new Date(sensor.timestamp).toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+
+      // Group by device and exact timestamp (without rounding)
+      // This will show individual sensor readings
+      const date = new Date(sensor.timestamp);
+      const timeKey = date.toISOString().slice(0, 19); // YYYY-MM-DDTHH:mm:ss
       const key = `${deviceName}-${timeKey}`;
 
       if (!grouped.has(key)) {
@@ -81,38 +98,46 @@ function HistoricalData() {
       };
     });
 
-    return Array.from(grouped.values()).sort(
+    const result = Array.from(grouped.values()).sort(
       (a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
+
+    console.log("Grouped result:", result.length, "groups");
+    console.log("First 3 group keys:", Array.from(grouped.keys()).slice(0, 3));
+    console.log(
+      "Unique devices found:",
+      Array.from(
+        new Set(Array.from(grouped.values()).map((g) => g.device_name))
+      )
+    );
+
+    return result;
   };
 
-  // Filter and search data (now done client-side for current page)
-  const filteredData =
-    sensorData?.filter((item) => {
-      const deviceName = item.metadata?.device || `Device ${item.device_id}`;
-      const matchesSearch =
-        deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sensor_type.toLowerCase().includes(searchTerm.toLowerCase());
+  // Group sensor data by device and timestamp first
+  const groupedData = groupSensorData(sensorData);
 
-      const matchesDevice =
-        deviceFilter === "all" || deviceName === deviceFilter;
+  // Then filter and search the grouped data
+  const filteredGroupedData = groupedData.filter((item) => {
+    const matchesSearch = item.device_name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesDevice =
+      deviceFilter === "all" || item.device_name === deviceFilter;
+    return matchesSearch && matchesDevice;
+  });
 
-      return matchesSearch && matchesDevice;
-    }) || [];
+  // Client-side pagination for grouped data
+  const totalGroupedItems = filteredGroupedData.length;
+  const totalPages = Math.ceil(totalGroupedItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalGroupedItems);
+  const currentData = filteredGroupedData.slice(startIndex, endIndex);
 
-  // Group sensor data by device and timestamp
-  const groupedData = groupSensorData(filteredData);
-
-  // For display, we'll show the grouped data but use API pagination
-  // This means some pages might have fewer groups than others
-  const currentData = groupedData;
-  
-  // Use pagination data from API
-  const totalItems = pagination?.total || 0;
-  const totalPages = pagination?.pages || 1;
-  const startIndex = ((pagination?.page || 1) - 1) * (pagination?.limit || itemsPerPage);
-  const endIndex = Math.min(startIndex + (pagination?.limit || itemsPerPage), totalItems);
+  // Pagination info for display
+  const displayStartIndex = startIndex + 1;
+  const displayEndIndex = endIndex;
 
   // Get unique devices for filter from current page data
   const uniqueDevices = Array.from(
@@ -124,13 +149,13 @@ function HistoricalData() {
   );
 
   const handleRefresh = async () => {
-    await refetch(1, itemsPerPage);
+    await refetch(1, 500); // Fetch more data
     setCurrentPage(1);
   };
 
-  const handlePageChange = async (newPage: number) => {
+  const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    await refetch(newPage, itemsPerPage);
+    // No API call needed, just update local state
   };
 
   const formatValue = (
@@ -145,13 +170,20 @@ function HistoricalData() {
   const formatDateTime = (timestamp: string | null): string => {
     if (!timestamp) return "---";
     try {
-      return new Date(timestamp).toLocaleString("id-ID", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      // Convert to WIB (+7 GMT) explicitly
+      const date = new Date(timestamp);
+      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000); // Add 7 hours for WIB
+
+      return (
+        wibTime.toLocaleString("id-ID", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }) + " WIB"
+      );
     } catch {
       return "Invalid";
     }
@@ -330,10 +362,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  {totalItems || 0}
+                  {apiPagination?.total || sensorData?.length || 0}
                 </div>
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Total Records
+                  Total Raw Records
                 </p>
               </CardContent>
             </Card>
@@ -360,10 +392,10 @@ function HistoricalData() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                  {currentData.length}
+                  {totalGroupedItems}
                 </div>
                 <p className="text-sm text-purple-600 dark:text-purple-400">
-                  Current Page
+                  Grouped Records
                 </p>
               </CardContent>
             </Card>
@@ -437,8 +469,8 @@ function HistoricalData() {
                 Sensor Data Table
               </CardTitle>
               <CardDescription>
-                Showing {startIndex + 1}-{endIndex} of{" "}
-                {totalItems} records (Page {pagination?.page || 1} of{" "}
+                Showing {displayStartIndex}-{displayEndIndex} of{" "}
+                {totalGroupedItems} grouped records (Page {currentPage} of{" "}
                 {totalPages})
               </CardDescription>
             </CardHeader>
@@ -579,35 +611,35 @@ function HistoricalData() {
                 )}
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6 pt-4 p-6 border-t">
-                  <div className="text-sm text-gray-600">
-                    Page {pagination?.page || 1} of {totalPages} ({totalItems}{" "}
-                    total records)
-                  </div>
+              {/* Pagination - Always show info, buttons only when needed */}
+              <div className="flex items-center justify-between mt-6 pt-4 p-6 border-t">
+                <div className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages} ({totalGroupedItems}{" "}
+                  grouped records)
+                </div>
+                {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(1)}
-                      disabled={(pagination?.page || 1) === 1 || loading}
+                      disabled={currentPage === 1 || loading}
                     >
                       <MdFirstPage className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange((pagination?.page || 1) - 1)}
-                      disabled={(pagination?.page || 1) === 1 || loading}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || loading}
                     >
                       <MdNavigateBefore className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePageChange((pagination?.page || 1) + 1)}
-                      disabled={(pagination?.page || 1) === totalPages || loading}
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages || loading}
                     >
                       <MdNavigateNext className="h-4 w-4" />
                     </Button>
@@ -615,13 +647,13 @@ function HistoricalData() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(totalPages)}
-                      disabled={(pagination?.page || 1) === totalPages || loading}
+                      disabled={currentPage === totalPages || loading}
                     >
                       <MdLastPage className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

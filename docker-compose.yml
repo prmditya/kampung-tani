@@ -16,9 +16,11 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-      - CHOKIDAR_USEPOLLING=${HOT_RELOAD}
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
       - NODE_ENV=${NODE_ENV}
     command: "npm run dev"
 
