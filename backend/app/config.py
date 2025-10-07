@@ -1,52 +1,69 @@
 """
-Configuration module for Kampung Tani IoT API
+FastAPI Core Configuration
+Modern, environment-based configuration management
 """
-import os
-from datetime import timezone, timedelta
 
-class Config:
-    """Base configuration class"""
+from typing import Optional
+import os
+from functools import lru_cache
+
+
+class Settings:
+    """Application settings with environment variable support"""
+    
+    # Application Settings
+    APP_NAME: str = "Kampung Tani IoT API"
+    VERSION: str = "3.0.0"
+    DEBUG: bool = False
     
     # Database Configuration
-    DB_HOST = os.environ.get('DB_HOST', 'db')
-    DB_PORT = os.environ.get('DB_PORT', '5432')
-    DB_NAME = os.environ.get('DB_NAME', 'kampungtani')
-    DB_USER = os.environ.get('DB_USER', 'kampungtani')
-    DB_PASS = os.environ.get('DB_PASS', 'kampungtani')
+    DATABASE_URL: Optional[str] = None
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_NAME: str = "kampung_tani"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
     
-    # Timezone Configuration
-    WIB_TIMEZONE = timezone(timedelta(hours=7))
+    # JWT Configuration
+    JWT_SECRET_KEY: str = "your-super-secret-jwt-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = 168  # 7 days
     
-    # Status Thresholds
-    OFFLINE_THRESHOLD_MINUTES = 5
-    RESTART_THRESHOLD_MINUTES = 1
+    # MQTT Configuration
+    MQTT_BROKER: str = "localhost"
+    MQTT_PORT: int = 1883
+    MQTT_USERNAME: Optional[str] = None
+    MQTT_PASSWORD: Optional[str] = None
+    MQTT_TOPICS: list = ["sensors/+/data", "devices/+/status"]
+    
+    # CORS Configuration
+    CORS_ORIGINS: list = ["*"]  # In production, specify exact origins
     
     # API Configuration
-    API_PORT = int(os.environ.get('API_PORT', 5000))
-    API_HOST = os.environ.get('API_HOST', '0.0.0.0')
-    FLASK_DEBUG = os.environ.get('FLASK_DEBUG', '1') == '1'
+    API_PREFIX: str = "/api"
+    DOCS_URL: str = "/api/docs"
+    REDOC_URL: str = "/api/redoc"
     
-    # Pagination limits
-    DEFAULT_PAGE_SIZE = 50
+    def __init__(self):
+        # Load from environment variables
+        self.DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+        self.DB_HOST = os.getenv("DB_HOST", self.DB_HOST)
+        self.DB_PORT = int(os.getenv("DB_PORT", self.DB_PORT))
+        self.DB_NAME = os.getenv("DB_NAME", self.DB_NAME)
+        self.DB_USER = os.getenv("DB_USER", self.DB_USER)
+        self.DB_PASSWORD = os.getenv("DB_PASSWORD", self.DB_PASSWORD)
+        self.JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", self.JWT_SECRET_KEY)
+    
+    @property
+    def database_url(self) -> str:
+        """Construct database URL from components"""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance"""
+    return Settings()
     MAX_PAGE_SIZE = 200
-
-class DevelopmentConfig(Config):
-    """Development configuration"""
-    DEBUG = True
-
-class ProductionConfig(Config):
-    """Production configuration"""
-    DEBUG = False
-
-class TestingConfig(Config):
-    """Testing configuration"""
-    TESTING = True
-    DEBUG = True
-
-# Config mapping
-config = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-    'default': DevelopmentConfig
-}

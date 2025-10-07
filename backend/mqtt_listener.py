@@ -1,468 +1,375 @@
-import os
+#!/usr/bin/env python3
+"""
+MQTT Listener for Kampung Tani IoT System
+Subscribes to MQTT topics and saves sensor data to database
+"""
+
 import json
-import psycopg2
-import paho.mqtt.client as mqtt
-import threading
+import logging
 import time
-from datetime import datetime, timedelta, timezone
+import threading
+from typing import Dict, Any
+import paho.mqtt.client as mqtt
+from app.core.database import get_db_cursor
+from app.core.config import get_settings
+from app.services.device_status_service import DeviceStatusService
+import signal
+import sys
+from dotenv import load_dotenv
 
-# Environment configuration
-DB_HOST = os.environ.get('DB_HOST', 'db')
-DB_PORT = os.environ.get('DB_PORT', '5432')
-DB_NAME = os.environ.get('DB_NAME', 'kampungtani')
-DB_USER = os.environ.get('DB_USER', 'kampungtani')
-DB_PASS = os.environ.get('DB_PASS', 'kampungtani')
-MQTT_HOST = os.environ.get('MQTT_HOST', 'host.docker.internal')
-MQTT_PORT = int(os.environ.get('MQTT_PORT', 1883))
-MQTT_TOPIC = os.environ.get('MQTT_TOPIC', 'sensor/ecu1051/data')
-MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'kampungtani_listener')
-LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+# Get settings from configuration
+settings = get_settings()
 
-# Indonesia Timezone (WIB = UTC+7)
-WIB_TIMEZONE = timezone(timedelta(hours=7))
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
-def get_wib_now():
-    """Get current time in WIB (UTC+7)"""
-    return datetime.now(WIB_TIMEZONE)
+# MQTT Configuration from settings
+MQTT_BROKER = settings.MQTT_BROKER
+MQTT_PORT = settings.MQTT_PORT
+MQTT_KEEPALIVE = settings.MQTT_KEEPALIVE
 
-def map_baud_rate(baud_code):
-    """Convert baud rate code to actual baud rate value"""
-    baud_rate_map = {
-        0: 2400,
-        1: 4800,
-        2: 9600
-    }
-    return baud_rate_map.get(baud_code, 9600)  # Default to 9600 if unknown
+# MQTT Topics to subscribe to
+MQTT_TOPICS = [
+    ("sensors/+/data", 0),  # sensors/{device_id}/data format
+    ("sensor/+/data", 0),  # sensor/{device_name}/data format (for SEM225)
+]
 
-def parse_payload(payload):
-    # Mapping tag ke sensor type untuk schema baru
-    tag_map = {
-        'SEM225:Moisture': 'moisture',
-        'SEM225:Temperature': 'temperature', 
-        'SEM225:Conductivity': 'conductivity',
-        'SEM225:PH': 'ph',
-        'SEM225:Nitrogen': 'nitrogen',
-        'SEM225:Phosphorus': 'phosphorus',
-        'SEM225:Potassium': 'potassium',
-        'SEM225:Salinity': 'salinity',
-        'SEM225:TDS': 'tds',
-    }
-    
-    # Mapping untuk calibration values
-    calibration_map = {
-        'SEM225:Temperature_Calibration_Value': 'temperature_cal',
-        'SEM225:Water_Content_Calibration_Value': 'moisture_cal',
-        'SEM225:Conductivity_Calibration_Value': 'conductivity_cal',
-        'SEM225:PH_Calibration_Value': 'ph_cal',
-        'SEM225:Nitrogen_Content_Calibration_Value': 'nitrogen_cal',
-        'SEM225:Phosphorus_Content_Calibration_Value': 'phosphorus_cal',
-        'SEM225:Potassium_Content_Calibration_Value': 'potassium_cal',
-    }
-    
-    measurements = []
-    calibrations = []
-    device_address = None
-    device_baud_rate = None
-    uptime_seconds = None
-    device_name = None
-    ts = None
-    
-    # Parse payload berdasarkan format baru
-    if 'deviceName' in payload and 'tags' in payload:
-        # Format: {"deviceName": "ECU-1051-01", "tags": [{"name": "SEM225:Moisture", "value": 45.5}]}
-        device_name = payload.get('deviceName')
-        for tag_data in payload.get('tags', []):
-            tag_name = tag_data.get('name')
-            tag_value = tag_data.get('value')
-            if tag_name in tag_map and tag_value is not None:
-                # Tidak dibagi 10 untuk conductivity, nitrogen, phosphorus, potassium
-                sensor_type = tag_map[tag_name]
-                if sensor_type in ['conductivity', 'nitrogen', 'phosphorus', 'potassium']:
-                    value = float(tag_value)  # Tidak dibagi 10
-                else:
-                    value = float(tag_value) / 10.0  # Dibagi 10 untuk sensor lainnya
-                
-                measurements.append({
-                    'type': sensor_type,
-                    'value': value
-                })
-            elif tag_name in calibration_map and tag_value is not None:
-                calibrations.append({
-                    'type': calibration_map[tag_name],
-                    'value': float(tag_value) / 10.0  # Nilai calibration juga dibagi 10
-                })
-            elif tag_name == 'SEM225:Device_Address':
-                device_address = int(tag_value)
-            elif tag_name == 'SEM225:Device_Baud_Rate':
-                device_baud_rate = map_baud_rate(int(tag_value))
-    elif 'd' in payload:
-        # Format ECU-1051: {"d": [{"tag": "SEM225:Moisture", "value": 45.5}], "ts": "2025-09-29T01:39:00Z"}
-        for item in payload.get('d', []):
-            tag = item.get('tag')
-            value = item.get('value')
-            
-            if value is None:
-                continue
-                
-            if tag in tag_map:
-                # Tidak dibagi 10 untuk conductivity, nitrogen, phosphorus, potassium
-                sensor_type = tag_map[tag]
-                if sensor_type in ['conductivity', 'nitrogen', 'phosphorus', 'potassium']:
-                    sensor_value = float(value)  # Tidak dibagi 10
-                else:
-                    sensor_value = float(value) / 10.0  # Dibagi 10 untuk sensor lainnya
-                    
-                measurements.append({
-                    'type': sensor_type,
-                    'value': sensor_value
-                })
-            elif tag in calibration_map:
-                calibrations.append({
-                    'type': calibration_map[tag],
-                    'value': float(value) / 10.0  # Nilai calibration juga dibagi 10
-                })
-            elif tag == 'SEM225:Device_Address':
-                device_address = int(value)
-            elif tag == 'SEM225:Device_Baud_Rate':
-                device_baud_rate = map_baud_rate(int(value))
-            elif tag == '#SYS_UPTIME':
-                uptime_seconds = float(value)
-        
-        # Generate device name berdasarkan address jika tidak ada
-        if device_address and not device_name:
-            device_name = f"ECU-1051-Address-{device_address}"
-    
-    # Ambil timestamp
-    ts = payload.get('ts') or payload.get('timestamp')
-    
-    # Return dict dengan data yang diparsing
-    if measurements or calibrations or device_name:
-        return {
-            'measurements': measurements,
-            'calibrations': calibrations,
-            'device_name': device_name or f"ECU-1051-Unknown-{hash(str(payload))%1000}",
-            'device_address': device_address,
-            'device_baud_rate': device_baud_rate,
-            'uptime_seconds': uptime_seconds,
-            'timestamp': ts
-        }
-    
-    return None
 
-def get_or_create_device(device_name, device_address=None, device_baud_rate=None):
-    """Get device_id berdasarkan nama device, atau buat device baru jika belum ada"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        cur = conn.cursor()
-        
-        # Cek device berdasarkan nama atau address
-        if device_address:
-            cur.execute("SELECT id, name FROM devices WHERE address = %s OR name = %s", (device_address, device_name))
-        else:
-            cur.execute("SELECT id, name FROM devices WHERE name = %s", (device_name,))
-        
-        result = cur.fetchone()
-        
-        if result:
-            device_id = result[0]
-            existing_name = result[1]
-            
-            # Update device info jika ada perubahan (using WIB time)
-            if device_address or device_baud_rate:
-                wib_now = get_wib_now()
-                cur.execute(
-                    """
-                    UPDATE devices 
-                    SET name = %s, address = COALESCE(%s, address), baud_rate = COALESCE(%s, baud_rate), updated_at = %s
-                    WHERE id = %s
-                    """,
-                    (device_name, device_address, device_baud_rate, wib_now.astimezone(timezone.utc), device_id)
-                )
-                conn.commit()
-                print(f"Updated device: {existing_name} -> {device_name} (ID: {device_id})")
-        else:
-            # Buat device baru dengan user_id = 1 (admin) sebagai default
-            cur.execute(
-                """
-                INSERT INTO devices (user_id, name, address, baud_rate, type, status)
-                VALUES (1, %s, %s, %s, 'ECU-1051', 'online')
-                RETURNING id
-                """,
-                (device_name, device_address or 1, device_baud_rate or 9600)
-            )
-            device_id = cur.fetchone()[0]
-            conn.commit()
-            print(f"Created new device: {device_name} with ID: {device_id}")
-        
-        cur.close()
-        conn.close()
-        return device_id
-        
-    except Exception as e:
-        print(f"Error getting/creating device: {e}")
-        return 1  # fallback ke device_id = 1
-
-def update_device_status(device_id, uptime_seconds):
-    """Update device status berdasarkan uptime dan last_seen"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        cur = conn.cursor()
-        
-        # Tentukan status device (using WIB time)
-        current_time = get_wib_now()
-        
-        # Cek status sebelumnya
-        cur.execute("SELECT status, uptime_seconds FROM devices WHERE id = %s", (device_id,))
-        result = cur.fetchone()
-        
-        if result:
-            previous_status = result[0]
-            previous_uptime = result[1] or 0
-            
-            # Tentukan status baru
-            new_status = 'online'
-            
-            # Jika uptime berkurang secara signifikan, device mungkin restart
-            if uptime_seconds < previous_uptime - 10:  # 10 detik threshold
-                new_status = 'restarted'
-                print(f"Device {device_id} restarted - uptime decreased from {previous_uptime} to {uptime_seconds}")
-            
-            # Update device status (store as UTC in database)
-            cur.execute(
-                """
-                UPDATE devices 
-                SET status = %s, last_seen = %s, uptime_seconds = %s, updated_at = %s
-                WHERE id = %s
-                """,
-                (new_status, current_time.astimezone(timezone.utc), uptime_seconds, current_time.astimezone(timezone.utc), device_id)
-            )
-            conn.commit()
-            print(f"Device {device_id} status: {new_status}, uptime: {uptime_seconds}s")
-        
-        cur.close()
-        conn.close()
-        
-    except Exception as e:
-        print(f"Error updating device status: {e}")
-
-def mark_devices_offline():
-    """Mark devices as offline if they haven't been seen for a while"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        cur = conn.cursor()
-        
-        # Mark devices offline if last_seen > 5 minutes ago (using WIB time calculation)
-        wib_now = get_wib_now()
-        offline_threshold = wib_now - timedelta(minutes=5)
-        
-        cur.execute(
-            """
-            UPDATE devices 
-            SET status = 'offline' 
-            WHERE status != 'offline' 
-            AND (last_seen IS NULL OR last_seen < %s)
-            RETURNING id, name
-            """,
-            (offline_threshold.astimezone(timezone.utc),)
-        )
-        
-        offline_devices = cur.fetchall()
-        if offline_devices:
-            for device_id, device_name in offline_devices:
-                print(f"Marked device {device_name} (ID: {device_id}) as offline")
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-    except Exception as e:
-        print(f"Error marking devices offline: {e}")
-
-def save_sensor_data(device_id, measurements):
-    """Simpan sensor measurements ke database"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        cur = conn.cursor()
-        
-        # Insert sensor_data dengan WIB timestamp
-        wib_now = get_wib_now()
-        cur.execute(
-            "INSERT INTO sensor_data (device_id, created_at) VALUES (%s, %s) RETURNING id",
-            (device_id, wib_now.astimezone(timezone.utc))
-        )
-        sensor_data_id = cur.fetchone()[0]
-        
-        # Insert measurements
-        for measurement in measurements:
-            cur.execute(
-                "INSERT INTO sensor_measurements (sensor_data_id, type, value) VALUES (%s, %s, %s)",
-                (sensor_data_id, measurement['type'], measurement['value'])
-            )
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        print(f"Saved {len(measurements)} measurements for device {device_id}")
-        
-    except Exception as e:
-        print(f"Error saving sensor data: {e}")
-
-def save_calibration_data(device_id, calibrations):
-    """Simpan calibration data ke database"""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        cur = conn.cursor()
-        
-        wib_now = get_wib_now()
-        
-        for cal in calibrations:
-            # Check if calibration already exists
-            cur.execute(
-                """
-                SELECT id FROM sensor_calibrations 
-                WHERE device_id = %s AND sensor_type = %s
-                """,
-                (device_id, cal['type'])
-            )
-            existing = cur.fetchone()
-            
-            if existing:
-                # Update existing calibration
-                cur.execute(
-                    """
-                    UPDATE sensor_calibrations 
-                    SET param_value = %s, updated_at = %s
-                    WHERE id = %s
-                    """,
-                    (cal['value'], wib_now.astimezone(timezone.utc), existing[0])
-                )
-            else:
-                # Insert new calibration  
-                cur.execute(
-                    """
-                    INSERT INTO sensor_calibrations (device_id, sensor_type, param_name, param_value, updated_at)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (device_id, cal['type'], cal['type'], cal['value'], wib_now.astimezone(timezone.utc))
-                )
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        print(f"Saved {len(calibrations)} calibrations for device {device_id}")
-        
-    except Exception as e:
-        print(f"Error saving calibration data: {e}")
-
-def on_connect(client, userdata, flags, rc, properties=None):
-    print(f"DEBUG: Connected to MQTT broker with result code {rc}")
+def on_connect(client, userdata, flags, rc):
+    """Callback for when the client receives a CONNACK response from the server."""
     if rc == 0:
-        print(f"DEBUG: Successfully connected to MQTT broker")
-        client.subscribe(MQTT_TOPIC)
-        print(f"DEBUG: Subscribed to topic: {MQTT_TOPIC}")
+        logger.info("Connected to MQTT broker")
+        # Subscribe to topics
+        for topic, qos in MQTT_TOPICS:
+            client.subscribe(topic, qos)
+            logger.info(f"Subscribed to topic: {topic}")
     else:
-        print(f"ERROR: Failed to connect to MQTT broker with code {rc}")
+        logger.error(f"Failed to connect to MQTT broker with result code {rc}")
 
-def on_disconnect(client, userdata, rc, properties=None):
-    print(f"DEBUG: Disconnected from MQTT broker with result code {rc}")
 
 def on_message(client, userdata, msg):
+    """Callback for when a PUBLISH message is received from the server."""
     try:
         topic = msg.topic
-        payload_str = msg.payload.decode('utf-8')
-        
-        print(f"DEBUG: Received from {topic}: {payload_str}")
-        
+        payload = msg.payload.decode("utf-8")
+        logger.info(f"Received message on topic '{topic}': {payload}")
+
         # Parse JSON payload
         try:
-            payload = json.loads(payload_str)
+            data = json.loads(payload)
         except json.JSONDecodeError as e:
-            print(f"ERROR: Failed to parse JSON payload: {e}")
-            print(f"Raw payload: {payload_str}")
+            logger.error(f"Failed to parse JSON payload: {e}")
             return
-        
-        # Parse payload ECU-1051
-        parsed_data = parse_payload(payload)
-        
-        if parsed_data:
-            print(f"DEBUG: Parsed data: {parsed_data}")
-            
-            # Get atau create device dengan info address dan baud rate
-            device_id = get_or_create_device(
-                parsed_data['device_name'],
-                parsed_data.get('device_address'),
-                parsed_data.get('device_baud_rate')
-            )
-            
-            # Update device status jika ada uptime
-            if parsed_data.get('uptime_seconds') is not None:
-                update_device_status(device_id, parsed_data['uptime_seconds'])
-            
-            # Simpan sensor measurements
-            if parsed_data.get('measurements'):
-                save_sensor_data(device_id, parsed_data['measurements'])
-            
-            # Simpan calibration data
-            if parsed_data.get('calibrations'):
-                save_calibration_data(device_id, parsed_data['calibrations'])
-            
-            print(f"DEBUG: Data saved for device: {parsed_data['device_name']} (ID: {device_id})")
-        else:
-            print("WARNING: Failed to parse MQTT message")
-            
-    except Exception as e:
-        print(f"ERROR: Error processing MQTT message: {e}")
-        print(f"Topic: {topic}, Payload: {payload_str}")
-        import traceback
-        traceback.print_exc()
 
-def device_monitor_task():
-    """Background task untuk monitor device offline"""
+        # Process the sensor data based on topic pattern
+        process_sensor_data(topic, data)
+
+    except Exception as e:
+        logger.error(f"Error processing MQTT message: {e}")
+
+
+def process_sensor_data(topic: str, data: Dict[str, Any]):
+    """Process incoming sensor data from both formats"""
+    try:
+        # Check if this is SEM225 format data first
+        if "d" in data and "ts" in data:
+            # This is SEM225 format, process accordingly
+            process_sem225_data(topic, data)
+            return
+
+        # Extract device identifier from topic
+        # For sensors/{device_id}/data or sensor/{device_name}/data
+        topic_parts = topic.split("/")
+        if len(topic_parts) >= 3:
+            device_identifier = topic_parts[1]
+            # Process legacy format data
+            process_legacy_data(device_identifier, data)
+        else:
+            logger.warning(f"Unknown topic pattern: {topic}")
+
+    except Exception as e:
+        logger.error(f"Error processing MQTT message: {e}")
+
+
+def process_sem225_data(topic: str, data: Dict[str, Any]):
+    """Process SEM225 format sensor data"""
+    try:
+        # Extract sensor readings from 'd' array
+        sensor_readings = data.get("d", [])
+        timestamp = data.get("ts")
+
+        if not sensor_readings:
+            logger.warning("No sensor readings found in SEM225 data")
+            return
+
+        # Group readings by device (extract device name from tag)
+        device_readings = {}
+
+        for reading in sensor_readings:
+            tag = reading.get("tag", "")
+            value = reading.get("value")
+
+            if ":" in tag:
+                # Extract device name and sensor type from tag (e.g., "SEM225:Temperature")
+                device_name, sensor_type = tag.split(":", 1)
+
+                if device_name not in device_readings:
+                    device_readings[device_name] = []
+
+                device_readings[device_name].append(
+                    {"sensor_type": sensor_type, "value": value, "timestamp": timestamp}
+                )
+
+        # Save readings for each device
+        for device_name, readings in device_readings.items():
+            save_device_readings(device_name, readings, timestamp)
+
+    except Exception as e:
+        logger.error(f"Error processing SEM225 data: {e}")
+
+
+def save_device_readings(device_name: str, readings: list, timestamp: str):
+    """Save sensor readings to database"""
+    try:
+        with get_db_cursor() as cursor:
+            # Check if device exists, if not create it
+            cursor.execute("SELECT id FROM devices WHERE name = %s", (device_name,))
+            device_row = cursor.fetchone()
+
+            if not device_row:
+                # Create new device with admin user_id (ID: 1)
+                cursor.execute(
+                    """
+                    INSERT INTO devices (user_id, name, device_type, status, location, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+                    RETURNING id
+                    """,
+                    (
+                        1,
+                        device_name,
+                        "soil_sensor",
+                        "online",
+                        "field",
+                    ),  # user_id = 1 (admin)
+                )
+                result = cursor.fetchone()
+                if result:
+                    device_id = result["id"]
+                    logger.info(
+                        f"Created new device: {device_name} with ID {device_id}"
+                    )
+                    # Record initial online status in history for new device
+                    DeviceStatusService._record_status_change(device_id, "online")
+                else:
+                    logger.error(f"Failed to create device {device_name}")
+                    return
+            else:
+                device_id = device_row["id"]
+                # Update device status to online and last_seen timestamp
+                DeviceStatusService.update_device_last_seen(device_id)
+
+            # Save each sensor reading
+            saved_count = 0
+            for reading in readings:
+                sensor_type = reading["sensor_type"]
+                raw_value = reading["value"]
+
+                # Apply scaling factor based on sensor type
+                value = apply_sensor_scaling(sensor_type, raw_value)
+
+                # Determine unit based on sensor type
+                unit = get_sensor_unit(sensor_type)
+
+                # Skip system readings and calibration values
+                if (
+                    sensor_type.startswith("#SYS_")
+                    or "Calibration" in sensor_type
+                    or "Coefficient" in sensor_type
+                    or "Device_Address" in sensor_type
+                    or "Device_Baud_Rate" in sensor_type
+                ):
+                    continue
+
+                try:
+                    # Parse timestamp if it's ISO format
+                    parsed_timestamp = timestamp
+                    if timestamp and timestamp != "NOW()":
+                        from datetime import datetime
+
+                        try:
+                            # Parse ISO format: 2025-10-02T07:37:30Z
+                            dt = datetime.fromisoformat(
+                                timestamp.replace("Z", "+00:00")
+                            )
+                            parsed_timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+                        except Exception:
+                            parsed_timestamp = None
+
+                    # Create metadata with device name
+                    import json
+
+                    metadata = json.dumps(
+                        {
+                            "device": device_name,
+                            "source": "mqtt",
+                            "auto_inserted": True,
+                            "inserted_by": "admin",  # Indicate this was auto-inserted by admin
+                        }
+                    )
+
+                    # Insert sensor data
+                    cursor.execute(
+                        """
+                        INSERT INTO sensor_data (device_id, sensor_type, value, unit, metadata, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            device_id,
+                            sensor_type.lower(),
+                            value,
+                            unit,
+                            metadata,
+                            parsed_timestamp,
+                        ),
+                    )
+                    logger.info(
+                        f"Inserted sensor data: {sensor_type} = {value} {unit} (raw: {raw_value})"
+                    )
+                    saved_count += 1
+                except Exception as e:
+                    logger.error(f"Error inserting sensor data {sensor_type}: {e}")
+                    continue
+
+            logger.info(f"Saved {saved_count} readings for device {device_name}")
+
+    except Exception as e:
+        logger.error(f"Error saving device readings for {device_name}: {e}")
+        import traceback
+
+        logger.error(f"Traceback: {traceback.format_exc()}")
+
+
+def apply_sensor_scaling(sensor_type: str, raw_value: float) -> float:
+    """Apply scaling factor to sensor values based on sensor type"""
+
+    # Sensors that need to be divided by 10
+    divide_by_10_sensors = {
+        "Temperature",
+        "Moisture",
+        "PH",
+        "Humidity",
+        "TDS",
+        "Salinity",
+    }
+
+    # Sensors that don't need scaling (keep original value)
+    no_scaling_sensors = {
+        "Nitrogen",
+        "Phosphorus",
+        "Potassium",
+        "Conductivity",
+        "Device_Address",
+        "Device_Baud_Rate",
+    }
+
+    if sensor_type in divide_by_10_sensors:
+        return raw_value / 10.0
+    elif sensor_type in no_scaling_sensors:
+        return raw_value
+    else:
+        # Default: divide by 10 for unknown sensors (except calibration/coefficient values)
+        if "Calibration" not in sensor_type and "Coefficient" not in sensor_type:
+            return raw_value / 10.0
+        return raw_value
+
+
+def get_sensor_unit(sensor_type: str) -> str:
+    """Get appropriate unit for sensor type"""
+    sensor_units = {
+        "Temperature": "°C",
+        "Moisture": "%",
+        "Humidity": "%",
+        "PH": "pH",
+        "Conductivity": "μS/cm",
+        "TDS": "ppm",
+        "Salinity": "psu",
+        "Nitrogen": "mg/kg",
+        "Phosphorus": "mg/kg",
+        "Potassium": "mg/kg",
+        "Device_Address": "",
+        "Device_Baud_Rate": "bps",
+    }
+
+    return sensor_units.get(sensor_type, "")
+
+
+def process_legacy_data(device_identifier: str, data: Dict[str, Any]):
+    """Process legacy format sensor data"""
+    try:
+        # For backward compatibility with old format
+        logger.info(f"Processing legacy data for device {device_identifier}")
+        # Implementation for legacy format can be added here if needed
+
+    except Exception as e:
+        logger.error(f"Error processing legacy data: {e}")
+
+
+def on_disconnect(client, userdata, rc):
+    """Callback for when the client disconnects from the server."""
+    logger.warning(f"Disconnected from MQTT broker with result code {rc}")
+
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info("Received shutdown signal, closing MQTT connection...")
+    client.disconnect()
+    sys.exit(0)
+
+
+def device_status_monitor():
+    """Background thread to monitor device status and mark offline devices"""
+    logger.info("Starting device status monitor thread")
+
     while True:
         try:
-            mark_devices_offline()
-            time.sleep(60)  # Check setiap 1 menit
-        except Exception as e:
-            print(f"Error in device monitor task: {e}")
+            # Check for offline devices every minute
             time.sleep(60)
+            offline_devices = DeviceStatusService.check_offline_devices()
+
+            if offline_devices:
+                logger.info(f"Marked {len(offline_devices)} devices as offline")
+
+        except Exception as e:
+            logger.error(f"Error in device status monitor: {e}")
+            time.sleep(60)  # Wait before retrying
+
 
 if __name__ == "__main__":
-    print("DEBUG: Starting MQTT Listener...")
-    print(f"DEBUG: MQTT Host: {MQTT_HOST}")
-    print(f"DEBUG: MQTT Port: {MQTT_PORT}")
-    print(f"DEBUG: MQTT Topic: {MQTT_TOPIC}")
-    print(f"DEBUG: DB Host: {DB_HOST}")
-    
-    # Start background task untuk monitoring device
-    monitor_thread = threading.Thread(target=device_monitor_task, daemon=True)
-    monitor_thread.start()
-    print("DEBUG: Device monitoring started in background")
-    
-    # Start MQTT client with callback API version 2
+    # Set up signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # Start device status monitor thread
+    status_monitor_thread = threading.Thread(target=device_status_monitor, daemon=True)
+    status_monitor_thread.start()
+
+    # Create MQTT client
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.on_disconnect = on_disconnect
+
     try:
-        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
-        client.on_connect = on_connect
-        client.on_disconnect = on_disconnect
-        client.on_message = on_message
-        
-        print(f"DEBUG: Connecting to MQTT broker at {MQTT_HOST}:{MQTT_PORT}")
-        client.connect(MQTT_HOST, MQTT_PORT, 60)
-        print(f"DEBUG: Listening to MQTT topic: {MQTT_TOPIC}")
-        
+        # Connect to MQTT broker
+        logger.info(f"Connecting to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+        client.connect(MQTT_BROKER, MQTT_PORT, MQTT_KEEPALIVE)
+
+        # Start the network loop to process callbacks
         client.loop_forever()
+
     except Exception as e:
-        print(f"ERROR: Failed to start MQTT client: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error starting MQTT listener: {e}")
+        sys.exit(1)
