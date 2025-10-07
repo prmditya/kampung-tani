@@ -91,9 +91,15 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, prefix=f"{settings.API_PREFIX}", tags=["Health"])
-app.include_router(auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"])
-app.include_router(devices.router, prefix=f"{settings.API_PREFIX}/devices", tags=["Devices"])
-app.include_router(sensors.router, prefix=f"{settings.API_PREFIX}/sensors", tags=["Sensors"])
+app.include_router(
+    auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"]
+)
+app.include_router(
+    devices.router, prefix=f"{settings.API_PREFIX}/devices", tags=["Devices"]
+)
+app.include_router(
+    sensors.router, prefix=f"{settings.API_PREFIX}/sensors", tags=["Sensors"]
+)
 
 
 @app.get("/", include_in_schema=False)
