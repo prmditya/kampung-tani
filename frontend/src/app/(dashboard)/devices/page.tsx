@@ -4,15 +4,12 @@ import dynamic from "next/dynamic";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   MdAccessTime,
-  MdDeviceUnknown,
   MdCheckCircle,
   MdDevices,
+  MdDeviceUnknown,
   MdError,
   MdRefresh,
-  MdRestartAlt,
   MdTrendingUp,
-  MdWifi,
-  MdWifiOff,
 } from "react-icons/md";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -28,6 +25,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
+import { DeviceStatusIndicator } from "@/shared/components/ui/device-status-indicator";
 import {
   useDeviceStats,
   useDeviceStatusHistory,
@@ -48,74 +46,6 @@ const DeviceHistoryPanel = dynamic(
     ssr: false,
   }
 );
-
-interface DeviceStatusIndicatorProps {
-  status: string;
-  className?: string;
-}
-
-const STATUS_VARIANTS = {
-  online: {
-    icon: MdWifi,
-    text: "Online",
-    bgColor:
-      "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
-    pulseColor: "bg-emerald-400 dark:bg-emerald-500",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900",
-  },
-  offline: {
-    icon: MdWifiOff,
-    text: "Offline",
-    bgColor:
-      "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-    pulseColor: "bg-red-400 dark:bg-red-500",
-    iconBg: "bg-red-100 dark:bg-red-900",
-  },
-  restarted: {
-    icon: MdRestartAlt,
-    text: "Restarted",
-    bgColor:
-      "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
-    pulseColor: "bg-amber-400 dark:bg-amber-500",
-    iconBg: "bg-amber-100 dark:bg-amber-900",
-  },
-} as const;
-
-const DeviceStatusIndicator: React.FC<DeviceStatusIndicatorProps> = React.memo(
-  ({ status, className }) => {
-    const config = STATUS_VARIANTS[status as keyof typeof STATUS_VARIANTS] || {
-      icon: MdDeviceUnknown,
-      text: "Unknown",
-      bgColor:
-        "bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800",
-      pulseColor: "bg-slate-400 dark:bg-slate-500",
-      iconBg: "bg-slate-100 dark:bg-slate-900",
-    };
-
-    const Icon = config.icon;
-
-    return (
-      <div
-        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${config.bgColor} ${className}`}
-      >
-        <div className={`rounded-md p-1 ${config.iconBg}`}>
-          {status === "online" && (
-            <div className="relative">
-              <div
-                className={`absolute -inset-0.5 rounded-md ${config.pulseColor} opacity-75 animate-pulse`}
-              ></div>
-              <Icon className="relative h-4 w-4" />
-            </div>
-          )}
-          {status !== "online" && <Icon className="h-4 w-4" />}
-        </div>
-        <span className="font-medium">{config.text}</span>
-      </div>
-    );
-  }
-);
-
-DeviceStatusIndicator.displayName = "DeviceStatusIndicator";
 
 function DevicesPage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -423,7 +353,15 @@ function DevicesPage() {
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               {device.name}
                             </h3>
-                            <DeviceStatusIndicator status={device.status} />
+                            <DeviceStatusIndicator
+                              status={
+                                device.status as
+                                  | "online"
+                                  | "offline"
+                                  | "restarted"
+                              }
+                              showLastSeen={false}
+                            />
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="inline-flex items-center px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">

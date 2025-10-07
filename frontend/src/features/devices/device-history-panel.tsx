@@ -7,13 +7,8 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import {
-  MdWifi,
-  MdWifiOff,
-  MdRestartAlt,
-  MdDeviceUnknown,
-  MdRefresh,
-} from "react-icons/md";
+import { DeviceStatusIndicator } from "@/shared/components/ui/device-status-indicator";
+import { MdRefresh } from "react-icons/md";
 import type { Device, DeviceStatusHistory } from "@/shared/hooks/useApi";
 
 interface DeviceHistoryPanelProps {
@@ -36,65 +31,6 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
   const selectedDevice = selectedDeviceId
     ? devices?.find((device) => device.id === selectedDeviceId)
     : undefined;
-
-  const renderStatusIndicator = (status: string) => {
-    const STATUS_VARIANTS = {
-      online: {
-        icon: MdWifi,
-        text: "Online",
-        bgColor:
-          "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
-        pulseColor: "bg-emerald-400 dark:bg-emerald-500",
-        iconBg: "bg-emerald-100 dark:bg-emerald-900",
-      },
-      offline: {
-        icon: MdWifiOff,
-        text: "Offline",
-        bgColor:
-          "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
-        pulseColor: "bg-red-400 dark:bg-red-500",
-        iconBg: "bg-red-100 dark:bg-red-900",
-      },
-      maintenance: {
-        icon: MdRestartAlt,
-        text: "Maintenance",
-        bgColor:
-          "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
-        pulseColor: "bg-amber-400 dark:bg-amber-500",
-        iconBg: "bg-amber-100 dark:bg-amber-900",
-      },
-    };
-
-    const config = STATUS_VARIANTS[status as keyof typeof STATUS_VARIANTS] || {
-      icon: MdDeviceUnknown,
-      text: "Unknown",
-      bgColor:
-        "bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800",
-      pulseColor: "bg-slate-400 dark:bg-slate-500",
-      iconBg: "bg-slate-100 dark:bg-slate-900",
-    };
-
-    const Icon = config.icon;
-
-    return (
-      <div
-        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border ${config.bgColor}`}
-      >
-        <div className={`rounded-md p-1 ${config.iconBg}`}>
-          {status === "online" && (
-            <div className="relative">
-              <div
-                className={`absolute -inset-0.5 rounded-md ${config.pulseColor} opacity-75 animate-pulse`}
-              ></div>
-              <Icon className="relative h-4 w-4" />
-            </div>
-          )}
-          {status !== "online" && <Icon className="h-4 w-4" />}
-        </div>
-        <span className="font-medium">{config.text}</span>
-      </div>
-    );
-  };
 
   const formatDuration = (seconds: number | null): string => {
     if (seconds === null) return "Unknown";
@@ -177,7 +113,12 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                   className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center space-x-3">
-                    {renderStatusIndicator(entry.status)}
+                    <DeviceStatusIndicator
+                      status={
+                        entry.status as "online" | "offline" | "restarted"
+                      }
+                      showLastSeen={false}
+                    />
                     <div>
                       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {entry.status === "online"
@@ -233,9 +174,16 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {renderStatusIndicator(
-                      selectedDevice.device_status || selectedDevice.status
-                    )}
+                    <DeviceStatusIndicator
+                      status={
+                        (selectedDevice.device_status ||
+                          selectedDevice.status) as
+                          | "online"
+                          | "offline"
+                          | "restarted"
+                      }
+                      showLastSeen={false}
+                    />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       {(selectedDevice.device_status ||
                         selectedDevice.status) === "online"

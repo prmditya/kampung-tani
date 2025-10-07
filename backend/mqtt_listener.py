@@ -162,7 +162,7 @@ def save_device_readings(device_name: str, readings: list, timestamp: str):
                         f"Created new device: {device_name} with ID {device_id}"
                     )
                     # Record initial online status in history for new device
-                    DeviceStatusService._record_status_change(device_id, 'online')
+                    DeviceStatusService._record_status_change(device_id, "online")
                 else:
                     logger.error(f"Failed to create device {device_name}")
                     return
