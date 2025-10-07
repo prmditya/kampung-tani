@@ -45,9 +45,9 @@ class Settings(BaseSettings):
     MQTT_TOPICS: str = Field(default="sensors/+/data")
 
     # API Configuration
-    API_PREFIX: str = Field(default="/api")
-    DOCS_URL: str = Field(default="/api/docs")
-    REDOC_URL: str = Field(default="/api/redoc")
+    API_PREFIX: str = Field(default="/api/v3")
+    DOCS_URL: str = Field(default="/api/v3/docs")
+    REDOC_URL: str = Field(default="/api/v3/redoc")
 
     # CORS Configuration (from .env)
     ALLOWED_ORIGINS: str = Field(default="http://localhost:3000")
