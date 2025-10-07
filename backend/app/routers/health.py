@@ -18,25 +18,25 @@ settings = get_settings()
     "/health",
     response_model=HealthResponse,
     summary="Health Check",
-    description="Check API and database health status"
+    description="Check API and database health status",
 )
 async def health_check():
     """
     Comprehensive health check endpoint.
-    
+
     Returns the current status of:
     - API service
     - Database connectivity
     - System timestamp
     - Version information
     """
-    
+
     # Check database health
     db_healthy = check_database_health()
-    
+
     # Determine overall status
     overall_status = "healthy" if db_healthy else "unhealthy"
-    
+
     return HealthResponse(
         status=overall_status,
         timestamp=datetime.utcnow(),
@@ -45,15 +45,15 @@ async def health_check():
         services={
             "api": True,
             "database": db_healthy,
-            "mqtt": True  # Assume MQTT is healthy for now
-        }
+            "mqtt": True,  # Assume MQTT is healthy for now
+        },
     )
 
 
 @router.get(
     "/ping",
     summary="Simple Ping",
-    description="Simple ping endpoint for basic connectivity check"
+    description="Simple ping endpoint for basic connectivity check",
 )
 async def ping():
     """Simple ping endpoint"""

@@ -1,9 +1,5 @@
 # Multi-service stack for Kampung Tani IoT Monitoring
 # Uses environment variables from .env file for security
-# - frontend: Next.js (port 3000 -> external port from .env)
-# - backend: Flask (port 5000 -> external port from .env)
-# - db: PostgreSQL (port 5432 -> external port from .env)
-# - mqtt: Mosquitto (port 1883, running on host)
 
 services:
   frontend:
@@ -32,17 +28,13 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=${POSTGRES_HOST}
-      - DB_PORT=${POSTGRES_PORT}
-      - DB_NAME=${POSTGRES_DB}
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - MQTT_BROKER=${MQTT_BROKER_HOST}
-      - MQTT_PORT=${MQTT_BROKER_PORT}
-      - JWT_SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${FLASK_DEBUG}
+      # Only pass Docker-specific environment overrides
+      # All other config comes from mounted .env files
+      - NODE_ENV=${NODE_ENV}
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./.env:/app/.env:ro
+      - ./backend/.env.local:/app/backend/.env.local:ro
 
   db:
     image: postgres:15
@@ -56,7 +48,7 @@ services:
       - "${DB_EXTERNAL_PORT}:${POSTGRES_PORT}"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./docker/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
 
 volumes:
   pgdata:
