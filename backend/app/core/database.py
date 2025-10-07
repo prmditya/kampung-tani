@@ -19,12 +19,12 @@ def get_database_connection():
     """Get a direct database connection"""
     try:
         conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            database=settings.DB_NAME,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-            cursor_factory=psycopg2.extras.RealDictCursor
+            host=settings.POSTGRES_HOST,
+            port=settings.POSTGRES_PORT,
+            database=settings.POSTGRES_DB,
+            user=settings.POSTGRES_USER,
+            password=settings.POSTGRES_PASSWORD,
+            cursor_factory=psycopg2.extras.RealDictCursor,
         )
         return conn
     except psycopg2.Error as e:
