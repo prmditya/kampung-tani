@@ -249,7 +249,7 @@ Make sure you have the following software installed on your system:
    After the containers are running, verify the services:
    - **Frontend**: http://localhost:3000
    - **Backend API**: http://localhost:5000
-   - **API Documentation**: http://localhost:5000/docs
+   - **API Documentation**: http://localhost:5000/api/v3/docs
    - **Database**: localhost:5432
 
 ### Environment Setup
@@ -315,22 +315,22 @@ docker-compose down
 
 The backend provides a comprehensive RESTful API. Access the interactive documentation at:
 
-- **Swagger UI**: http://localhost:5000/docs
-- **ReDoc**: http://localhost:5000/redoc
+- **Swagger UI**: http://localhost:5000/api/v3/docs
+- **ReDoc**: http://localhost:5000/api/v3/redoc
 
 #### Example API Endpoints
 
 ```sh
 # Get all devices
-curl -X GET "http://localhost:5000/api/devices" \
+curl -X GET "http://localhost:5000/api/v3/devices" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Get sensor data for a device
-curl -X GET "http://localhost:5000/api/devices/1/sensor-data" \
+curl -X GET "http://localhost:5000/api/v3/devices/1/sensor-data" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Health check
-curl -X GET "http://localhost:5000/api/health"
+curl -X GET "http://localhost:5000/api/v3/health"
 ```
 
 ### MQTT Integration
@@ -359,7 +359,7 @@ The system automatically listens for MQTT messages from IoT devices:
 }
 ```
 
-_For more examples and detailed API documentation, please refer to the [API Documentation](http://localhost:5000/docs)_
+_For more examples and detailed API documentation, please refer to the [API Documentation](http://localhost:5000/api/v3/docs)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -438,7 +438,7 @@ backend/
 #### Login
 
 ```http
-POST /api/auth/login
+POST /api/v3/auth/login
 Content-Type: application/json
 
 {
@@ -467,14 +467,14 @@ Content-Type: application/json
 #### Get All Devices
 
 ```http
-GET /api/devices
+GET /api/v3/devices
 Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
 #### Get Device Sensor Data
 
 ```http
-GET /api/devices/{device_id}/sensor-data?limit=100&hours=24
+GET /api/v3/devices/{device_id}/sensor-data?limit=100&hours=24
 Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
@@ -483,7 +483,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 #### System Health
 
 ```http
-GET /api/health
+GET /api/v3/health
 ```
 
 ```json

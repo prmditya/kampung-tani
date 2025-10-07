@@ -4,7 +4,15 @@
 
 // ===== API CONFIGURATION =====
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v3',
+  
+  // Documentation URLs
+  DOCS: {
+    SWAGGER: process.env.NEXT_PUBLIC_DOCS_URL || 'http://localhost:5000/api/v3/docs',
+    REDOC: process.env.NEXT_PUBLIC_REDOC_URL || 'http://localhost:5000/api/v3/redoc',
+    OPENAPI: 'http://localhost:5000/api/v3/openapi.json',
+  },
+  
   REFRESH_INTERVALS: {
     SENSOR_DATA: 10000, // 10 seconds
     DEVICE_STATS: 10000, // 10 seconds

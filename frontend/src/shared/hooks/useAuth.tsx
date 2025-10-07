@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 
 // Types
 interface User {
@@ -55,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const router = useRouter();
 
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v3";
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -191,7 +192,7 @@ export const withAuth = <P extends object>(
     if (isLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+          <LoadingSpinner size="lg" text="Loading..." />
         </div>
       );
     }

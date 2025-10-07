@@ -44,6 +44,8 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI application
+settings = get_settings()
+
 app = FastAPI(
     title="Kampung Tani IoT API",
     description="""
@@ -73,9 +75,9 @@ app = FastAPI(
         "name": "MIT",
     },
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    docs_url=settings.DOCS_URL,
+    redoc_url=settings.REDOC_URL,
+    openapi_url=f"{settings.API_PREFIX}/openapi.json",
 )
 
 # Configure CORS
@@ -88,10 +90,16 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health.router, prefix="/api", tags=["Health"])
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
-app.include_router(sensors.router, prefix="/api/sensors", tags=["Sensors"])
+app.include_router(health.router, prefix=f"{settings.API_PREFIX}", tags=["Health"])
+app.include_router(
+    auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"]
+)
+app.include_router(
+    devices.router, prefix=f"{settings.API_PREFIX}/devices", tags=["Devices"]
+)
+app.include_router(
+    sensors.router, prefix=f"{settings.API_PREFIX}/sensors", tags=["Sensors"]
+)
 
 
 @app.get("/", include_in_schema=False)
@@ -100,7 +108,7 @@ async def root():
     return {
         "message": "🌱 Kampung Tani IoT API",
         "version": "3.0.0",
-        "docs": "/api/docs",
+        "docs": settings.DOCS_URL,
         "status": "healthy",
     }
 

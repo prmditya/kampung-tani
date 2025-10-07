@@ -99,7 +99,7 @@ interface UsePaginatedApiResult<T> {
 
 // ===== CONFIGURATION =====
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v3';
 
 // ===== UTILITIES =====
 
@@ -377,7 +377,7 @@ export const useDevicesWithUptime = (initialPage = 1, initialLimit = 50): UsePag
       
       for (const device of devices) {
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/devices/${device.id}/status-history?limit=1`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v3'}/devices/${device.id}/status-history?limit=1`, {
             headers: getAuthHeaders(),
           });
           
