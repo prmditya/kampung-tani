@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_CONFIG } from '@/shared/lib/constants';
 
 // ===== INTERFACES =====
 
@@ -344,7 +345,7 @@ export const useDevices = (initialPage = 1, initialLimit = 50): UsePaginatedApiR
 };
 
 // Device stats with auto-refresh
-export const useDeviceStats = (autoRefresh = false, interval = 30000): UseApiResult<DeviceStats> => {
+export const useDeviceStats = (autoRefresh = false, interval = API_CONFIG.REFRESH_INTERVALS.DEVICE_STATUS): UseApiResult<DeviceStats> => {
   return useApiData<DeviceStats>('/devices/stats', autoRefresh, interval);
 };
 
@@ -409,10 +410,6 @@ export const useDevicesWithUptime = (initialPage = 1, initialLimit = 50): UsePag
   };
 };
 
-// Sensor calibrations
-export const useSensorCalibrations = (): UseApiResult<SensorCalibration[]> => {
-  return useApiData<SensorCalibration[]>('/sensor-calibrations');
-};
 
 // Export types
 export type { 
@@ -421,7 +418,6 @@ export type {
   DeviceStatusHistory,
   DeviceStatusHistoryResponse, 
   DeviceStats, 
-  SensorCalibration, 
   UseApiResult, 
   UsePaginatedApiResult
 };

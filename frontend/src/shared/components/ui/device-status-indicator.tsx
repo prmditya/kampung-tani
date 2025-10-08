@@ -1,5 +1,5 @@
 import React from "react";
-import { getDeviceStatusTheme, getRelativeTime } from "@/shared/lib/helpers";
+import { formatDateTime, getDeviceStatusTheme } from "@/shared/lib/helpers";
 import { UI_CONSTANTS } from "@/shared/lib/constants";
 import type { DeviceStatusType } from "@/shared/lib/constants";
 import { MdWifi, MdWifiOff, MdRestartAlt } from "react-icons/md";
@@ -76,7 +76,7 @@ export function DeviceStatusIndicator({
 
       {showLastSeen && lastSeen && (
         <span className="text-xs text-muted-foreground font-medium">
-          {getRelativeTime(lastSeen)}
+          {formatDateTime(lastSeen, "Asia/Jakarta")}
         </span>
       )}
     </div>

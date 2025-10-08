@@ -295,7 +295,7 @@ def get_sensor_unit(sensor_type: str) -> str:
         "PH": "pH",
         "Conductivity": "μS/cm",
         "TDS": "ppm",
-        "Salinity": "psu",
+        "Salinity": "ppt",
         "Nitrogen": "mg/kg",
         "Phosphorus": "mg/kg",
         "Potassium": "mg/kg",

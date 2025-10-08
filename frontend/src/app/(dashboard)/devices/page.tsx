@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   MdAccessTime,
   MdCheckCircle,
@@ -15,7 +15,6 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
@@ -33,6 +32,7 @@ import {
 } from "@/shared/hooks/useApi";
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 import { ErrorMessage } from "@/shared/components/ui/error-message";
+import { formatDateTime } from "@/shared/lib/helpers";
 
 const DeviceHistoryPanel = dynamic(
   () => import("@/features/devices/device-history-panel"),
@@ -49,7 +49,6 @@ const DeviceHistoryPanel = dynamic(
 
 function DevicesPage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   const {
     data: devices,
@@ -73,102 +72,6 @@ function DevicesPage() {
     refetch: refetchHistory,
   } = useDeviceStatusHistory(
     selectedDeviceId ? parseInt(selectedDeviceId) : null
-  );
-
-  const formatDuration = useCallback((seconds: number): string => {
-    if (seconds < 60) return `${Math.floor(seconds)}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-  }, []);
-
-  const formatDateTimeWIB = useCallback((dateTimeString: string): string => {
-    try {
-      const date = new Date(dateTimeString);
-      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-
-      return (
-        wibTime.toLocaleString("id-ID", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          timeZone: "UTC",
-        }) + " WIB"
-      );
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return dateTimeString;
-    }
-  }, []);
-
-  const formatLastSeen = useCallback((device: any): string => {
-    try {
-      const date = new Date(device.last_seen || device.updated_at);
-      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-      return (
-        wibTime.toLocaleString("id-ID", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }) + " WIB"
-      );
-    } catch {
-      return "Never";
-    }
-  }, []);
-
-  const getOfflineDuration = useCallback(
-    (device: any): string => {
-      if (!device.last_seen) return "Unknown";
-
-      try {
-        const lastSeen = new Date(device.last_seen);
-        const now = new Date();
-        const diffInSeconds = Math.floor(
-          (now.getTime() - lastSeen.getTime()) / 1000
-        );
-        return formatDuration(diffInSeconds);
-      } catch (error) {
-        console.error("Error calculating offline duration:", error);
-        return "Unknown";
-      }
-    },
-    [formatDuration]
-  );
-
-  const getStatusDuration = useCallback(
-    (device: any): string => {
-      // For online devices, use current_uptime_formatted if available
-      if (device.status === "online" && device.current_uptime_formatted) {
-        return device.current_uptime_formatted;
-      }
-
-      // Fallback calculation for online devices
-      if (device.status === "online" && device.last_seen) {
-        try {
-          const lastSeen = new Date(device.last_seen);
-          const now = new Date();
-          const diffInSeconds = Math.floor(
-            (now.getTime() - lastSeen.getTime()) / 1000
-          );
-          return formatDuration(Math.abs(diffInSeconds));
-        } catch (error) {
-          console.error("Error calculating uptime duration:", error);
-          return "N/A";
-        }
-      }
-
-      return "N/A";
-    },
-    [formatDuration]
   );
 
   const handleRefresh = async () => {
@@ -401,7 +304,10 @@ function DevicesPage() {
                               Last seen:
                             </span>
                             <span className="font-medium ml-2 text-gray-900 dark:text-gray-100">
-                              {formatLastSeen(device)}
+                              {formatDateTime(
+                                device.last_seen || device.updated_at,
+                                "Asia/Jakarta"
+                              )}
                             </span>
                           </div>
                         </div>

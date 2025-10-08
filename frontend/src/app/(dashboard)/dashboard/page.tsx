@@ -16,11 +16,8 @@ import { SensorCard } from "@/shared/components/ui/sensor-card";
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 import { ErrorMessage } from "@/shared/components/ui/error-message";
 import { useDeviceStats, useSensorData } from "@/shared/hooks/useApi";
-import { useDashboardPreferences } from "@/shared/hooks/useLocalStorage";
 
 function Dashboard() {
-  const [preferences] = useDashboardPreferences();
-
   const {
     data: sensorData,
     loading: isLoading,
@@ -82,7 +79,6 @@ function Dashboard() {
   ];
 
   const onlineCount = deviceStats?.online_devices ?? 0;
-  const offlineCount = deviceStats?.offline_devices ?? 0;
   const totalDevices = deviceStats?.total_devices ?? 0;
   const isSystemOnline = onlineCount > 0;
 
@@ -177,9 +173,7 @@ function Dashboard() {
             <p className="text-sm font-medium text-muted-foreground dark:text-slate-300">
               Device
             </p>
-            <p className="text-sm font-medium text-foreground">
-              ECU-1051-Address-1
-            </p>
+            <p className="text-sm font-medium text-foreground">SEM225</p>
             <p
               className={`text-xs font-medium ${
                 isSystemOnline

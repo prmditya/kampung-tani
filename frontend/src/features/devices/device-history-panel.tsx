@@ -10,6 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import { DeviceStatusIndicator } from "@/shared/components/ui/device-status-indicator";
 import { MdRefresh } from "react-icons/md";
 import type { Device, DeviceStatusHistory } from "@/shared/hooks/useApi";
+import { formatDateTime } from "@/shared/lib/helpers";
 
 interface DeviceHistoryPanelProps {
   selectedDeviceId: number | null;
@@ -31,26 +32,6 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
   const selectedDevice = selectedDeviceId
     ? devices?.find((device) => device.id === selectedDeviceId)
     : undefined;
-
-  const formatDuration = (seconds: number | null): string => {
-    if (seconds === null) return "Unknown";
-
-    if (seconds < 60) {
-      return `${seconds}s`;
-    } else if (seconds < 3600) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
-    } else if (seconds < 86400) {
-      const hours = Math.floor(seconds / 3600);
-      const remainingMinutes = Math.floor((seconds % 3600) / 60);
-      return `${hours}h ${remainingMinutes}m`;
-    } else {
-      const days = Math.floor(seconds / 86400);
-      const remainingHours = Math.floor((seconds % 86400) / 3600);
-      return `${days}d ${remainingHours}h`;
-    }
-  };
 
   return (
     <Card>
@@ -114,10 +95,8 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <DeviceStatusIndicator
-                      status={
-                        entry.status as "online" | "offline" | "restarted"
-                      }
-                      showLastSeen={false}
+                      status={entry.status as "online" | "offline"}
+                      showLastSeen={true}
                     />
                     <div>
                       <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -130,9 +109,7 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                       {entry.status === "offline" &&
                         entry.uptime_seconds !== null && (
                           <div className="text-xs text-muted-foreground mt-1 font-medium">
-                            Uptime:{" "}
-                            {entry.uptime_formatted ||
-                              formatDuration(entry.uptime_seconds)}
+                            Uptime: {entry.uptime_formatted}
                           </div>
                         )}
                     </div>
@@ -141,19 +118,9 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                     {entry.created_at
                       ? (() => {
                           try {
-                            const date = new Date(entry.created_at);
-                            const wibTime = new Date(
-                              date.getTime() + 7 * 60 * 60 * 1000
-                            ); // Add 7 hours for WIB
-                            return (
-                              wibTime.toLocaleString("id-ID", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              }) + " WIB"
+                            return formatDateTime(
+                              entry.created_at,
+                              "Asia/Jakarta"
                             );
                           } catch {
                             return "Invalid";
@@ -198,21 +165,9 @@ const DeviceHistoryPanel: React.FC<DeviceHistoryPanelProps> = ({
                     Last seen:{" "}
                     {(() => {
                       try {
-                        const date = new Date(
-                          selectedDevice.last_seen || selectedDevice.updated_at
-                        );
-                        const wibTime = new Date(
-                          date.getTime() + 7 * 60 * 60 * 1000
-                        ); // Add 7 hours for WIB
-                        return (
-                          wibTime.toLocaleString("id-ID", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          }) + " WIB"
+                        return formatDateTime(
+                          selectedDevice.last_seen || selectedDevice.updated_at,
+                          "Asia/Jakarta"
                         );
                       } catch {
                         return "Invalid";

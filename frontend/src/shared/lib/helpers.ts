@@ -75,12 +75,21 @@ export function getStatsCardTheme(type: keyof typeof THEME_COLORS.STATS_CARDS) {
  */
 export const formatDateTime = (timestamp: string, timezone: string): string => {
 try {
+  // Get fixed UTC timezone
   const utcTimestamp =
     timestamp.includes("Z") || timestamp.includes("+")
       ? timestamp
-      : timestamp + "Z"; // Tambahkan Z untuk UTC
+      : timestamp + "Z"; // Z for UTC because default datetime from sensor are UTC
 
   const date = new Date(utcTimestamp);
+
+
+  // Get timezone abbreviation
+  const timezoneName = date.toLocaleString("en-US", {
+    timeZoneName: "short",
+    timeZone: timezone
+  }).split(' ').pop();
+
   return (
     date.toLocaleString("id-ID", {
       year: "numeric",
@@ -90,6 +99,7 @@ try {
       minute: "2-digit",
       second: "2-digit",
       timeZone: timezone,
+      hour12: false,
     }) + " WIB"
   );
 } catch (error) {
