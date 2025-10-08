@@ -54,3 +54,11 @@ CREATE INDEX idx_device_status_history_created_at ON device_status_history(creat
 INSERT INTO users (username, email, password_hash, role) VALUES 
 ('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'admin'),
 ('user1', 'user@kampungtani.com', '$2b$12$6aJph2tLyWOIlrt9Hargs.QBGqvYTnXchyWkQRXpVf2iTGT7pRuuC', 'user');
+
+-- Insert sample device for admin
+INSERT INTO devices (user_id, name, description, location) VALUES
+(1, 'SEM225', 'Soil Sensor for Farmland Monitoring', 'Kebun A');
+
+-- Insert sample device status history for admin
+INSERT INTO device_status_history (device_id, status, uptime_seconds) VALUES
+(1, 'offline', 0);
