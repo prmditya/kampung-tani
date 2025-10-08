@@ -32,6 +32,7 @@ import {
 } from "@/shared/hooks/useApi";
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 import { ErrorMessage } from "@/shared/components/ui/error-message";
+import { formatDateTime } from "@/shared/lib/helpers";
 
 function HistoricalData() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,27 +56,6 @@ function HistoricalData() {
   const currentApiPage = apiPagination?.page || 1;
   const totalPages = apiPagination?.pages || 1;
   const totalItems = apiPagination?.total || 0;
-
-  // Format date to WIB
-  const formatDateTime = (timestamp: string): string => {
-    try {
-      const date = new Date(timestamp);
-      const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-      return (
-        wibTime.toLocaleString("id-ID", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          timeZone: "UTC",
-        }) + " WIB"
-      );
-    } catch (error) {
-      return timestamp;
-    }
-  };
 
   // Format numeric values
   const formatValue = (value: number, prefix = "", decimals = 2): string => {
@@ -360,7 +340,7 @@ function HistoricalData() {
                       </div>
                     </td>
                     <td className="p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(row.timestamp)}
+                      {formatDateTime(row.timestamp, "Asia/Jakarta")}
                     </td>
                     <td className="p-2 sm:p-3">
                       <div className="text-sm font-medium capitalize">

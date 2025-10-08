@@ -68,85 +68,34 @@ export function getStatsCardTheme(type: keyof typeof THEME_COLORS.STATS_CARDS) {
   return THEME_COLORS.STATS_CARDS[type] || THEME_COLORS.STATS_CARDS.total;
 }
 
-// ===== DEVICE UTILITIES =====
-
-/**
- * Check if device is online based on last seen timestamp
- */
-export function isDeviceOnline(lastSeen: string, offlineThresholdMinutes: number = 5): boolean {
-  const lastSeenTime = new Date(lastSeen).getTime();
-  const now = Date.now();
-  const thresholdMs = offlineThresholdMinutes * 60 * 1000;
-  
-  return (now - lastSeenTime) <= thresholdMs;
-}
-
-/**
- * Get device status based on last seen and status history
- */
-export function getDeviceStatus(
-  lastSeen: string, 
-  hasRecentRestart: boolean = false,
-  offlineThresholdMinutes: number = 5
-): DeviceStatusType {
-  if (hasRecentRestart) return DEVICE_STATUS.RESTARTED;
-  return isDeviceOnline(lastSeen, offlineThresholdMinutes) ? DEVICE_STATUS.ONLINE : DEVICE_STATUS.OFFLINE;
-}
-
-/**
- * Calculate device uptime percentage
- */
-export function calculateUptimePercentage(onlineMinutes: number, totalMinutes: number): number {
-  if (totalMinutes === 0) return 0;
-  return Math.round((onlineMinutes / totalMinutes) * 100);
-}
-
 // ===== DATE UTILITIES =====
 
 /**
  * Format date with locale-specific formatting
  */
-export function formatDate(
-  date: string | Date, 
-  format: keyof typeof DATE_FORMATS = 'SHORT',
-  locale: string = 'id-ID'
-): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat(locale, DATE_FORMATS[format]).format(dateObj);
-}
+export const formatDateTime = (timestamp: string, timezone: string): string => {
+try {
+  const utcTimestamp =
+    timestamp.includes("Z") || timestamp.includes("+")
+      ? timestamp
+      : timestamp + "Z"; // Tambahkan Z untuk UTC
 
-/**
- * Get relative time string (e.g., "2 minutes ago")
- */
-export function getRelativeTime(date: string | Date, locale: string = 'id-ID'): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
-  const diffMs = now.getTime() - dateObj.getTime();
-  
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  
-  const seconds = Math.floor(diffMs / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  
-  if (days > 0) return rtf.format(-days, 'day');
-  if (hours > 0) return rtf.format(-hours, 'hour');
-  if (minutes > 0) return rtf.format(-minutes, 'minute');
-  return rtf.format(-seconds, 'second');
+  const date = new Date(utcTimestamp);
+  return (
+    date.toLocaleString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: timezone,
+    }) + " WIB"
+  );
+} catch (error) {
+  return timestamp;
 }
-
-/**
- * Check if date is today
- */
-export function isToday(date: string | Date): boolean {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const today = new Date();
-  
-  return dateObj.getDate() === today.getDate() &&
-         dateObj.getMonth() === today.getMonth() &&
-         dateObj.getFullYear() === today.getFullYear();
-}
+};
 
 // ===== VALIDATION UTILITIES =====
 
