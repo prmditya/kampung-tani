@@ -46,8 +46,7 @@ CREATE TABLE gateways (
     status VARCHAR(20) DEFAULT 'offline',
     last_seen TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- SENSORS TABLE
@@ -57,11 +56,9 @@ CREATE TABLE sensors (
     sensor_uid VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(100),
     type VARCHAR(50) NOT NULL,
-    unit VARCHAR(20),
     status VARCHAR(20) DEFAULT 'inactive',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- GATEWAY ASSIGNMENTS TABLE
@@ -107,4 +104,4 @@ CREATE INDEX idx_sensor_data_gateway_id_timestamp ON sensor_data(gateway_id, tim
 
 -- Insert sample admin user (password: admin123 for admin)
 INSERT INTO users (username, email, password_hash, role) VALUES 
-('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'admin'),
+('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'admin');
