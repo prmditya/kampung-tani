@@ -1,72 +1,120 @@
 """
-FastAPI Database Connection Management
-Clean, efficient database utilities
+Async SQLAlchemy Database Configuration
+Clean, efficient async database management with dependency injection
 """
 
-import psycopg2
-import psycopg2.extras
-from typing import Generator, Optional
-from contextlib import contextmanager
+from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+    AsyncSession,
+    AsyncEngine
+)
+from sqlalchemy import text
 import logging
 
-from .config import get_settings
+from app.core.config import get_settings
+from app.models.base import Base
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def get_database_connection():
-    """Get a direct database connection"""
+# Create async engine
+def get_async_engine() -> AsyncEngine:
+    """
+    Create and configure async SQLAlchemy engine
+
+    Returns:
+        AsyncEngine: Configured async database engine
+    """
+    database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+
+    engine = create_async_engine(
+        database_url,
+        echo=settings.DEBUG,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+    )
+
+    return engine
+
+
+# Create async session factory
+engine = get_async_engine()
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency for database session
+
+    Yields:
+        AsyncSession: Database session for request handling
+
+    Usage:
+        @app.get("/items")
+        async def get_items(db: AsyncSession = Depends(get_db)):
+            result = await db.execute(select(Item))
+            return result.scalars().all()
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Database session error: {e}")
+            raise
+        finally:
+            await session.close()
+
+
+async def init_db() -> None:
+    """
+    Initialize database tables
+    Creates all tables defined in models if they don't exist
+
+    Note: In production, use Alembic migrations instead
+    """
+    async with engine.begin() as conn:
+        # Drop all tables (use with caution!)
+        # await conn.run_sync(Base.metadata.drop_all)
+
+        # Create all tables
+        await conn.run_sync(Base.metadata.create_all)
+
+    logger.info("✅ Database tables created successfully")
+
+
+async def check_database_health() -> bool:
+    """
+    Check if database is accessible and responsive
+
+    Returns:
+        bool: True if database is healthy, False otherwise
+    """
     try:
-        conn = psycopg2.connect(
-            host=settings.POSTGRES_HOST,
-            port=settings.POSTGRES_PORT,
-            database=settings.POSTGRES_DB,
-            user=settings.POSTGRES_USER,
-            password=settings.POSTGRES_PASSWORD,
-            cursor_factory=psycopg2.extras.RealDictCursor,
-        )
-        return conn
-    except psycopg2.Error as e:
-        logger.error(f"Database connection error: {e}")
-        raise
-
-
-@contextmanager
-def get_db_cursor():
-    """Context manager for database operations"""
-    conn = None
-    cursor = None
-    try:
-        conn = get_database_connection()
-        cursor = conn.cursor()
-        yield cursor
-        conn.commit()
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"Database operation error: {e}")
-        raise
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-
-def get_db() -> Generator:
-    """FastAPI dependency for database connection"""
-    with get_db_cursor() as cursor:
-        yield cursor
-
-
-# Database health check
-def check_database_health() -> bool:
-    """Check if database is accessible"""
-    try:
-        with get_db_cursor() as cursor:
-            cursor.execute("SELECT 1")
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
             return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return False
+
+
+async def close_db() -> None:
+    """
+    Close database connections
+    Should be called on application shutdown
+    """
+    await engine.dispose()
+    logger.info("✅ Database connections closed")

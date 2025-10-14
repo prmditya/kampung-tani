@@ -1,6 +1,6 @@
 """
 Health Check Router
-System status and monitoring endpoints
+System status and monitoring endpoints with async support
 """
 
 from fastapi import APIRouter, status
@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.core.config import get_settings
 from app.core.database import check_database_health
-from app.schemas import HealthResponse
+from app.api.v1.schemas import HealthResponse
 
 router = APIRouter()
 settings = get_settings()
@@ -32,7 +32,7 @@ async def health_check():
     """
 
     # Check database health
-    db_healthy = check_database_health()
+    db_healthy = await check_database_health()
 
     # Determine overall status
     overall_status = "healthy" if db_healthy else "unhealthy"
@@ -45,7 +45,6 @@ async def health_check():
         services={
             "api": True,
             "database": db_healthy,
-            "mqtt": True,  # Assume MQTT is healthy for now
         },
     )
 
@@ -56,5 +55,9 @@ async def health_check():
     description="Simple ping endpoint for basic connectivity check",
 )
 async def ping():
-    """Simple ping endpoint"""
-    return {"message": "pong", "timestamp": datetime.utcnow()}
+    """Simple ping endpoint for quick health check"""
+    return {
+        "message": "pong",
+        "timestamp": datetime.utcnow(),
+        "version": settings.VERSION
+    }
