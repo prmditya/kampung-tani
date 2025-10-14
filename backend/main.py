@@ -4,6 +4,7 @@ Kampung Tani IoT API - FastAPI with Async SQLAlchemy
 Modern, fast, and clean RESTful API with automatic OpenAPI documentation
 """
 
+import textwrap
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -16,8 +17,7 @@ from app.core.database import check_database_health, close_db
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -55,10 +55,7 @@ async def lifespan(app: FastAPI):
 # Get settings
 settings = get_settings()
 
-# Create FastAPI application
-app = FastAPI(
-    title="Kampung Tani IoT API",
-    description="""
+description = """
     🌱 **Modern FastAPI-based IoT Monitoring System**
 
     ## Features
@@ -81,7 +78,12 @@ app = FastAPI(
     ```
     Authorization: Bearer <your-jwt-token>
     ```
-    """,
+    """
+
+# Create FastAPI application
+app = FastAPI(
+    title="Kampung Tani IoT API",
+    description=textwrap.dedent(description),
     version=settings.VERSION,
     contact={
         "name": "Kampung Tani Development Team",
@@ -107,25 +109,15 @@ app.add_middleware(
 )
 
 # Include API v1 routers
+app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(
-    health.router,
-    prefix=settings.API_PREFIX,
-    tags=["Health"]
+    auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"]
 )
 app.include_router(
-    auth.router,
-    prefix=f"{settings.API_PREFIX}/auth",
-    tags=["Authentication"]
+    gateways.router, prefix=f"{settings.API_PREFIX}/gateways", tags=["Gateways"]
 )
 app.include_router(
-    gateways.router,
-    prefix=f"{settings.API_PREFIX}/gateways",
-    tags=["Gateways"]
-)
-app.include_router(
-    sensors.router,
-    prefix=f"{settings.API_PREFIX}/sensors",
-    tags=["Sensors"]
+    sensors.router, prefix=f"{settings.API_PREFIX}/sensors", tags=["Sensors"]
 )
 
 
@@ -138,7 +130,7 @@ async def root():
         "docs": settings.DOCS_URL,
         "redoc": settings.REDOC_URL,
         "status": "healthy",
-        "api_prefix": settings.API_PREFIX
+        "api_prefix": settings.API_PREFIX,
     }
 
 
@@ -146,9 +138,5 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=5000,
-        reload=settings.DEBUG,
-        log_level="info"
+        "main:app", host="0.0.0.0", port=5000, reload=settings.DEBUG, log_level="info"
     )
