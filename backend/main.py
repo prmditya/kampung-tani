@@ -11,7 +11,16 @@ from contextlib import asynccontextmanager
 import logging
 
 # Import v1 routers
-from app.api.v1.routers import auth, gateways, sensors, health
+from app.api.v1.routers import (
+    auth,
+    gateways,
+    sensors,
+    health,
+    farmers,
+    farms,
+    gateway_assignments,
+    gateway_status_history,
+)
 from app.core.config import get_settings
 from app.core.database import check_database_health, close_db
 
@@ -118,6 +127,18 @@ app.include_router(
 )
 app.include_router(
     sensors.router, prefix=f"{settings.API_PREFIX}/sensors", tags=["Sensors"]
+)
+app.include_router(
+    farmers.router, prefix=f"{settings.API_PREFIX}/farmers", tags=["Farmers"]
+)
+app.include_router(
+    farms.router, prefix=f"{settings.API_PREFIX}/farms", tags=["Farms"]
+)
+app.include_router(
+    gateway_assignments.router, prefix=f"{settings.API_PREFIX}/gateway-assignments", tags=["Gateway Assignments"]
+)
+app.include_router(
+    gateway_status_history.router, prefix=f"{settings.API_PREFIX}/gateway-status-history", tags=["Gateway Status History"]
 )
 
 

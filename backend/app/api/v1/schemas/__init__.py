@@ -28,6 +28,25 @@ from app.api.v1.schemas.sensor_data import (
     SensorDataResponse,
     SensorDataBulkCreate,
 )
+from app.api.v1.schemas.farmer import (
+    FarmerCreate,
+    FarmerUpdate,
+    FarmerResponse,
+)
+from app.api.v1.schemas.farm import (
+    FarmCreate,
+    FarmUpdate,
+    FarmResponse,
+)
+from app.api.v1.schemas.gateway_assignment import (
+    GatewayAssignmentCreate,
+    GatewayAssignmentUpdate,
+    GatewayAssignmentResponse,
+)
+from app.api.v1.schemas.gateway_status_history import (
+    GatewayStatusHistoryCreate,
+    GatewayStatusHistoryResponse,
+)
 from app.api.v1.schemas.health import HealthResponse
 
 __all__ = [
@@ -56,6 +75,21 @@ __all__ = [
     "SensorDataCreate",
     "SensorDataResponse",
     "SensorDataBulkCreate",
+    # Farmer schemas
+    "FarmerCreate",
+    "FarmerUpdate",
+    "FarmerResponse",
+    # Farm schemas
+    "FarmCreate",
+    "FarmUpdate",
+    "FarmResponse",
+    # Gateway Assignment schemas
+    "GatewayAssignmentCreate",
+    "GatewayAssignmentUpdate",
+    "GatewayAssignmentResponse",
+    # Gateway Status History schemas
+    "GatewayStatusHistoryCreate",
+    "GatewayStatusHistoryResponse",
     # Health schemas
     "HealthResponse",
 ]
