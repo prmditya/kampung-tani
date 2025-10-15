@@ -1,10 +1,27 @@
-"use client";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Topbar } from "@/components/topbar";
+import { cookies } from "next/headers";
 
-import { DashboardLayout } from "@/shared/components/dashboard-layout";
-import { withAuth } from "@/shared/hooks/useAuth";
+export default async function DashboardLayout({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
+	const cookieStore = await cookies();
+	const defaultOpen = cookieStore.get("sidebar:state")?.value !== "false";
 
-function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
-	return <DashboardLayout>{children}</DashboardLayout>;
+	return (
+		<SidebarProvider defaultOpen={defaultOpen}>
+			<AppSidebar />
+			<div className="flex min-h-screen w-full flex-col overflow-x-hidden">
+				<Topbar />
+				<main className="flex-1 bg-muted/40 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden">
+					<div className="max-w-[100vw] sm:max-w-none">
+						{children}
+					</div>
+				</main>
+			</div>
+		</SidebarProvider>
+	);
 }
-
-export default withAuth(DashboardGroupLayout);
