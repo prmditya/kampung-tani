@@ -58,7 +58,6 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="admins">Admin Users</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
         </TabsList>
 
         {/* Account Tab */}

@@ -21,9 +21,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
-import { Button } from "./ui/button";
+import { NavUser } from "./nav-user";
 
 // Menu items.
 const items = [
@@ -52,6 +53,9 @@ const items = [
     url: "/dashboard/data",
     icon: Database,
   },
+];
+
+const secondaryItems = [
   {
     title: "Settings",
     url: "/dashboard/settings",
@@ -92,9 +96,29 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.url}
                     className={
-                      pathname === item.url
-                        ? "bg-muted hover:bg-muted/80"
-                        : ""
+                      pathname === item.url ? "bg-muted hover:bg-muted/80" : ""
+                    }
+                  >
+                    <Link href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {secondaryItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url}
+                    className={
+                      pathname === item.url ? "bg-muted hover:bg-muted/80" : ""
                     }
                   >
                     <Link href={item.url}>
@@ -108,6 +132,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <NavUser
+          user={{
+            name: "Admin",
+            email: "admin@kampoengtani.com",
+            avatar: "/path/to/avatar.jpg",
+          }}
+        />
+      </SidebarFooter>
     </Sidebar>
   );
 }

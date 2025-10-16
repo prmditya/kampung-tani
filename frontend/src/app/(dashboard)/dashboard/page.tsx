@@ -174,7 +174,7 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid
-                    strokeDasharray="5"
+                    strokeDasharray="5 5"
                     horizontal={true}
                     vertical={false}
                     className="stroke-border"
