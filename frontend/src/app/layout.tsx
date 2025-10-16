@@ -12,6 +12,9 @@ const geistSans = Geist({
 export const metadata: Metadata = {
 	title: "Kampoeng Tani - Admin Dashboard",
 	description: "IoT Device Management System for Agriculture",
+	icons: {
+		icon: "/favicon.webp",
+	},
 };
 
 export default function RootLayout({
