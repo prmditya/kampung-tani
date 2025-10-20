@@ -13,10 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Phone } from "lucide-react";
 import { useFarmers } from "@/hooks/use-farmers";
 import { useFarms } from "@/hooks/use-farms";
-import { AddFarmerDialog } from "@/components/farmers/add-farmer-dialog";
-import { EditFarmerDialog } from "@/components/farmers/edit-farmer-dialog";
-import { DeleteFarmerButton } from "@/components/farmers/delete-farmer-button";
-import { ViewFarmerDialog } from "@/components/farmers/view-farmer-dialog";
+import {
+  AddFarmerDialog,
+  EditFarmerDialog,
+  DeleteFarmerButton,
+  ViewFarmerDialog,
+} from "@/features/farmers";
 import type { FarmResponse } from "@/types/api";
 
 export default function FarmersPage() {
