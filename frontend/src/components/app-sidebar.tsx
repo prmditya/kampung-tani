@@ -69,7 +69,7 @@ export function AppSidebar() {
     <Sidebar variant="inset">
       <SidebarHeader className="border-b px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="bg-background p-2 rounded-lg shadow-sm">
+          <div className="bg-emerald-100  p-2 rounded-lg shadow-sm">
             <Image
               src="/favicon.webp"
               alt="Kampoeng Tani Logo"
