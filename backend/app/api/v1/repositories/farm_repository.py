@@ -161,3 +161,27 @@ class FarmRepository(BaseRepository[Farm]):
             .where(Farm.id == farm_id)
         )
         return result.scalar_one_or_none()
+
+    async def delete(self, id: int) -> bool:
+        """
+        Delete a farm by ID with cascade delete of associated gateway assignments
+
+        Override base repository delete to properly trigger ORM cascade
+
+        Args:
+            id: Farm ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        # Load farm with gateway assignments to trigger ORM cascade
+        farm = await self.get_with_assignments(id)
+
+        if not farm:
+            return False
+
+        # Delete through session to trigger cascade
+        await self.db.delete(farm)
+        await self.db.flush()
+
+        return True

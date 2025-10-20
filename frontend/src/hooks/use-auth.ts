@@ -42,6 +42,10 @@ export function useLogin() {
       // Store token in localStorage
       localStorage.setItem("token", data.access_token);
 
+      // Store token expiration time (current time + expires_in seconds)
+      const expirationTime = Date.now() + data.expires_in * 1000;
+      localStorage.setItem("token_expiration", expirationTime.toString());
+
       // Redirect to dashboard
       router.push("/dashboard");
     },
@@ -57,8 +61,9 @@ export function useLogout() {
       return response.data;
     },
     onSuccess: () => {
-      // Remove token from localStorage
+      // Remove token and expiration from localStorage
       localStorage.removeItem("token");
+      localStorage.removeItem("token_expiration");
 
       // Redirect to login page
       router.push("/login");

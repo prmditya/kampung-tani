@@ -6,6 +6,7 @@ Database operations for Sensor model
 from typing import Optional, List
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.sensor import Sensor
 from app.api.v1.repositories.base_repository import BaseRepository
@@ -96,3 +97,44 @@ class SensorRepository(BaseRepository[Sensor]):
             True if exists, False otherwise
         """
         return await self.exists(sensor_uid=sensor_uid)
+
+    async def get_with_sensor_data(self, sensor_id: int) -> Optional[Sensor]:
+        """
+        Get sensor with sensor data eager loaded
+
+        Args:
+            sensor_id: Sensor ID
+
+        Returns:
+            Sensor instance with sensor data or None
+        """
+        result = await self.db.execute(
+            select(Sensor)
+            .options(selectinload(Sensor.sensor_data))
+            .where(Sensor.id == sensor_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def delete(self, id: int) -> bool:
+        """
+        Delete a sensor by ID with cascade delete of associated sensor data
+
+        Override base repository delete to properly trigger ORM cascade
+
+        Args:
+            id: Sensor ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        # Load sensor with sensor data to trigger ORM cascade
+        sensor = await self.get_with_sensor_data(id)
+
+        if not sensor:
+            return False
+
+        # Delete through session to trigger cascade
+        await self.db.delete(sensor)
+        await self.db.flush()
+
+        return True

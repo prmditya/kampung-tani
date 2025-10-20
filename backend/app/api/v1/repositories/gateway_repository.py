@@ -205,3 +205,49 @@ class GatewayRepository(BaseRepository[Gateway]):
             True if exists, False otherwise
         """
         return await self.exists(gateway_uid=gateway_uid)
+
+    async def get_with_all_relationships(self, gateway_id: int) -> Optional[Gateway]:
+        """
+        Get gateway with all relationships eager loaded for cascade delete
+
+        Args:
+            gateway_id: Gateway ID
+
+        Returns:
+            Gateway instance with all relationships or None
+        """
+        result = await self.db.execute(
+            select(Gateway)
+            .options(
+                selectinload(Gateway.sensors),
+                selectinload(Gateway.sensor_data),
+                selectinload(Gateway.gateway_assignments),
+                selectinload(Gateway.status_history)
+            )
+            .where(Gateway.id == gateway_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def delete(self, id: int) -> bool:
+        """
+        Delete a gateway by ID with cascade delete of all associated data
+
+        Override base repository delete to properly trigger ORM cascade
+
+        Args:
+            id: Gateway ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        # Load gateway with all relationships to trigger ORM cascade
+        gateway = await self.get_with_all_relationships(id)
+
+        if not gateway:
+            return False
+
+        # Delete through session to trigger cascade
+        await self.db.delete(gateway)
+        await self.db.flush()
+
+        return True

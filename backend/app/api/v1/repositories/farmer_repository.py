@@ -83,3 +83,27 @@ class FarmerRepository(BaseRepository[Farmer]):
 
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def delete(self, id: int) -> bool:
+        """
+        Delete a farmer by ID with cascade delete of associated farms
+
+        Override base repository delete to properly trigger ORM cascade
+
+        Args:
+            id: Farmer ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        # Load farmer with farms to trigger ORM cascade
+        farmer = await self.get_with_farms(id)
+
+        if not farmer:
+            return False
+
+        # Delete through session to trigger cascade
+        await self.db.delete(farmer)
+        await self.db.flush()
+
+        return True
