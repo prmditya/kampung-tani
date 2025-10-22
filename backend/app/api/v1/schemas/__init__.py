@@ -48,6 +48,12 @@ from app.api.v1.schemas.gateway_status_history import (
     GatewayStatusHistoryResponse,
 )
 from app.api.v1.schemas.health import HealthResponse
+from app.api.v1.schemas.dashboard import (
+    DashboardStats,
+    DashboardActivity,
+    DashboardResponse,
+    ActivityDataPoint,
+)
 
 __all__ = [
     # Base schemas
@@ -92,4 +98,9 @@ __all__ = [
     "GatewayStatusHistoryResponse",
     # Health schemas
     "HealthResponse",
+    # Dashboard schemas
+    "DashboardStats",
+    "DashboardActivity",
+    "DashboardResponse",
+    "ActivityDataPoint",
 ]

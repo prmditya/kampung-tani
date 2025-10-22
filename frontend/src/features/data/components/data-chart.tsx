@@ -80,7 +80,7 @@ export function DataChart({ data, title }: DataChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={150}>
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
@@ -118,18 +118,18 @@ export function DataChart({ data, title }: DataChartProps) {
               tick={{ fill: "currentColor", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              width={50}
+              width={40}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '6px',
-                color: 'hsl(var(--popover-foreground))',
+                backgroundColor: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "6px",
+                color: "hsl(var(--popover-foreground))",
               }}
               labelStyle={{
-                color: 'hsl(var(--popover-foreground))',
-                fontWeight: 'bold',
+                color: "hsl(var(--popover-foreground))",
+                fontWeight: "bold",
               }}
             />
             {sensorTypes.length > 1 && <Legend />}
@@ -143,7 +143,7 @@ export function DataChart({ data, title }: DataChartProps) {
                 strokeWidth={2}
                 name={type}
                 dot={{
-                  r: 3,
+                  r: 2,
                   fill: "rgb(59, 130, 246)",
                   strokeWidth: 2,
                   stroke: "hsl(var(--card))",

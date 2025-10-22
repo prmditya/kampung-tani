@@ -20,6 +20,7 @@ from app.api.v1.routers import (
     farms,
     gateway_assignments,
     gateway_status_history,
+    dashboard,
 )
 from app.core.config import get_settings
 from app.core.database import check_database_health, close_db
@@ -121,6 +122,9 @@ app.add_middleware(
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(
     auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"]
+)
+app.include_router(
+    dashboard.router, prefix=f"{settings.API_PREFIX}/dashboard", tags=["Dashboard"]
 )
 app.include_router(
     gateways.router, prefix=f"{settings.API_PREFIX}/gateways", tags=["Gateways"]
