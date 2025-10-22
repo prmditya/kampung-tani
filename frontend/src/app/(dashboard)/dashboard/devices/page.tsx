@@ -1,34 +1,48 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dummyDevices } from "@/lib/dummy-data";
-import type { Device } from "@/lib/types";
-import { DevicesTable, AddDeviceDialog } from "@/features/devices";
+import { useGateways } from "@/hooks/use-gateways";
+import { DevicesTable } from "@/features/devices";
 
 export default function DevicesPage() {
-  const [devices, setDevices] = useState<Device[]>(dummyDevices);
+  const { data: devicesData, isLoading, error } = useGateways({ size: 20 });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Device Management</h1>
-          <p className="text-muted-foreground">
-            Manage and monitor all IoT devices
-          </p>
-        </div>
-        <AddDeviceDialog />
-      </div>
+  const devices = devicesData?.items || [];
 
+  if (isLoading) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle>All Devices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DevicesTable devices={devices} />
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="text-muted-foreground">Loading devices...</div>
+          </div>
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="text-destructive">
+              Error loading devices: {(error as Error).message}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>All Devices</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <DevicesTable devices={devices} />
+      </CardContent>
+    </Card>
   );
 }

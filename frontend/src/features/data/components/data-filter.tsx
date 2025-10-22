@@ -8,34 +8,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Download, Filter } from "lucide-react";
-import type { Device, Farmer } from "@/lib/types";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Download, Filter, RefreshCw, CalendarIcon, RotateCw } from "lucide-react";
+import { format } from "date-fns";
+import type { GatewayResponse, SensorResponse } from "@/types/api";
+import { cn } from "@/lib/utils";
 
 interface DataFilterProps {
-  devices: Device[];
-  farmers: Farmer[];
-  selectedDevice: string;
-  selectedFarmer: string;
-  dateFrom: string;
-  dateTo: string;
-  onDeviceChange: (value: string) => void;
-  onFarmerChange: (value: string) => void;
-  onDateFromChange: (value: string) => void;
-  onDateToChange: (value: string) => void;
+  gateways: GatewayResponse[];
+  sensors: SensorResponse[];
+  selectedGateway: string;
+  selectedSensor: string;
+  dateFrom: Date | undefined;
+  dateTo: Date | undefined;
+  onGatewayChange: (value: string) => void;
+  onSensorChange: (value: string) => void;
+  onDateFromChange: (date: Date | undefined) => void;
+  onDateToChange: (date: Date | undefined) => void;
+  onReset: () => void;
+  onRefresh: () => void;
+  onExport: () => void;
+  isRefreshing?: boolean;
 }
 
 export function DataFilter({
-  devices,
-  farmers,
-  selectedDevice,
-  selectedFarmer,
+  gateways,
+  sensors,
+  selectedGateway,
+  selectedSensor,
   dateFrom,
   dateTo,
-  onDeviceChange,
-  onFarmerChange,
+  onGatewayChange,
+  onSensorChange,
   onDateFromChange,
   onDateToChange,
+  onReset,
+  onRefresh,
+  onExport,
+  isRefreshing = false,
 }: DataFilterProps) {
   return (
     <Card>
@@ -48,16 +63,16 @@ export function DataFilter({
       <CardContent>
         <div className="grid gap-4 md:grid-cols-4">
           <div className="grid gap-2">
-            <Label htmlFor="device-filter">Device</Label>
-            <Select value={selectedDevice} onValueChange={onDeviceChange}>
-              <SelectTrigger id="device-filter">
-                <SelectValue placeholder="All Devices" />
+            <Label htmlFor="gateway-filter">Gateway</Label>
+            <Select value={selectedGateway} onValueChange={onGatewayChange}>
+              <SelectTrigger id="gateway-filter">
+                <SelectValue placeholder="Select Gateway" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Devices</SelectItem>
-                {devices.map((device) => (
-                  <SelectItem key={device.id} value={device.id}>
-                    {device.name}
+                <SelectItem value="all">All Gateways</SelectItem>
+                {gateways.map((gateway) => (
+                  <SelectItem key={gateway.id} value={gateway.id.toString()}>
+                    {gateway.name || gateway.gateway_uid}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -65,16 +80,20 @@ export function DataFilter({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="farmer-filter">Farmer</Label>
-            <Select value={selectedFarmer} onValueChange={onFarmerChange}>
-              <SelectTrigger id="farmer-filter">
-                <SelectValue placeholder="All Farmers" />
+            <Label htmlFor="sensor-filter">Sensor</Label>
+            <Select
+              value={selectedSensor}
+              onValueChange={onSensorChange}
+              disabled={selectedGateway === "all"}
+            >
+              <SelectTrigger id="sensor-filter">
+                <SelectValue placeholder="Select Sensor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Farmers</SelectItem>
-                {farmers.map((farmer) => (
-                  <SelectItem key={farmer.id} value={farmer.id}>
-                    {farmer.name}
+                <SelectItem value="all">All Sensors</SelectItem>
+                {sensors.map((sensor) => (
+                  <SelectItem key={sensor.id} value={sensor.id.toString()}>
+                    {sensor.name || sensor.sensor_uid} ({sensor.type})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -82,32 +101,76 @@ export function DataFilter({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date-from">Date From</Label>
-            <Input
-              id="date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => onDateFromChange(e.target.value)}
-            />
+            <Label>Date From</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={onDateFromChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date-to">Date To</Label>
-            <Input
-              id="date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => onDateToChange(e.target.value)}
-            />
+            <Label>Date To</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={onDateToChange}
+                  initialFocus
+                  disabled={(date) =>
+                    dateFrom ? date < dateFrom : false
+                  }
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
         <div className="mt-4 flex gap-3">
-          <Button className="flex-1">Apply Filters</Button>
-          <Button variant="outline" className="flex-1">
-            Reset
+          <Button
+            onClick={onRefresh}
+            variant="outline"
+            className="flex-1"
+            disabled={isRefreshing}
+          >
+            <RotateCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
-          <Button variant="outline">
+          <Button onClick={onReset} variant="outline" className="flex-1">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Reset Filters
+          </Button>
+          <Button onClick={onExport} variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>

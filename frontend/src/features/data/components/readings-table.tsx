@@ -6,46 +6,84 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { SensorReading } from "@/lib/types";
+import type { SensorDataResponse, SensorResponse } from "@/types/api";
+import { useMemo } from "react";
 
 interface ReadingsTableProps {
-  readings: SensorReading[];
+  readings: SensorDataResponse[];
+  sensors: SensorResponse[];
 }
 
-export function ReadingsTable({ readings }: ReadingsTableProps) {
+export function ReadingsTable({ readings, sensors }: ReadingsTableProps) {
+  // Create a map of sensor IDs to sensor info
+  const sensorMap = useMemo(() => {
+    return new Map(
+      sensors.map((s) => [s.id, { type: s.type, name: s.name, uid: s.sensor_uid }])
+    );
+  }, [sensors]);
+
+  if (!readings.length) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        No readings available
+      </div>
+    );
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Time</TableHead>
-          <TableHead>Device ID</TableHead>
-          <TableHead>pH Level</TableHead>
-          <TableHead>Temperature (°C)</TableHead>
-          <TableHead>Turbidity (NTU)</TableHead>
-          <TableHead>Water Level (%)</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {readings.map((reading) => (
-          <TableRow key={reading.id}>
-            <TableCell>
-              {new Date(reading.timestamp).toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </TableCell>
-            <TableCell className="font-medium">
-              {reading.deviceId}
-            </TableCell>
-            <TableCell>{reading.ph.toFixed(1)}</TableCell>
-            <TableCell>{reading.temperature.toFixed(1)}</TableCell>
-            <TableCell>{reading.turbidity.toFixed(1)}</TableCell>
-            <TableCell>{reading.waterLevel.toFixed(1)}</TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Time</TableHead>
+            <TableHead>Sensor</TableHead>
+            <TableHead>Measurement Type</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead>Unit</TableHead>
+            <TableHead>Gateway ID</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {readings.map((reading) => {
+            const sensor = sensorMap.get(reading.sensor_id);
+            // Extract measurement type from metadata
+            const measurementType = reading.metadata?.measurement_type || sensor?.type || "Unknown";
+
+            return (
+              <TableRow key={reading.id}>
+                <TableCell>
+                  {new Date(reading.timestamp).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {sensor?.name || sensor?.uid || reading.sensor_id}
+                </TableCell>
+                <TableCell>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                    {measurementType}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono">
+                  {typeof reading.value === "number"
+                    ? reading.value.toFixed(2)
+                    : reading.value}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {reading.unit || "-"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {reading.gateway_id}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

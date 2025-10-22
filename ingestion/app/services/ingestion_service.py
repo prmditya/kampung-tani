@@ -27,13 +27,15 @@ class IngestionService:
             logger.info(f"Ingesting message: {topic}")
 
             # Extract gateway_uid and sensor_uid from topic
+            logger.debug(f"Parsing topic: {topic}")
             match = re.match(r"kampoengtani/([^/]+)/([^/]+)/data", topic)
             if not match:
-                logger.warning(f"Invalid topic format: {topic}")
+                logger.warning(f"Invalid topic format: {topic} (expected: kampoengtani/<gateway_uid>/<sensor_uid>/data)")
                 return 0
 
             gateway_uid = match.group(1)
             sensor_uid = match.group(2)
+            logger.info(f"Parsed topic - Gateway: {gateway_uid}, Sensor: {sensor_uid}")
 
             # Validate assignment (ensure gateway currently assigned to a farm)
             assignment = get_active_assignment(db, gateway_uid)

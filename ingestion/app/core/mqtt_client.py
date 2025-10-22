@@ -26,17 +26,20 @@ class MQTTClient:
     def on_connect(self, client, userdata, flags, rc):
         """Callback saat connect ke broker"""
         if rc == 0:
-            logger.info("Connected to MQTT Broker")
+            logger.info("✓ Connected to MQTT Broker")
             # Subscribe to topic
             client.subscribe(settings.MQTT_TOPIC_PATTERN)
-            logger.info(f"Subscribed to: {settings.MQTT_TOPIC_PATTERN}")
+            logger.info(f"✓ Subscribed to: {settings.MQTT_TOPIC_PATTERN}")
         else:
             logger.error(f"✗ Failed to connect, code: {rc}")
 
     def on_message(self, client, userdata, msg):
         """Callback saat terima message"""
+        logger.debug(f"MQTT message received - Topic: {msg.topic}, QoS: {msg.qos}")
         if self.message_handler:
             self.message_handler(msg.topic, msg.payload)
+        else:
+            logger.warning("No message handler set!")
 
     def on_disconnect(self, client, userdata, rc):
         """Callback saat disconnect"""

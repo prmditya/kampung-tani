@@ -5,6 +5,8 @@ import type {
   GatewayCreate,
   GatewayUpdate,
   MessageResponse,
+  FarmResponse,
+  PaginatedResponse,
 } from "@/types/api";
 
 // Query Keys
@@ -18,22 +20,27 @@ export const gatewayKeys = {
 };
 
 // ==================== GET ALL GATEWAYS ====================
-export function useGateways(filters?: { skip?: number; limit?: number }) {
+export function useGateways(filters?: {
+  page?: number;
+  size?: number;
+  search?: string;
+}) {
   return useQuery({
     queryKey: gatewayKeys.list(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters?.skip) params.append("skip", filters.skip.toString());
-      if (filters?.limit) params.append("limit", filters.limit.toString());
+      if (filters?.page) params.append("page", filters.page.toString());
+      if (filters?.size) params.append("size", filters.size.toString());
+      if (filters?.search) params.append("search", filters.search);
 
-      const response = await apiClient.get<GatewayResponse[]>(
+      const response = await apiClient.get<PaginatedResponse<GatewayResponse>>(
         `/gateways?${params}`
       );
       return response.data;
     },
     // TODO: Integrate with API
     // Uncomment when ready to integrate
-    enabled: false, // Set to true when integrating
+    enabled: true, // Set to true when integrating
   });
 }
 
@@ -74,13 +81,7 @@ export function useUpdateGateway() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: GatewayUpdate;
-    }) => {
+    mutationFn: async ({ id, data }: { id: number; data: GatewayUpdate }) => {
       const response = await apiClient.put<GatewayResponse>(
         `/gateways/${id}`,
         data

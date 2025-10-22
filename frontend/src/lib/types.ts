@@ -1,10 +1,11 @@
 export interface Device {
   id: string;
   name: string;
-  status: "active" | "inactive" | "maintenance";
+  status: "online" | "offline" | "active" | "inactive" | "maintenance";
   farmId?: string;
   farmName?: string;
-  lastActive: Date;
+  lastActive?: Date;
+  lastSeen?: Date;
   batteryLevel?: number;
 }
 

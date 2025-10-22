@@ -93,7 +93,7 @@ export interface GatewayUpdate {
 export interface GatewayResponse extends GatewayBase {
   id: number;
   user_id: number;
-  last_seen?: string | null;
+  last_seen: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -132,23 +132,39 @@ export interface SensorResponse extends SensorBase {
 
 // ==================== SENSOR DATA TYPES ====================
 
-export interface SensorDataCreate {
+export interface SensorDataMetadata {
+  measurement_type?: string; // Type of measurement (Temperature, Moisture, PH, etc.)
+  source?: string; // Data source (mqtt, api, etc.)
+  raw_value?: number; // Original raw value before scaling
+  tag?: string; // Original MQTT tag
+  farm_id?: number;
+  farmer_id?: number;
+  assignment_id?: number;
+  [key: string]: unknown; // Allow additional metadata fields
+}
+
+export interface SensorDataBase {
+  value: number;
+  unit?: string | null;
+  metadata?: SensorDataMetadata | null;
+}
+
+export interface SensorDataCreate extends SensorDataBase {
   sensor_id: number;
-  temperature?: number | null;
-  humidity?: number | null;
-  soil_moisture?: number | null;
-  ph_level?: number | null;
-  light_intensity?: number | null;
+  gateway_id: number;
   timestamp?: string;
 }
 
-export interface SensorDataResponse extends SensorDataCreate {
+export interface SensorDataResponse extends SensorDataBase {
   id: number;
-  created_at: string;
+  sensor_id: number;
+  gateway_id: number;
+  timestamp: string;
 }
 
 export interface SensorDataBulkCreate {
-  data: SensorDataCreate[];
+  gateway_id: number;
+  readings: Record<string, unknown>[];
 }
 
 // ==================== FARMER TYPES ====================
@@ -228,7 +244,7 @@ export interface GatewayAssignmentUpdate {
 
 export interface GatewayAssignmentResponse extends GatewayAssignmentBase {
   id: number;
-  assigned_by?: number | null;
+  assigned_by: number;
 }
 
 // ==================== GATEWAY STATUS HISTORY TYPES ====================
@@ -239,7 +255,8 @@ export interface GatewayStatusHistoryCreate {
   timestamp?: string;
 }
 
-export interface GatewayStatusHistoryResponse extends GatewayStatusHistoryCreate {
+export interface GatewayStatusHistoryResponse
+  extends GatewayStatusHistoryCreate {
   id: number;
   created_at: string;
 }

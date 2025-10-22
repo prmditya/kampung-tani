@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,98 +12,148 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Unplug, Link2Off } from "lucide-react";
-import type { Device, Farmer, Farm } from "@/lib/types";
+import { Plus } from "lucide-react";
+import { useCreateAssignment } from "@/hooks/use-assignment";
+import type {
+  GatewayResponse,
+  FarmResponse,
+  GatewayAssignmentCreate,
+} from "@/types/api";
 
 interface AssignmentFormProps {
-  unassignedDevices: Device[];
-  farmers: Farmer[];
-  farms: Farm[];
-  selectedDevice: string;
-  selectedFarmer: string;
-  selectedFarm: string;
-  onDeviceChange: (value: string) => void;
-  onFarmerChange: (value: string) => void;
-  onFarmChange: (value: string) => void;
+  gateways: GatewayResponse[];
+  farms: FarmResponse[];
 }
 
-export function AssignmentForm({
-  unassignedDevices,
-  farmers,
-  farms,
-  selectedDevice,
-  selectedFarmer,
-  selectedFarm,
-  onDeviceChange,
-  onFarmerChange,
-  onFarmChange,
-}: AssignmentFormProps) {
+export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
+  const [selectedGateway, setSelectedGateway] = useState<string>("");
+  const [selectedFarm, setSelectedFarm] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const createMutation = useCreateAssignment();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedGateway || !selectedFarm) {
+      return;
+    }
+
+    // Convert date strings to ISO datetime format (add time component)
+    const formatDateTime = (dateStr: string) => {
+      if (!dateStr) return null;
+      // Add time component (00:00:00) to make it a valid datetime
+      return `${dateStr}T00:00:00`;
+    };
+
+    const data: GatewayAssignmentCreate = {
+      gateway_id: parseInt(selectedGateway),
+      farm_id: parseInt(selectedFarm),
+      start_date: formatDateTime(startDate),
+      end_date: formatDateTime(endDate),
+    };
+
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        // Reset form
+        setSelectedGateway("");
+        setSelectedFarm("");
+        setStartDate("");
+        setEndDate("");
+      },
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Create New Assignment</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="grid gap-2">
-            <Label htmlFor="device">Select Device</Label>
-            <Select value={selectedDevice} onValueChange={onDeviceChange}>
-              <SelectTrigger id="device">
-                <SelectValue placeholder="Choose a device" />
-              </SelectTrigger>
-              <SelectContent>
-                {unassignedDevices.map((device) => (
-                  <SelectItem key={device.id} value={device.id}>
-                    {device.name} ({device.id})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="gateway">Gateway *</Label>
+              <Select
+                value={selectedGateway}
+                onValueChange={setSelectedGateway}
+                disabled={createMutation.isPending}
+              >
+                <SelectTrigger id="gateway">
+                  <SelectValue placeholder="Select a gateway" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gateways.map((gateway) => (
+                    <SelectItem key={gateway.id} value={gateway.id.toString()}>
+                      {gateway.name || gateway.gateway_uid} ({gateway.gateway_uid})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="farm">Farm *</Label>
+              <Select
+                value={selectedFarm}
+                onValueChange={setSelectedFarm}
+                disabled={createMutation.isPending}
+              >
+                <SelectTrigger id="farm">
+                  <SelectValue placeholder="Select a farm" />
+                </SelectTrigger>
+                <SelectContent>
+                  {farms.map((farm) => (
+                    <SelectItem key={farm.id} value={farm.id.toString()}>
+                      {farm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="start_date">Start Date (Optional)</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                disabled={createMutation.isPending}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="end_date">End Date (Optional)</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={createMutation.isPending}
+              />
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="farmer">Select Farmer</Label>
-            <Select value={selectedFarmer} onValueChange={onFarmerChange}>
-              <SelectTrigger id="farmer">
-                <SelectValue placeholder="Choose a farmer" />
-              </SelectTrigger>
-              <SelectContent>
-                {farmers.map((farmer) => (
-                  <SelectItem key={farmer.id} value={farmer.id}>
-                    {farmer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {createMutation.isError && (
+            <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+              {createMutation.error?.message || "Failed to create assignment"}
+            </div>
+          )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="farm">Select Farm</Label>
-            <Select value={selectedFarm} onValueChange={onFarmChange}>
-              <SelectTrigger id="farm">
-                <SelectValue placeholder="Choose a farm" />
-              </SelectTrigger>
-              <SelectContent>
-                {farms.map((farm) => (
-                  <SelectItem key={farm.id} value={farm.id}>
-                    {farm.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="mt-6">
+            <Button
+              type="submit"
+              disabled={
+                !selectedGateway || !selectedFarm || createMutation.isPending
+              }
+              className="w-full"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {createMutation.isPending ? "Creating..." : "Create Assignment"}
+            </Button>
           </div>
-        </div>
-
-        <div className="mt-6 grid md:grid-cols-2 gap-3">
-          <Button className="flex-1">
-            <Unplug className="mr-2 h-4 w-4" />
-            Assign Device
-          </Button>
-          <Button variant="outline" className="flex-1">
-            <Link2Off className="mr-2 h-4 w-4" />
-            Unassign Selected
-          </Button>
-        </div>
+        </form>
       </CardContent>
     </Card>
   );

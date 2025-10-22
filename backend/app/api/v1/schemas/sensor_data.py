@@ -3,7 +3,7 @@ Sensor Data Pydantic Schemas
 Sensor readings and time-series data schemas
 """
 
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import Optional, Any, List
 from datetime import datetime
 
@@ -36,7 +36,26 @@ class SensorDataBulkCreate(BaseSchema):
 class SensorDataResponse(SensorDataBase):
     """Sensor data response schema"""
 
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
     id: int
     sensor_id: int
     gateway_id: int
     timestamp: datetime
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to handle metadata_ -> metadata mapping"""
+        if hasattr(obj, 'metadata_'):
+            # Create a dict copy and rename metadata_ to metadata
+            obj_dict = {
+                'id': obj.id,
+                'sensor_id': obj.sensor_id,
+                'gateway_id': obj.gateway_id,
+                'value': obj.value,
+                'unit': obj.unit,
+                'metadata': obj.metadata_,  # Map metadata_ to metadata
+                'timestamp': obj.timestamp
+            }
+            return super().model_validate(obj_dict, **kwargs)
+        return super().model_validate(obj, **kwargs)

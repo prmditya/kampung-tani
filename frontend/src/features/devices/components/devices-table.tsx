@@ -6,21 +6,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Battery } from "lucide-react";
-import type { Device } from "@/lib/types";
+import type { GatewayResponse } from "@/types/api";
+import { EditDeviceDialog } from "./edit-device-dialog";
+import { DeleteDeviceButton } from "./delete-device-button";
 
 interface DevicesTableProps {
-  devices: Device[];
+  devices: GatewayResponse[];
 }
 
 export function DevicesTable({ devices }: DevicesTableProps) {
-  const getStatusColor = (status: Device["status"]) => {
+  const getStatusColor = (status: GatewayResponse["status"]) => {
     switch (status) {
-      case "active":
+      case "online":
         return "default";
-      case "inactive":
+      case "offline":
         return "secondary";
       case "maintenance":
         return "outline";
@@ -29,68 +29,69 @@ export function DevicesTable({ devices }: DevicesTableProps) {
     }
   };
 
-  const getBatteryColor = (level: number) => {
-    if (level >= 60) return "text-green-500";
-    if (level >= 20) return "text-yellow-500";
-    return "text-red-500";
-  };
-
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Device ID</TableHead>
+          <TableHead>Gateway UID</TableHead>
           <TableHead>Name</TableHead>
+          <TableHead>MAC Address</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Farm</TableHead>
-          <TableHead>Last Active</TableHead>
-          <TableHead>Battery</TableHead>
+          <TableHead>Last Seen</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {devices.map((device) => (
-          <TableRow key={device.id}>
-            <TableCell className="font-medium">{device.id}</TableCell>
-            <TableCell>{device.name}</TableCell>
-            <TableCell>
-              <Badge variant={getStatusColor(device.status)}>
-                {device.status}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              {device.farmName || (
-                <span className="text-muted-foreground">Unassigned</span>
-              )}
-            </TableCell>
-            <TableCell>
-              {new Date(device.lastActive).toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Battery
-                  className={`h-4 w-4 ${getBatteryColor(device.batteryLevel || 0)}`}
-                />
-                <span className="text-sm">{device.batteryLevel}%</span>
-              </div>
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" size="icon">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
+        {devices.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              No devices found. Add a new device to get started.
             </TableCell>
           </TableRow>
-        ))}
+        ) : (
+          devices.map((device) => (
+            <TableRow key={device.id}>
+              <TableCell className="font-medium">{device.gateway_uid}</TableCell>
+              <TableCell>
+                {device.name || (
+                  <span className="text-muted-foreground">Unnamed</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {device.mac_address || (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge variant={getStatusColor(device.status)}>
+                  {device.status}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {device.last_seen ? (
+                  new Date(device.last_seen).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                ) : (
+                  <span className="text-muted-foreground">Never</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <EditDeviceDialog device={device} />
+                  <DeleteDeviceButton
+                    deviceId={device.id}
+                    deviceName={device.name}
+                    gatewayUid={device.gateway_uid}
+                  />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
       </TableBody>
     </Table>
   );

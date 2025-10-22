@@ -74,6 +74,7 @@ class DataService:
                     base_meta.update(
                         {
                             "source": "mqtt",
+                            "measurement_type": reading.get("sensor_type"),  # Store what type of measurement (temperature, moisture, etc.)
                             "raw_value": reading.get("raw_value"),
                             "tag": reading.get("tag"),
                             "farm_id": farm_id,
@@ -126,13 +127,14 @@ class DataService:
 
         # Auto-register sensor based on first message. This allows sensors to be
         # created when the gateway owner has already registered the gateway via API.
+        # Note: One sensor can send multiple measurement types (temperature, moisture, etc.)
+        # so we use a generic type for the sensor itself
         try:
             sensor = Sensor(
                 gateway_id=gateway_id,
                 sensor_uid=sensor_uid,
                 name=reading.get("sensor_uid") or f"{sensor_uid}",
-                type=reading.get("sensor_type") or reading.get("type") or "unknown",
-                unit=reading.get("unit"),
+                type="multi-sensor",  # Generic type since one sensor sends multiple measurements
                 status="active",
             )
             db.add(sensor)
@@ -141,6 +143,8 @@ class DataService:
             return sensor
         except Exception as e:
             logger.error(f"Error auto-creating sensor {sensor_uid}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
 
     # Backwards-compatible helper names (not used internally)
