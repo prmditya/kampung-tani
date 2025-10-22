@@ -36,14 +36,10 @@ export function ActivityChart({ data }: ActivityChartProps) {
               <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="rgb(59, 130, 246)"
+                  stopColor="var(--chart-1)"
                   stopOpacity={0.4}
                 />
-                <stop
-                  offset="95%"
-                  stopColor="rgb(59, 130, 246)"
-                  stopOpacity={0}
-                />
+                <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
@@ -69,23 +65,23 @@ export function ActivityChart({ data }: ActivityChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "var(--radius)",
-                color: "hsl(var(--foreground))",
+                color: "var(--foreground)",
               }}
             />
             <Area
               type="monotone"
               dataKey="readings"
-              stroke="rgb(59, 130, 246)"
+              stroke="var(--chart-1)"
               strokeWidth={3}
               fill="url(#colorQty)"
               dot={{
-                r: 5,
-                fill: "rgb(59, 130, 246)",
+                r: 3,
+                fill: "var(--chart-1)",
                 strokeWidth: 2,
-                stroke: "hsl(var(--card))",
+                stroke: "var(--chart-1)",
               }}
               activeDot={{ r: 6 }}
             />

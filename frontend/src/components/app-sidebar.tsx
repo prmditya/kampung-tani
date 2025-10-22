@@ -69,12 +69,13 @@ export function AppSidebar() {
     <Sidebar variant="inset">
       <SidebarHeader className="border-b px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="bg-emerald-100  p-2 rounded-lg shadow-sm">
+          <div className="bg-gradient-to-br from-emerald-300 to-emerald-500 p-2 rounded-xl shadow-sm">
             <Image
               src="/favicon.webp"
               alt="Kampoeng Tani Logo"
               width={24}
               height={24}
+              className="brightness-10 invert"
             />
           </div>
           <div className="flex flex-col">

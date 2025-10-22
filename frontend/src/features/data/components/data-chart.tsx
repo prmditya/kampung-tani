@@ -86,14 +86,10 @@ export function DataChart({ data, title }: DataChartProps) {
               <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="rgb(59, 130, 246)"
+                  stopColor="var(--chart-1)"
                   stopOpacity={0.4}
                 />
-                <stop
-                  offset="95%"
-                  stopColor="rgb(59, 130, 246)"
-                  stopOpacity={0}
-                />
+                <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
@@ -105,7 +101,7 @@ export function DataChart({ data, title }: DataChartProps) {
             <XAxis
               dataKey="time"
               className="text-xs"
-              tick={{ fill: "currentColor", fontSize: 9 }}
+              tick={{ fill: "currentColor", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               angle={0}
@@ -122,13 +118,13 @@ export function DataChart({ data, title }: DataChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--popover)",
+                border: "1px solid var(--border)",
                 borderRadius: "6px",
-                color: "hsl(var(--popover-foreground))",
+                color: "var(--popover-foreground)",
               }}
               labelStyle={{
-                color: "hsl(var(--popover-foreground))",
+                color: "var(--popover-foreground)",
                 fontWeight: "bold",
               }}
             />
@@ -138,15 +134,15 @@ export function DataChart({ data, title }: DataChartProps) {
                 key={type}
                 type="monotone"
                 dataKey={type}
-                stroke={COLORS[index % COLORS.length]}
+                stroke="var(--chart-1)"
                 fill="url(#colorQty)"
                 strokeWidth={2}
                 name={type}
                 dot={{
-                  r: 2,
-                  fill: "rgb(59, 130, 246)",
+                  r: 1,
+                  fill: "var(--chart-1)",
                   strokeWidth: 2,
-                  stroke: "hsl(var(--card))",
+                  stroke: "var(--chart-1)",
                 }}
                 connectNulls
                 animationDuration={300}
