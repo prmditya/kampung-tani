@@ -6,21 +6,54 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { SensorDataResponse, SensorResponse } from "@/types/api";
+import type {
+  SensorDataResponse,
+  SensorResponse,
+  FarmerResponse,
+  FarmResponse,
+  GatewayAssignmentResponse,
+  GatewayResponse
+} from "@/types/api";
 import { useMemo } from "react";
 
 interface ReadingsTableProps {
   readings: SensorDataResponse[];
   sensors: SensorResponse[];
+  farmers: FarmerResponse[];
+  farms: FarmResponse[];
+  assignments: GatewayAssignmentResponse[];
+  gateways: GatewayResponse[];
 }
 
-export function ReadingsTable({ readings, sensors }: ReadingsTableProps) {
+export function ReadingsTable({ readings, sensors, farmers, farms, assignments, gateways }: ReadingsTableProps) {
   // Create a map of sensor IDs to sensor info
   const sensorMap = useMemo(() => {
     return new Map(
       sensors.map((s) => [s.id, { type: s.type, name: s.name, uid: s.sensor_uid }])
     );
   }, [sensors]);
+
+  // Create maps for farmers and farms
+  const farmerMap = useMemo(() => {
+    return new Map(farmers.map((f) => [f.id, f]));
+  }, [farmers]);
+
+  const farmMap = useMemo(() => {
+    return new Map(farms.map((f) => [f.id, f]));
+  }, [farms]);
+
+  // Create a map of gateway IDs to gateway info
+  const gatewayMap = useMemo(() => {
+    return new Map(gateways.map((g) => [g.id, g]));
+  }, [gateways]);
+
+  // Create a map of gateway IDs to active assignments
+  const assignmentMap = useMemo(() => {
+    const activeAssignments = assignments.filter((a) => a.is_active);
+    return new Map(
+      activeAssignments.map((a) => [a.gateway_id, a])
+    );
+  }, [assignments]);
 
   if (!readings.length) {
     return (
@@ -40,7 +73,9 @@ export function ReadingsTable({ readings, sensors }: ReadingsTableProps) {
             <TableHead>Measurement Type</TableHead>
             <TableHead>Value</TableHead>
             <TableHead>Unit</TableHead>
-            <TableHead>Gateway ID</TableHead>
+            <TableHead>Farmer</TableHead>
+            <TableHead>Farm</TableHead>
+            <TableHead>Gateway</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -48,6 +83,14 @@ export function ReadingsTable({ readings, sensors }: ReadingsTableProps) {
             const sensor = sensorMap.get(reading.sensor_id);
             // Extract measurement type from metadata
             const measurementType = reading.metadata?.measurement_type || sensor?.type || "Unknown";
+
+            // Get farmer and farm from gateway assignment
+            const assignment = assignmentMap.get(reading.gateway_id);
+            const farm = assignment ? farmMap.get(assignment.farm_id) : null;
+            const farmer = farm ? farmerMap.get(farm.farmer_id) : null;
+
+            // Get gateway info
+            const gateway = gatewayMap.get(reading.gateway_id);
 
             return (
               <TableRow key={reading.id}>
@@ -77,7 +120,13 @@ export function ReadingsTable({ readings, sensors }: ReadingsTableProps) {
                   {reading.unit || "-"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {reading.gateway_id}
+                  {farmer ? farmer.name : assignment ? "No farmer found" : "No assignment"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {farm ? farm.name : assignment ? "No farm found" : "No assignment"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {gateway ? gateway.gateway_uid : reading.gateway_id}
                 </TableCell>
               </TableRow>
             );

@@ -171,3 +171,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+.custom-tooltip {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+

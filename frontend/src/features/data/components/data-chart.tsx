@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -23,14 +23,14 @@ interface DataChartProps {
 
 // Color palette for different sensor types
 const COLORS = [
-  "rgb(59, 130, 246)",   // blue
-  "rgb(16, 185, 129)",   // green
-  "rgb(249, 115, 22)",   // orange
-  "rgb(168, 85, 247)",   // purple
-  "rgb(236, 72, 153)",   // pink
-  "rgb(234, 179, 8)",    // yellow
-  "rgb(239, 68, 68)",    // red
-  "rgb(20, 184, 166)",   // teal
+  "rgb(59, 130, 246)", // blue
+  "rgb(16, 185, 129)", // green
+  "rgb(249, 115, 22)", // orange
+  "rgb(168, 85, 247)", // purple
+  "rgb(236, 72, 153)", // pink
+  "rgb(234, 179, 8)", // yellow
+  "rgb(239, 68, 68)", // red
+  "rgb(20, 184, 166)", // teal
 ];
 
 export function DataChart({ data, title }: DataChartProps) {
@@ -47,6 +47,15 @@ export function DataChart({ data, title }: DataChartProps) {
     });
     return Array.from(types);
   }, [data]);
+
+  // Calculate tick interval based on data length
+  const tickInterval = useMemo(() => {
+    const dataLength = data.length;
+    if (dataLength <= 10) return 0; // Show all ticks
+    if (dataLength <= 50) return Math.floor(dataLength / 5); // Show ~5 ticks
+    if (dataLength <= 100) return Math.floor(dataLength / 8); // Show ~8 ticks
+    return Math.floor(dataLength / 10); // Show ~10 ticks for larger datasets
+  }, [data.length]);
 
   if (!data.length) {
     return (
@@ -66,11 +75,27 @@ export function DataChart({ data, title }: DataChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{title || "Sensor Data Trends (10s intervals)"}</CardTitle>
+        <CardTitle className="text-lg">
+          {title || "Sensor Data Trends (10s intervals)"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data}>
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="rgb(59, 130, 246)"
+                  stopOpacity={0.4}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="rgb(59, 130, 246)"
+                  stopOpacity={0}
+                />
+              </linearGradient>
+            </defs>
             <CartesianGrid
               strokeDasharray="3 3"
               className="stroke-border"
@@ -83,9 +108,10 @@ export function DataChart({ data, title }: DataChartProps) {
               tick={{ fill: "currentColor", fontSize: 9 }}
               axisLine={false}
               tickLine={false}
-              angle={-45}
-              textAnchor="end"
-              height={50}
+              angle={0}
+              textAnchor="start"
+              height={20}
+              interval={tickInterval}
             />
             <YAxis
               className="text-xs"
@@ -96,26 +122,37 @@ export function DataChart({ data, title }: DataChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
+                backgroundColor: 'hsl(var(--popover))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '6px',
+                color: 'hsl(var(--popover-foreground))',
+              }}
+              labelStyle={{
+                color: 'hsl(var(--popover-foreground))',
+                fontWeight: 'bold',
               }}
             />
             {sensorTypes.length > 1 && <Legend />}
             {sensorTypes.map((type, index) => (
-              <Line
+              <Area
                 key={type}
                 type="monotone"
                 dataKey={type}
                 stroke={COLORS[index % COLORS.length]}
+                fill="url(#colorQty)"
                 strokeWidth={2}
                 name={type}
-                dot={false}
+                dot={{
+                  r: 3,
+                  fill: "rgb(59, 130, 246)",
+                  strokeWidth: 2,
+                  stroke: "hsl(var(--card))",
+                }}
                 connectNulls
                 animationDuration={300}
               />
             ))}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

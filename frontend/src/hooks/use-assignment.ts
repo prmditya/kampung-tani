@@ -16,6 +16,8 @@ export const assignmentKeys = {
     [...assignmentKeys.lists(), filters] as const,
   details: () => [...assignmentKeys.all, "detail"] as const,
   detail: (id: number) => [...assignmentKeys.details(), id] as const,
+  byGateway: (gatewayId: number) =>
+    [...assignmentKeys.all, "gateway", gatewayId] as const,
 };
 
 // ==================== GET ALL ASSIGNMENT ====================
@@ -51,6 +53,25 @@ export function useAssignment(id: number) {
       );
       return response.data;
     },
+  });
+}
+
+// =================== GET ACTIVE ASSIGNMENT BY GATEWAY ID ===================
+export function useAssignmentByGateway(gatewayId: number) {
+  return useQuery<GatewayAssignmentResponse | null>({
+    queryKey: assignmentKeys.byGateway(gatewayId),
+    queryFn: async () => {
+      // Get all assignments and filter for active one for this gateway
+      const response = await apiClient.get<PaginatedResponse<GatewayAssignmentResponse>>(
+        `/gateway-assignments?size=100`
+      );
+      const activeAssignment = response.data.items.find(
+        (a) => a.gateway_id === gatewayId && a.is_active
+      );
+      return activeAssignment || null;
+    },
+    enabled: gatewayId > 0,
+    staleTime: 30000,
   });
 }
 
