@@ -20,10 +20,12 @@ from app.models.user import User
 from app.api.v1.repositories.user_repository import UserRepository
 from app.api.v1.schemas import (
     UserCreate,
+    UserUpdate,
     UserLogin,
     Token,
     UserResponse,
     MessageResponse,
+    PasswordChange,
 )
 
 logger = logging.getLogger(__name__)
@@ -171,3 +173,106 @@ async def logout_user(
     return MessageResponse(
         message=f"User {current_user.username} logged out successfully"
     )
+
+
+@router.put(
+    "/me",
+    response_model=UserResponse,
+    summary="Update Own Profile",
+    description="Update current user's profile information",
+)
+async def update_own_profile(
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update current authenticated user's profile.
+
+    Users can update their own:
+    - Email address
+
+    Requires valid JWT token in Authorization header.
+    """
+    user_repo = UserRepository(db)
+
+    # Check if new email already exists (if email is being changed)
+    if user_data.email and user_data.email != current_user.email:
+        if await user_repo.email_exists(user_data.email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+    # Prepare update data (only email, users cannot change their own role)
+    update_data = {}
+    if user_data.email:
+        update_data["email"] = user_data.email
+
+    try:
+        updated_user = await user_repo.update(current_user.id, **update_data)
+
+        logger.info(f"User updated own profile: {updated_user.username}")
+        return UserResponse.model_validate(updated_user)
+
+    except Exception as e:
+        logger.error(f"Error updating user profile: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile"
+        )
+
+
+@router.post(
+    "/change-password",
+    response_model=MessageResponse,
+    summary="Change Password",
+    description="Change current user's password",
+)
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Change current authenticated user's password.
+
+    Requires:
+    - Current password (for verification)
+    - New password (minimum 6 characters)
+
+    Requires valid JWT token in Authorization header.
+    """
+    user_repo = UserRepository(db)
+
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Check if new password is same as current password
+    if verify_password(password_data.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    # Hash new password and update
+    new_password_hash = get_password_hash(password_data.new_password)
+
+    try:
+        await user_repo.update(current_user.id, password_hash=new_password_hash)
+
+        logger.info(f"User changed password: {current_user.username}")
+        return MessageResponse(
+            message="Password changed successfully"
+        )
+
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password"
+        )

@@ -240,7 +240,7 @@ export const dummyAdmins: Admin[] = [
     id: "ADMIN001",
     username: "admin",
     email: "admin@kampungtani.com",
-    role: "super_admin",
+    role: "super admin",
     createdAt: new Date("2025-01-01"),
     lastLogin: new Date("2025-10-15T08:00:00"),
   },

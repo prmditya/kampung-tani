@@ -5,11 +5,13 @@ Type-safe, validated data models
 
 from app.api.v1.schemas.base import BaseSchema, MessageResponse, ErrorResponse, PaginatedResponse
 from app.api.v1.schemas.user import (
+    UserRole,
     UserCreate,
     UserUpdate,
     UserResponse,
     UserLogin,
     Token,
+    PasswordChange,
 )
 from app.api.v1.schemas.gateway import (
     GatewayCreate,
@@ -62,11 +64,13 @@ __all__ = [
     "ErrorResponse",
     "PaginatedResponse",
     # User schemas
+    "UserRole",
     "UserCreate",
     "UserUpdate",
     "UserResponse",
     "UserLogin",
     "Token",
+    "PasswordChange",
     # Gateway schemas
     "GatewayCreate",
     "GatewayUpdate",

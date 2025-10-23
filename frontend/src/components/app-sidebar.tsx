@@ -22,8 +22,10 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Separator } from "./ui/separator";
 import Image from "next/image";
 import { NavUser } from "./nav-user";
+import { useCurrentUser } from "@/hooks/use-auth";
 
 // Menu items.
 const items = [
@@ -64,6 +66,7 @@ const secondaryItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const currentUser = useCurrentUser();
 
   return (
     <Sidebar variant="inset">
@@ -132,14 +135,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <Separator />
       <SidebarFooter>
-        <NavUser
-          user={{
-            name: "Admin",
-            email: "admin@kampoengtani.com",
-            avatar: "/path/to/avatar.jpg",
-          }}
-        />
+        {currentUser ? (
+          <NavUser
+            user={{
+              name: currentUser.username,
+              email: currentUser.email,
+            }}
+          />
+        ) : (
+          <NavUser
+            user={{
+              name: "Guest",
+              email: "guest@kampoengtani.com",
+            }}
+          />
+        )}
       </SidebarFooter>
     </Sidebar>
   );

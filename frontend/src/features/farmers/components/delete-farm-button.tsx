@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { useDeleteFarm } from "@/hooks/use-farms";
 
 interface DeleteFarmButtonProps {
@@ -38,7 +38,11 @@ export function DeleteFarmButton({
           size="icon"
           disabled={deleteMutation.isPending}
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          {deleteMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4 text-destructive" />
+          )}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -58,7 +62,14 @@ export function DeleteFarmButton({
             disabled={deleteMutation.isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {deleteMutation.isPending ? "Deleting..." : "Delete Farm"}
+            {deleteMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete Farm"
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

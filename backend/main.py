@@ -13,6 +13,7 @@ import logging
 # Import v1 routers
 from app.api.v1.routers import (
     auth,
+    users,
     gateways,
     sensors,
     health,
@@ -122,6 +123,9 @@ app.add_middleware(
 app.include_router(health.router, prefix=settings.API_PREFIX, tags=["Health"])
 app.include_router(
     auth.router, prefix=f"{settings.API_PREFIX}/auth", tags=["Authentication"]
+)
+app.include_router(
+    users.router, prefix=f"{settings.API_PREFIX}/users", tags=["User Management"]
 )
 app.include_router(
     dashboard.router, prefix=f"{settings.API_PREFIX}/dashboard", tags=["Dashboard"]

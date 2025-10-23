@@ -24,29 +24,29 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     # User Information
-    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
+    email: Mapped[str] = mapped_column(
+        String(150), unique=True, nullable=False, index=True
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="admin", nullable=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        nullable=False
+        DateTime, default=datetime.utcnow, nullable=False
     )
 
     # Relationships
     gateways: Mapped[list["Gateway"]] = relationship(
-        "Gateway",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "Gateway", back_populates="user", cascade="all, delete-orphan"
     )
 
     gateway_assignments: Mapped[list["GatewayAssignment"]] = relationship(
         "GatewayAssignment",
         foreign_keys="GatewayAssignment.assigned_by",
-        back_populates="assigned_by_user"
+        back_populates="assigned_by_user",
     )
 
     def __repr__(self) -> str:

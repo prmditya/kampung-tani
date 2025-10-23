@@ -29,7 +29,7 @@ export interface PaginatedResponse<T> {
 // ==================== USER TYPES ====================
 
 export enum UserRole {
-  USER = "user",
+  SUPER_ADMIN = "super admin",
   ADMIN = "admin",
 }
 
@@ -56,6 +56,11 @@ export interface UserResponse extends UserBase {
 export interface UserLogin {
   username: string;
   password: string;
+}
+
+export interface PasswordChange {
+  current_password: string;
+  new_password: string;
 }
 
 export interface Token {

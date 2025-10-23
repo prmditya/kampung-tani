@@ -14,7 +14,7 @@ from app.api.v1.schemas.base import BaseSchema
 class UserRole(str, Enum):
     """User role enumeration"""
 
-    USER = "user"
+    SUPER_ADMIN = "super admin"
     ADMIN = "admin"
 
 
@@ -37,6 +37,13 @@ class UserUpdate(BaseSchema):
 
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
+
+
+class PasswordChange(BaseSchema):
+    """Password change schema"""
+
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6, max_length=100)
 
 
 class UserResponse(UserBase):

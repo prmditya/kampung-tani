@@ -57,7 +57,7 @@ export interface Admin {
   id: string;
   username: string;
   email: string;
-  role: "super_admin" | "admin";
+  role: "super admin" | "admin";
   createdAt: Date;
   lastLogin?: Date;
 }

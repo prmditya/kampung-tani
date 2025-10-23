@@ -195,15 +195,39 @@ async def get_current_admin_user(
         current_user: Current authenticated user
 
     Returns:
-        Current User instance (admin only)
+        Current User instance (admin or super admin)
 
     Raises:
         HTTPException: If user is not admin
     """
-    if current_user.role != "admin":
+    if current_user.role not in ["admin", "super admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions. Admin access required."
+        )
+
+    return current_user
+
+
+async def get_current_super_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    FastAPI dependency to get current super admin user
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Current User instance (super admin only)
+
+    Raises:
+        HTTPException: If user is not super admin
+    """
+    if current_user.role != "super admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions. Super admin access required."
         )
 
     return current_user
