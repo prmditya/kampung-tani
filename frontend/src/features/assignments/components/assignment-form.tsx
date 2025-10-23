@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { useCreateAssignment } from "@/hooks/use-assignment";
+import { useCreateAssignment } from "@/features/assignments/hooks/use-assignment";
 import type {
   GatewayResponse,
   FarmResponse,
@@ -85,7 +85,8 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
                 <SelectContent>
                   {gateways.map((gateway) => (
                     <SelectItem key={gateway.id} value={gateway.id.toString()}>
-                      {gateway.name || gateway.gateway_uid} ({gateway.gateway_uid})
+                      {gateway.name || gateway.gateway_uid} (
+                      {gateway.gateway_uid})
                     </SelectItem>
                   ))}
                 </SelectContent>

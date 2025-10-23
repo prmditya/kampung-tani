@@ -62,9 +62,9 @@ export function useAssignmentByGateway(gatewayId: number) {
     queryKey: assignmentKeys.byGateway(gatewayId),
     queryFn: async () => {
       // Get all assignments and filter for active one for this gateway
-      const response = await apiClient.get<PaginatedResponse<GatewayAssignmentResponse>>(
-        `/gateway-assignments?size=100`
-      );
+      const response = await apiClient.get<
+        PaginatedResponse<GatewayAssignmentResponse>
+      >(`/gateway-assignments?size=100`);
       const activeAssignment = response.data.items.find(
         (a) => a.gateway_id === gatewayId && a.is_active
       );
@@ -114,7 +114,9 @@ export function useUpdateAssignment() {
     },
     onSuccess: (data) => {
       // Invalidate specific assignment and list
-      queryClient.invalidateQueries({ queryKey: assignmentKeys.detail(data.id) });
+      queryClient.invalidateQueries({
+        queryKey: assignmentKeys.detail(data.id),
+      });
       queryClient.invalidateQueries({ queryKey: assignmentKeys.lists() });
     },
   });
@@ -123,7 +125,6 @@ export function useUpdateAssignment() {
 // ==================== DELETE ASSIGNMENT ====================
 export function useDeleteAssignment() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.delete<MessageResponse>(

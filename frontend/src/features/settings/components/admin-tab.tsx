@@ -46,7 +46,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Shield, Loader2 } from "lucide-react";
-import { useCreateUser, useGetUsers, useDeleteUser } from "@/hooks/use-users";
+import {
+  useCreateUser,
+  useGetUsers,
+  useDeleteUser,
+} from "@/features/settings/hooks/use-users";
 import type { UserCreate, UserRole } from "@/types/api";
 
 export default function AdminTab() {
@@ -55,7 +59,10 @@ export default function AdminTab() {
   const { mutate: deleteUser, isPending: isDeleting } = useDeleteUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
-  const [userToDelete, setUserToDelete] = useState<{ id: number; username: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{
+    id: number;
+    username: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -301,7 +308,10 @@ export default function AdminTab() {
       </CardContent>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+      <AlertDialog
+        open={!!userToDelete}
+        onOpenChange={() => setUserToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>

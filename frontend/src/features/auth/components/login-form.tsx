@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { useLogin } from "@/hooks/use-auth";
+import { useLogin } from "@/features/auth/hooks/use-auth";
 
 export function LoginForm({
   className,
@@ -76,7 +76,8 @@ export function LoginForm({
               </Field>
               {loginMutation.isError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
-                  {loginMutation.error?.message || "Login failed. Please try again."}
+                  {loginMutation.error?.message ||
+                    "Login failed. Please try again."}
                 </div>
               )}
               <Field>

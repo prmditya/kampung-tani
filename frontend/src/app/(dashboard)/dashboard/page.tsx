@@ -9,9 +9,9 @@ import {
   QuickActions,
 } from "@/features/dashboard";
 import { useGateways } from "@/hooks/use-gateways";
-import useAssignments from "@/hooks/use-assignment";
-import { useFarms } from "@/hooks/use-farms";
-import { useDashboard } from "@/hooks/use-dashboard";
+import useAssignments from "@/features/assignments/hooks/use-assignment";
+import { useFarms } from "@/features/farmers/hooks/use-farms";
+import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
 
 export default function DashboardPage() {
   // Fetch dashboard data from new aggregated endpoint
@@ -77,28 +77,18 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div>
-              <h1 className="text-3xl font-bold">
-                Admin IoT Monitoring Dashboard
-              </h1>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="flex items-start justify-between flex-col gap-1">
+        <h1 className="text-3xl font-bold">Admin IoT Monitoring Dashboard</h1>
+        <div className="flex items-center gap-1">
+          <Calendar className="h-4 w-4" />
+          <span>
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
         </div>
       </div>
 

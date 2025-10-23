@@ -2,7 +2,7 @@ import axios from "axios";
 
 const apiClient = axios.create({
   // backend uses /api/v1 as API prefix
-  baseURL: "http://localhost:5000/api/v1",
+  baseURL: process.env.BACKEND_API_URL || "http://192.168.1.64:5000/api/v1",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",

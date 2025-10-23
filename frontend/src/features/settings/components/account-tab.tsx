@@ -11,7 +11,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useCurrentUser, useUpdateOwnProfile, useChangePassword } from "@/hooks/use-auth";
+import {
+  useCurrentUser,
+  useUpdateOwnProfile,
+  useChangePassword,
+} from "@/features/auth/hooks/use-auth";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function AccountTab() {
@@ -31,7 +35,6 @@ export default function AccountTab() {
     error: passwordError,
     reset: resetPasswordMutation,
   } = useChangePassword();
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -49,8 +52,6 @@ export default function AccountTab() {
       { email },
       {
         onSuccess: () => {
-          setIsEditingProfile(false);
-          // Reload page after a short delay to show success message and update sidebar
           setTimeout(() => {
             window.location.reload();
           }, 1500);
@@ -105,10 +106,13 @@ export default function AccountTab() {
     );
   }
 
-  const passwordsMatch = passwordForm.newPassword === passwordForm.confirmPassword;
+  const passwordsMatch =
+    passwordForm.newPassword === passwordForm.confirmPassword;
   const isPasswordValid = passwordForm.newPassword.length >= 6;
-  const showPasswordMismatch = passwordForm.confirmPassword.length > 0 && !passwordsMatch;
-  const showPasswordTooShort = passwordForm.newPassword.length > 0 && !isPasswordValid;
+  const showPasswordMismatch =
+    passwordForm.confirmPassword.length > 0 && !passwordsMatch;
+  const showPasswordTooShort =
+    passwordForm.newPassword.length > 0 && !isPasswordValid;
 
   return (
     <>
@@ -129,7 +133,8 @@ export default function AccountTab() {
           {isPasswordError && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <XCircle className="h-4 w-4" />
-              {passwordError?.message || "Failed to change password. Please try again."}
+              {passwordError?.message ||
+                "Failed to change password. Please try again."}
             </div>
           )}
           <form onSubmit={handleChangePassword} className="space-y-4">
@@ -140,7 +145,10 @@ export default function AccountTab() {
                 type="password"
                 value={passwordForm.currentPassword}
                 onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                  setPasswordForm({
+                    ...passwordForm,
+                    currentPassword: e.target.value,
+                  })
                 }
                 required
                 disabled={isChangingPassword}
@@ -153,7 +161,10 @@ export default function AccountTab() {
                 type="password"
                 value={passwordForm.newPassword}
                 onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                  setPasswordForm({
+                    ...passwordForm,
+                    newPassword: e.target.value,
+                  })
                 }
                 required
                 disabled={isChangingPassword}
@@ -172,7 +183,10 @@ export default function AccountTab() {
                 type="password"
                 value={passwordForm.confirmPassword}
                 onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                  setPasswordForm({
+                    ...passwordForm,
+                    confirmPassword: e.target.value,
+                  })
                 }
                 required
                 disabled={isChangingPassword}
@@ -213,7 +227,7 @@ export default function AccountTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isProfileSuccess && !isEditingProfile && (
+          {isProfileSuccess && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
               <CheckCircle2 className="h-4 w-4" />
               Profile updated successfully!
@@ -222,7 +236,8 @@ export default function AccountTab() {
           {isProfileError && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <XCircle className="h-4 w-4" />
-              {profileError?.message || "Failed to update profile. Please try again."}
+              {profileError?.message ||
+                "Failed to update profile. Please try again."}
             </div>
           )}
           <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -245,8 +260,6 @@ export default function AccountTab() {
                 name="email"
                 type="email"
                 defaultValue={currentUser.email}
-                disabled={!isEditingProfile}
-                className={!isEditingProfile ? "bg-muted" : ""}
                 required
               />
             </div>
@@ -263,32 +276,19 @@ export default function AccountTab() {
               </div>
             </div>
             <div className="flex gap-2">
-              {!isEditingProfile ? (
-                <Button type="button" onClick={() => setIsEditingProfile(true)}>
-                  Edit Profile
-                </Button>
-              ) : (
-                <>
-                  <Button type="submit" disabled={isUpdating}>
-                    {isUpdating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditingProfile(false)}
-                    disabled={isUpdating}
-                  >
-                    Cancel
-                  </Button>
-                </>
-              )}
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+              <Button type="button" variant="outline" disabled={isUpdating}>
+                Cancel
+              </Button>
             </div>
           </form>
         </CardContent>

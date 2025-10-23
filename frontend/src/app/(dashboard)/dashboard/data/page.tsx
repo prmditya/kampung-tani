@@ -14,10 +14,13 @@ import {
 } from "@/components/ui/select";
 import { DataFilter, DataChart, ReadingsTable } from "@/features/data";
 import { useGateways } from "@/hooks/use-gateways";
-import { useSensorsByGateway, useSensorData } from "@/hooks/use-sensors";
-import { useFarmers } from "@/hooks/use-farmers";
-import { useFarms } from "@/hooks/use-farms";
-import useAssignments from "@/hooks/use-assignment";
+import {
+  useSensorsByGateway,
+  useSensorData,
+} from "@/features/data/hooks/use-sensors";
+import { useFarmers } from "@/features/farmers/hooks/use-farmers";
+import { useFarms } from "@/features/farmers/hooks/use-farms";
+import useAssignments from "@/features/assignments/hooks/use-assignment";
 import type { SensorDataResponse } from "@/types/api";
 import { Loader2, Clock, Search } from "lucide-react";
 
@@ -163,7 +166,15 @@ export default function DataPage() {
     }
 
     return filtered;
-  }, [sensorReadings, tableSearch, selectedFarmer, selectedFarm, sensorsData?.items, assignmentsData?.items, farmsData?.items]);
+  }, [
+    sensorReadings,
+    tableSearch,
+    selectedFarmer,
+    selectedFarm,
+    sensorsData?.items,
+    assignmentsData?.items,
+    farmsData?.items,
+  ]);
 
   // Prepare separate chart data for each measurement type (to avoid scale issues)
   const chartDataByType = useMemo(() => {
@@ -521,14 +532,20 @@ export default function DataPage() {
                   {/* Farmer Filter */}
                   <div className="flex items-center gap-2">
                     <Label className="text-sm whitespace-nowrap">Farmer:</Label>
-                    <Select value={selectedFarmer} onValueChange={setSelectedFarmer}>
+                    <Select
+                      value={selectedFarmer}
+                      onValueChange={setSelectedFarmer}
+                    >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="All Farmers" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Farmers</SelectItem>
                         {farmersData?.items.map((farmer) => (
-                          <SelectItem key={farmer.id} value={farmer.id.toString()}>
+                          <SelectItem
+                            key={farmer.id}
+                            value={farmer.id.toString()}
+                          >
                             {farmer.name}
                           </SelectItem>
                         ))}
@@ -539,19 +556,26 @@ export default function DataPage() {
                   {/* Farm Filter */}
                   <div className="flex items-center gap-2">
                     <Label className="text-sm whitespace-nowrap">Farm:</Label>
-                    <Select value={selectedFarm} onValueChange={setSelectedFarm}>
+                    <Select
+                      value={selectedFarm}
+                      onValueChange={setSelectedFarm}
+                    >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="All Farms" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Farms</SelectItem>
                         {farmsData?.items
-                          .filter((farm) =>
-                            selectedFarmer === "all" ||
-                            farm.farmer_id === parseInt(selectedFarmer)
+                          .filter(
+                            (farm) =>
+                              selectedFarmer === "all" ||
+                              farm.farmer_id === parseInt(selectedFarmer)
                           )
                           .map((farm) => (
-                            <SelectItem key={farm.id} value={farm.id.toString()}>
+                            <SelectItem
+                              key={farm.id}
+                              value={farm.id.toString()}
+                            >
                               {farm.name}
                             </SelectItem>
                           ))}

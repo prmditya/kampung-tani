@@ -13,17 +13,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash2, Loader2 } from "lucide-react";
-import { useDeleteFarm } from "@/hooks/use-farms";
+import { useDeleteFarm } from "@/features/farmers/hooks/use-farms";
 
 interface DeleteFarmButtonProps {
   farmId: number;
   farmName: string;
 }
 
-export function DeleteFarmButton({
-  farmId,
-  farmName,
-}: DeleteFarmButtonProps) {
+export function DeleteFarmButton({ farmId, farmName }: DeleteFarmButtonProps) {
   const deleteMutation = useDeleteFarm();
 
   const handleDelete = () => {
@@ -33,11 +30,7 @@ export function DeleteFarmButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={deleteMutation.isPending}
-        >
+        <Button variant="ghost" size="icon" disabled={deleteMutation.isPending}>
           {deleteMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -49,8 +42,8 @@ export function DeleteFarmButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Farm?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete farm <strong>{farmName}</strong>.
-            {" "}This action cannot be undone.
+            This will permanently delete farm <strong>{farmName}</strong>. This
+            action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

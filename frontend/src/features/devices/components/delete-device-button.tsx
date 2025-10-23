@@ -35,11 +35,7 @@ export function DeleteDeviceButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={deleteMutation.isPending}
-        >
+        <Button variant="ghost" size="icon" disabled={deleteMutation.isPending}>
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </AlertDialogTrigger>
@@ -56,7 +52,9 @@ export function DeleteDeviceButton({
                 ⚠️ Warning: All sensor data and assignments associated with this
                 device will also be affected.
               </p>
-              <p className="text-muted-foreground">This action cannot be undone.</p>
+              <p className="text-muted-foreground">
+                This action cannot be undone.
+              </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

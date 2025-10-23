@@ -99,7 +99,10 @@ export function AddDeviceDialog() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="status">Status *</Label>
-              <Select value={status} onValueChange={(value) => setStatus(value as GatewayStatus)}>
+              <Select
+                value={status}
+                onValueChange={(value) => setStatus(value as GatewayStatus)}
+              >
                 <SelectTrigger disabled={createMutation.isPending}>
                   <SelectValue />
                 </SelectTrigger>

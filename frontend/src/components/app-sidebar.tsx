@@ -1,5 +1,4 @@
 "use client";
-
 import {
   Unplug,
   LayoutDashboard,
@@ -25,7 +24,7 @@ import {
 import { Separator } from "./ui/separator";
 import Image from "next/image";
 import { NavUser } from "./nav-user";
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/features/auth/hooks/use-auth";
 
 // Menu items.
 const items = [
@@ -137,21 +136,12 @@ export function AppSidebar() {
       </SidebarContent>
       <Separator />
       <SidebarFooter>
-        {currentUser ? (
-          <NavUser
-            user={{
-              name: currentUser.username,
-              email: currentUser.email,
-            }}
-          />
-        ) : (
-          <NavUser
-            user={{
-              name: "Guest",
-              email: "guest@kampoengtani.com",
-            }}
-          />
-        )}
+        <NavUser
+          user={{
+            name: currentUser?.username || "User",
+            email: currentUser?.email || "user@kampoengtani.com",
+          }}
+        />
       </SidebarFooter>
     </Sidebar>
   );

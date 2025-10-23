@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
-import { useCreateFarm } from "@/hooks/use-farms";
+import { useCreateFarm } from "@/features/farmers/hooks/use-farms";
 import type { FarmCreate } from "@/types/api";
 
 interface AddFarmDialogProps {
@@ -33,11 +33,17 @@ export function AddFarmDialog({ farmerId }: AddFarmDialogProps) {
     const data: FarmCreate = {
       farmer_id: farmerId,
       name: formData.get("name") as string,
-      location: formData.get("location") as string || null,
-      latitude: formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : null,
-      longitude: formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : null,
-      area_size: formData.get("area_size") ? parseFloat(formData.get("area_size") as string) : null,
-      soil_type: formData.get("soil_type") as string || null,
+      location: (formData.get("location") as string) || null,
+      latitude: formData.get("latitude")
+        ? parseFloat(formData.get("latitude") as string)
+        : null,
+      longitude: formData.get("longitude")
+        ? parseFloat(formData.get("longitude") as string)
+        : null,
+      area_size: formData.get("area_size")
+        ? parseFloat(formData.get("area_size") as string)
+        : null,
+      soil_type: (formData.get("soil_type") as string) || null,
     };
 
     createMutation.mutate(data, {

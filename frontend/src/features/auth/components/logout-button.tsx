@@ -1,7 +1,7 @@
 "use client";
 
 import { IconLogout } from "@tabler/icons-react";
-import { useLogout } from "@/hooks/use-auth";
+import { useLogout } from "@/features/auth/hooks/use-auth";
 
 export function LogoutButton() {
   const logoutMutation = useLogout();

@@ -1,9 +1,15 @@
 "use client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import AccountTab from "@/features/settings/components/account-tab";
 import AdminTab from "@/features/settings/components/admin-tab";
-import { useCurrentUser, isSuperAdmin } from "@/hooks/use-auth";
+import { useCurrentUser, isSuperAdmin } from "@/features/auth/hooks/use-auth";
 import { ShieldAlert } from "lucide-react";
 
 export default function SettingsPage() {

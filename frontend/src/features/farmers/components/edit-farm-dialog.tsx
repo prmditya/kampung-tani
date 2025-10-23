@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
-import { useUpdateFarm } from "@/hooks/use-farms";
+import { useUpdateFarm } from "@/features/farmers/hooks/use-farms";
 import type { FarmResponse, FarmUpdate } from "@/types/api";
 
 interface EditFarmDialogProps {
@@ -30,11 +30,17 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
 
     const data: FarmUpdate = {
       name: formData.get("name") as string,
-      location: formData.get("location") as string || null,
-      latitude: formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : null,
-      longitude: formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : null,
-      area_size: formData.get("area_size") ? parseFloat(formData.get("area_size") as string) : null,
-      soil_type: formData.get("soil_type") as string || null,
+      location: (formData.get("location") as string) || null,
+      latitude: formData.get("latitude")
+        ? parseFloat(formData.get("latitude") as string)
+        : null,
+      longitude: formData.get("longitude")
+        ? parseFloat(formData.get("longitude") as string)
+        : null,
+      area_size: formData.get("area_size")
+        ? parseFloat(formData.get("area_size") as string)
+        : null,
+      soil_type: (formData.get("soil_type") as string) || null,
     };
 
     updateMutation.mutate(
@@ -58,9 +64,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Edit Farm</DialogTitle>
-              <DialogDescription>
-                Update farm information
-              </DialogDescription>
+              <DialogDescription>Update farm information</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">

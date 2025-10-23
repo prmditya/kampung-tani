@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
-import { useUpdateFarmer } from "@/hooks/use-farmers";
+import { useUpdateFarmer } from "@/features/farmers/hooks/use-farmers";
 import type { FarmerResponse, FarmerUpdate } from "@/types/api";
 
 interface EditFarmerDialogProps {
@@ -31,8 +31,8 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
 
     const data: FarmerUpdate = {
       name: formData.get("name") as string,
-      contact: formData.get("contact") as string || null,
-      address: formData.get("address") as string || null,
+      contact: (formData.get("contact") as string) || null,
+      address: (formData.get("address") as string) || null,
     };
 
     updateMutation.mutate(
@@ -56,9 +56,7 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Edit Farmer</DialogTitle>
-              <DialogDescription>
-                Update farmer information
-              </DialogDescription>
+              <DialogDescription>Update farmer information</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">

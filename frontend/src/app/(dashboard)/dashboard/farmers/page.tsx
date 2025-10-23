@@ -1,8 +1,8 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { useFarmers } from "@/hooks/use-farmers";
-import { useFarms } from "@/hooks/use-farms";
+import { useFarmers } from "@/features/farmers/hooks/use-farmers";
+import { useFarms } from "@/features/farmers/hooks/use-farms";
 import type { FarmResponse } from "@/types/api";
 import FarmerStatsCard from "@/features/farmers/components/farmer-stats-card";
 import FarmersTable from "@/features/farmers/components/farmers-table";

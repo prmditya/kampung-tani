@@ -22,7 +22,11 @@ import {
 } from "@/components/ui/select";
 import { Pencil } from "lucide-react";
 import { useUpdateGateway } from "@/hooks/use-gateways";
-import type { GatewayResponse, GatewayUpdate, GatewayStatus } from "@/types/api";
+import type {
+  GatewayResponse,
+  GatewayUpdate,
+  GatewayStatus,
+} from "@/types/api";
 
 interface EditDeviceDialogProps {
   device: GatewayResponse;
@@ -104,7 +108,10 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-status">Status *</Label>
-                <Select value={status} onValueChange={(value) => setStatus(value as GatewayStatus)}>
+                <Select
+                  value={status}
+                  onValueChange={(value) => setStatus(value as GatewayStatus)}
+                >
                   <SelectTrigger disabled={updateMutation.isPending}>
                     <SelectValue />
                   </SelectTrigger>

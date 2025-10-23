@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
-import { useCreateFarmer } from "@/hooks/use-farmers";
+import { useCreateFarmer } from "@/features/farmers/hooks/use-farmers";
 import type { FarmerCreate } from "@/types/api";
 
 export function AddFarmerDialog() {
@@ -28,8 +28,8 @@ export function AddFarmerDialog() {
 
     const data: FarmerCreate = {
       name: formData.get("name") as string,
-      contact: formData.get("contact") as string || null,
-      address: formData.get("address") as string || null,
+      contact: (formData.get("contact") as string) || null,
+      address: (formData.get("address") as string) || null,
     };
 
     createMutation.mutate(data, {

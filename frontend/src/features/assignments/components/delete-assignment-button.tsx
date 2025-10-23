@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Link2Off } from "lucide-react";
-import { useDeleteAssignment } from "@/hooks/use-assignment";
+import { useDeleteAssignment } from "@/features/assignments/hooks/use-assignment";
 
 interface DeleteAssignmentButtonProps {
   assignmentId: number;
@@ -35,11 +35,7 @@ export function DeleteAssignmentButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={deleteMutation.isPending}
-        >
+        <Button variant="ghost" size="sm" disabled={deleteMutation.isPending}>
           <Link2Off className="mr-2 h-4 w-4" />
           Unassign
         </Button>
@@ -53,7 +49,9 @@ export function DeleteAssignmentButton({
                 This will unassign gateway <strong>{gatewayName}</strong> from{" "}
                 <strong>{farmName}</strong>.
               </p>
-              <p className="text-muted-foreground">This action cannot be undone.</p>
+              <p className="text-muted-foreground">
+                This action cannot be undone.
+              </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

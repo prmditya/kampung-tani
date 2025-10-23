@@ -38,8 +38,8 @@ export function useCreateUser() {
       const response = await apiClient.post<UserResponse>("/users", user);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: userKeys.byRole(data.role) });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
     },
   });
 }

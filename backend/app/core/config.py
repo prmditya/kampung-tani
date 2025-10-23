@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     REDOC_URL: str = Field(default="/api/v1/redoc")
 
     # CORS Configuration (from .env)
-    ALLOWED_ORIGINS: str = Field(default="http://localhost:3002")
+    ALLOWED_ORIGINS: str = Field(default="*")
 
     @property
     def database_url(self) -> str:
