@@ -52,15 +52,21 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
         <div className="space-y-4 py-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <h3 className="font-semibold text-sm text-muted-foreground">Name</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground">
+                Name
+              </h3>
               <p className="text-base">{farmer.name}</p>
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-muted-foreground">Contact</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground">
+                Contact
+              </h3>
               <p className="text-base">{farmer.contact || "-"}</p>
             </div>
             <div className="md:col-span-2">
-              <h3 className="font-semibold text-sm text-muted-foreground">Address</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground">
+                Address
+              </h3>
               <p className="text-base">{farmer.address || "-"}</p>
             </div>
           </div>
@@ -70,7 +76,8 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
               <div>
                 <h3 className="font-semibold text-lg">Farms</h3>
                 <p className="text-sm text-muted-foreground">
-                  {farms.length} {farms.length === 1 ? "farm" : "farms"} registered
+                  {farms.length} {farms.length === 1 ? "farm" : "farms"}{" "}
+                  registered
                 </p>
               </div>
               <AddFarmDialog farmerId={farmer.id} />
@@ -97,7 +104,9 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
                   <TableBody>
                     {farms.map((farm) => (
                       <TableRow key={farm.id}>
-                        <TableCell className="font-medium">{farm.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {farm.name}
+                        </TableCell>
                         <TableCell>
                           {farm.location ? (
                             <div className="flex items-center gap-1">
@@ -105,7 +114,9 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
                               <span className="text-sm">{farm.location}</span>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
+                            <span className="text-muted-foreground text-sm">
+                              -
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>

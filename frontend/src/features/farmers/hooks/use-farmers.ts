@@ -19,7 +19,11 @@ export const farmerKeys = {
 };
 
 // ==================== GET ALL FARMERS ====================
-export function useFarmers(filters?: { page?: number; size?: number; search?: string }) {
+export function useFarmers(filters?: {
+  page?: number;
+  size?: number;
+  search?: string;
+}) {
   return useQuery({
     queryKey: farmerKeys.list(filters),
     queryFn: async () => {
@@ -29,7 +33,7 @@ export function useFarmers(filters?: { page?: number; size?: number; search?: st
       if (filters?.search) params.append("search", filters.search);
 
       const response = await apiClient.get<PaginatedResponse<FarmerResponse>>(
-        `/farmers?${params}`
+        `/farmers?${params}`,
       );
       return response.data;
     },
@@ -70,7 +74,7 @@ export function useUpdateFarmer() {
     mutationFn: async ({ id, data }: { id: number; data: FarmerUpdate }) => {
       const response = await apiClient.put<FarmerResponse>(
         `/farmers/${id}`,
-        data
+        data,
       );
       return response.data;
     },
@@ -88,7 +92,7 @@ export function useDeleteFarmer() {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.delete<MessageResponse>(
-        `/farmers/${id}`
+        `/farmers/${id}`,
       );
       return response.data;
     },

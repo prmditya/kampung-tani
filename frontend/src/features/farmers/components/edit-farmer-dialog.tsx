@@ -41,7 +41,7 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
         onSuccess: () => {
           setOpen(false);
         },
-      }
+      },
     );
   };
 

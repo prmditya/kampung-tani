@@ -12,7 +12,7 @@ import type {
   FarmerResponse,
   FarmResponse,
   GatewayAssignmentResponse,
-  GatewayResponse
+  GatewayResponse,
 } from "@/types/api";
 import { useMemo } from "react";
 
@@ -25,11 +25,21 @@ interface ReadingsTableProps {
   gateways: GatewayResponse[];
 }
 
-export function ReadingsTable({ readings, sensors, farmers, farms, assignments, gateways }: ReadingsTableProps) {
+export function ReadingsTable({
+  readings,
+  sensors,
+  farmers,
+  farms,
+  assignments,
+  gateways,
+}: ReadingsTableProps) {
   // Create a map of sensor IDs to sensor info
   const sensorMap = useMemo(() => {
     return new Map(
-      sensors.map((s) => [s.id, { type: s.type, name: s.name, uid: s.sensor_uid }])
+      sensors.map((s) => [
+        s.id,
+        { type: s.type, name: s.name, uid: s.sensor_uid },
+      ]),
     );
   }, [sensors]);
 
@@ -50,9 +60,7 @@ export function ReadingsTable({ readings, sensors, farmers, farms, assignments, 
   // Create a map of gateway IDs to active assignments
   const assignmentMap = useMemo(() => {
     const activeAssignments = assignments.filter((a) => a.is_active);
-    return new Map(
-      activeAssignments.map((a) => [a.gateway_id, a])
-    );
+    return new Map(activeAssignments.map((a) => [a.gateway_id, a]));
   }, [assignments]);
 
   if (!readings.length) {
@@ -82,7 +90,8 @@ export function ReadingsTable({ readings, sensors, farmers, farms, assignments, 
           {readings.map((reading) => {
             const sensor = sensorMap.get(reading.sensor_id);
             // Extract measurement type from metadata
-            const measurementType = reading.metadata?.measurement_type || sensor?.type || "Unknown";
+            const measurementType =
+              reading.metadata?.measurement_type || sensor?.type || "Unknown";
 
             // Get farmer and farm from gateway assignment
             const assignment = assignmentMap.get(reading.gateway_id);
@@ -120,10 +129,18 @@ export function ReadingsTable({ readings, sensors, farmers, farms, assignments, 
                   {reading.unit || "-"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {farmer ? farmer.name : assignment ? "No farmer found" : "No assignment"}
+                  {farmer
+                    ? farmer.name
+                    : assignment
+                      ? "No farmer found"
+                      : "No assignment"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {farm ? farm.name : assignment ? "No farm found" : "No assignment"}
+                  {farm
+                    ? farm.name
+                    : assignment
+                      ? "No farm found"
+                      : "No assignment"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {gateway ? gateway.gateway_uid : reading.gateway_id}

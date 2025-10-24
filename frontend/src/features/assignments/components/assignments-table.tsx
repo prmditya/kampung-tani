@@ -51,7 +51,10 @@ export function AssignmentsTable({
       <TableBody>
         {assignments.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+            <TableCell
+              colSpan={7}
+              className="text-center py-8 text-muted-foreground"
+            >
               No assignments found. Create a new assignment to get started.
             </TableCell>
           </TableRow>
@@ -99,14 +102,20 @@ export function AssignmentsTable({
                     : "-"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={assignment.is_active ? "default" : "secondary"}>
+                  <Badge
+                    variant={assignment.is_active ? "default" : "secondary"}
+                  >
                     {assignment.is_active ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <DeleteAssignmentButton
                     assignmentId={assignment.id}
-                    gatewayName={gateway?.name || gateway?.gateway_uid || `Gateway #${assignment.gateway_id}`}
+                    gatewayName={
+                      gateway?.name ||
+                      gateway?.gateway_uid ||
+                      `Gateway #${assignment.gateway_id}`
+                    }
                     farmName={farm?.name || `Farm #${assignment.farm_id}`}
                   />
                 </TableCell>

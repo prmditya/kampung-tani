@@ -59,7 +59,7 @@ export function useUpdateUser() {
     }) => {
       const response = await apiClient.put<UserResponse>(
         `/users/${userId}`,
-        data
+        data,
       );
       return response.data;
     },
@@ -76,7 +76,7 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: async (userId: number) => {
       const response = await apiClient.delete<MessageResponse>(
-        `/users/${userId}`
+        `/users/${userId}`,
       );
       return response.data;
     },

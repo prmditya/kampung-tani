@@ -77,31 +77,39 @@ const STATS_CONFIG: StatConfig[] = [
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {STATS_CONFIG.map(({ key, title, icon: Icon, color, description, showBadge }) => {
-        const colorClass = COLOR_CLASSES[color];
+      {STATS_CONFIG.map(
+        ({ key, title, icon: Icon, color, description, showBadge }) => {
+          const colorClass = COLOR_CLASSES[color];
 
-        return (
-          <Card key={key} className="transition-shadow hover:shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-lg ${colorClass.bg}`}>
-                  <Icon className={`h-5 w-5 ${colorClass.icon}`} />
+          return (
+            <Card key={key} className="transition-shadow hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-lg ${colorClass.bg}`}
+                  >
+                    <Icon className={`h-5 w-5 ${colorClass.icon}`} />
+                  </div>
+                  {showBadge && (
+                    <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      Live
+                    </span>
+                  )}
                 </div>
-                {showBadge && (
-                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    Live
-                  </span>
-                )}
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                <p className="text-2xl font-bold tracking-tight">{stats[key]}</p>
-                <p className="text-xs text-muted-foreground">{description}</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {title}
+                  </p>
+                  <p className="text-2xl font-bold tracking-tight">
+                    {stats[key]}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{description}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        },
+      )}
     </div>
   );
 }

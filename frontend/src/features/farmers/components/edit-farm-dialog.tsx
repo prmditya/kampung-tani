@@ -49,7 +49,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
         onSuccess: () => {
           setOpen(false);
         },
-      }
+      },
     );
   };
 

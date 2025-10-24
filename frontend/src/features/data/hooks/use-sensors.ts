@@ -36,7 +36,7 @@ export function useSensors(filters?: { skip?: number; limit?: number }) {
       if (filters?.limit) params.append("limit", filters.limit.toString());
 
       const response = await apiClient.get<SensorResponse[]>(
-        `/sensors?${params}`
+        `/sensors?${params}`,
       );
       return response.data;
     },
@@ -65,7 +65,7 @@ export function useSensorsByGateway(
     page?: number;
     size?: number;
     sensor_type?: string;
-  }
+  },
 ) {
   return useQuery({
     queryKey: sensorKeys.byGateway(gatewayId),
@@ -74,10 +74,11 @@ export function useSensorsByGateway(
       params.append("gateway_id", gatewayId.toString());
       if (filters?.page) params.append("page", filters.page.toString());
       if (filters?.size) params.append("size", filters.size.toString());
-      if (filters?.sensor_type) params.append("sensor_type", filters.sensor_type);
+      if (filters?.sensor_type)
+        params.append("sensor_type", filters.sensor_type);
 
       const response = await apiClient.get<PaginatedResponse<SensorResponse>>(
-        `/sensors?${params}`
+        `/sensors?${params}`,
       );
       return response.data;
     },
@@ -112,7 +113,7 @@ export function useUpdateSensor() {
     mutationFn: async ({ id, data }: { id: number; data: SensorUpdate }) => {
       const response = await apiClient.put<SensorResponse>(
         `/sensors/${id}`,
-        data
+        data,
       );
       return response.data;
     },
@@ -133,7 +134,9 @@ export function useDeleteSensor() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiClient.delete<MessageResponse>(`/sensors/${id}`);
+      const response = await apiClient.delete<MessageResponse>(
+        `/sensors/${id}`,
+      );
       return response.data;
     },
     onSuccess: () => {
@@ -150,7 +153,7 @@ export function useSensorData(
     page?: number;
     size?: number;
     hours?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: sensorKeys.data(sensorId, filters),
@@ -160,9 +163,9 @@ export function useSensorData(
       if (filters?.size) params.append("size", filters.size.toString());
       if (filters?.hours) params.append("hours", filters.hours.toString());
 
-      const response = await apiClient.get<PaginatedResponse<SensorDataResponse>>(
-        `/sensors/${sensorId}/data?${params}`
-      );
+      const response = await apiClient.get<
+        PaginatedResponse<SensorDataResponse>
+      >(`/sensors/${sensorId}/data?${params}`);
       return response.data;
     },
     enabled: !!sensorId,
@@ -208,7 +211,7 @@ export function useCreateSensorData() {
     }) => {
       const response = await apiClient.post<SensorDataResponse>(
         `/sensors/${sensorId}/data`,
-        data
+        data,
       );
       return response.data;
     },

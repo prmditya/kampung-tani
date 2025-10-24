@@ -49,7 +49,7 @@ export function useAssignment(id: number) {
     queryKey: assignmentKeys.detail(id),
     queryFn: async () => {
       const response = await apiClient.get<GatewayAssignmentResponse>(
-        `/gateway-assignments/${id}`
+        `/gateway-assignments/${id}`,
       );
       return response.data;
     },
@@ -66,7 +66,7 @@ export function useAssignmentByGateway(gatewayId: number) {
         PaginatedResponse<GatewayAssignmentResponse>
       >(`/gateway-assignments?size=100`);
       const activeAssignment = response.data.items.find(
-        (a) => a.gateway_id === gatewayId && a.is_active
+        (a) => a.gateway_id === gatewayId && a.is_active,
       );
       return activeAssignment || null;
     },
@@ -83,7 +83,7 @@ export function useCreateAssignment() {
     mutationFn: async (data: GatewayAssignmentCreate) => {
       const response = await apiClient.post<GatewayAssignmentResponse>(
         "/gateway-assignments",
-        data
+        data,
       );
       return response.data;
     },
@@ -108,7 +108,7 @@ export function useUpdateAssignment() {
     }) => {
       const response = await apiClient.put<GatewayAssignmentResponse>(
         `/gateway-assignments/${id}`,
-        data
+        data,
       );
       return response.data;
     },
@@ -128,7 +128,7 @@ export function useDeleteAssignment() {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.delete<MessageResponse>(
-        `/gateway-assignments/${id}`
+        `/gateway-assignments/${id}`,
       );
       return response.data;
     },

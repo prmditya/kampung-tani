@@ -128,7 +128,7 @@ export default function DataPage() {
       filtered = filtered.filter((reading) => {
         const measurementType = reading.metadata?.measurement_type || "Unknown";
         const sensorInfo = sensorsData?.items.find(
-          (s) => s.id === reading.sensor_id
+          (s) => s.id === reading.sensor_id,
         );
         const sensorName = sensorInfo?.name || sensorInfo?.sensor_uid || "";
 
@@ -145,7 +145,7 @@ export default function DataPage() {
       const farmerId = parseInt(selectedFarmer);
       filtered = filtered.filter((reading) => {
         const assignment = assignmentsData?.items.find(
-          (a) => a.gateway_id === reading.gateway_id && a.is_active
+          (a) => a.gateway_id === reading.gateway_id && a.is_active,
         );
         const farm = assignment
           ? farmsData?.items.find((f) => f.id === assignment.farm_id)
@@ -159,7 +159,7 @@ export default function DataPage() {
       const farmId = parseInt(selectedFarm);
       filtered = filtered.filter((reading) => {
         const assignment = assignmentsData?.items.find(
-          (a) => a.gateway_id === reading.gateway_id && a.is_active
+          (a) => a.gateway_id === reading.gateway_id && a.is_active,
         );
         return assignment?.farm_id === farmId;
       });
@@ -214,7 +214,7 @@ export default function DataPage() {
 
       // Check if we already have this time point
       const existingPoint = dataByType[measurementType].find(
-        (d) => d.time === time
+        (d) => d.time === time,
       );
       if (existingPoint) {
         // Update with latest value
@@ -298,7 +298,7 @@ export default function DataPage() {
     const rows = sensorReadings.map((r) => {
       // Find assignment for this gateway
       const assignment = assignmentsData?.items.find(
-        (a) => a.gateway_id === r.gateway_id && a.is_active
+        (a) => a.gateway_id === r.gateway_id && a.is_active,
       );
       const farm = assignment
         ? farmsData?.items.find((f) => f.id === assignment.farm_id)
@@ -320,7 +320,7 @@ export default function DataPage() {
     });
 
     const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join(
-      "\n"
+      "\n",
     );
 
     // Download CSV
@@ -408,7 +408,7 @@ export default function DataPage() {
                           setSelectedMeasurementTypes((prev) =>
                             prev.includes(type)
                               ? prev.filter((t) => t !== type)
-                              : [...prev, type]
+                              : [...prev, type],
                           );
                         }}
                       >
@@ -569,7 +569,7 @@ export default function DataPage() {
                           .filter(
                             (farm) =>
                               selectedFarmer === "all" ||
-                              farm.farmer_id === parseInt(selectedFarmer)
+                              farm.farmer_id === parseInt(selectedFarmer),
                           )
                           .map((farm) => (
                             <SelectItem

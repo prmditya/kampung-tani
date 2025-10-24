@@ -18,19 +18,23 @@ Panduan lengkap untuk mengintegrasikan frontend dengan backend API yang sudah te
 ### Files Already Created:
 
 ✅ **TypeScript Types**: `/src/types/api.ts`
+
 - Semua interface API sudah didefinisikan
 - Type-safe dengan backend Pydantic schemas
 
 ✅ **API Client**: `/src/lib/api-client.ts`
+
 - Axios instance dengan interceptor
 - Base URL: `http://localhost:5000/api/v1`
 - Auto-attach Bearer token
 
 ✅ **Auth Hooks**: `/src/hooks/use-auth.ts`
+
 - `useLogin()` - ✅ Sudah terintegrasi
 - `useLogout()` - ✅ Sudah terintegrasi
 
 ✅ **Entity Hooks**: (Siap untuk integrasi)
+
 - `/src/hooks/use-gateways.ts`
 - `/src/hooks/use-sensors.ts`
 - `/src/hooks/use-farmers.ts`
@@ -43,6 +47,7 @@ Panduan lengkap untuk mengintegrasikan frontend dengan backend API yang sudah te
 Semua types sudah tersedia di `/src/types/api.ts`:
 
 ### Entities:
+
 - **User**: `UserResponse`, `UserCreate`, `UserUpdate`
 - **Gateway**: `GatewayResponse`, `GatewayCreate`, `GatewayUpdate`
 - **Sensor**: `SensorResponse`, `SensorCreate`, `SensorUpdate`
@@ -52,10 +57,22 @@ Semua types sudah tersedia di `/src/types/api.ts`:
 - **Gateway Status History**: `GatewayStatusHistoryResponse`
 
 ### Enums:
+
 ```typescript
-enum UserRole { USER, ADMIN }
-enum GatewayStatus { ONLINE, OFFLINE, MAINTENANCE }
-enum SensorStatus { ACTIVE, INACTIVE, ERROR }
+enum UserRole {
+  USER,
+  ADMIN,
+}
+enum GatewayStatus {
+  ONLINE,
+  OFFLINE,
+  MAINTENANCE,
+}
+enum SensorStatus {
+  ACTIVE,
+  INACTIVE,
+  ERROR,
+}
 ```
 
 ---
@@ -65,19 +82,22 @@ enum SensorStatus { ACTIVE, INACTIVE, ERROR }
 Setiap entity memiliki hooks standar:
 
 ### Pattern:
+
 ```typescript
 // Query Hooks (GET)
-useEntities()       // Get all
-useEntity(id)       // Get by ID
+useEntities(); // Get all
+useEntity(id); // Get by ID
 
 // Mutation Hooks (POST/PUT/DELETE)
-useCreateEntity()   // Create new
-useUpdateEntity()   // Update existing
-useDeleteEntity()   // Delete
+useCreateEntity(); // Create new
+useUpdateEntity(); // Update existing
+useDeleteEntity(); // Delete
 ```
 
 ### Query Keys:
+
 Setiap hook menggunakan query keys untuk cache management:
+
 ```typescript
 export const entityKeys = {
   all: ["entities"],
@@ -97,6 +117,7 @@ export const entityKeys = {
 Di setiap hook file, ubah `enabled: false` menjadi `enabled: true`:
 
 **Before:**
+
 ```typescript
 export function useGateways() {
   return useQuery({
@@ -108,6 +129,7 @@ export function useGateways() {
 ```
 
 **After:**
+
 ```typescript
 export function useGateways() {
   return useQuery({
@@ -177,17 +199,19 @@ export default function FarmersPage() {
 Sesuaikan form types dengan API schema:
 
 **Old (Dummy):**
+
 ```typescript
 type Farmer = {
   id: string;
   name: string;
-  farmName: string;  // ❌ Not in API
-  email: string;     // ❌ Not in API
+  farmName: string; // ❌ Not in API
+  email: string; // ❌ Not in API
   // ...
-}
+};
 ```
 
 **New (API):**
+
 ```typescript
 import type { FarmerResponse, FarmerCreate } from "@/types/api";
 
@@ -197,7 +221,7 @@ const farmer: FarmerResponse = {
   name: "John Doe",
   contact: "+62 812-3456-7890",
   address: "Bandung, West Java",
-  created_at: "2024-01-01T00:00:00Z"
+  created_at: "2024-01-01T00:00:00Z",
 };
 ```
 
@@ -206,58 +230,64 @@ const farmer: FarmerResponse = {
 ## 📍 Available Endpoints
 
 ### Authentication
+
 ```typescript
-POST   /auth/login       // ✅ Terintegrasi
-POST   /auth/register
-POST   /auth/logout      // ✅ Terintegrasi
-GET    /auth/me
+POST / auth / login; // ✅ Terintegrasi
+POST / auth / register;
+POST / auth / logout; // ✅ Terintegrasi
+GET / auth / me;
 ```
 
 ### Gateways
+
 ```typescript
-GET    /gateways         // Get all gateways
-GET    /gateways/{id}    // Get gateway by ID
-POST   /gateways         // Create new gateway
-PUT    /gateways/{id}    // Update gateway
-DELETE /gateways/{id}    // Delete gateway
+GET / gateways; // Get all gateways
+GET / gateways / { id }; // Get gateway by ID
+POST / gateways; // Create new gateway
+PUT / gateways / { id }; // Update gateway
+DELETE / gateways / { id }; // Delete gateway
 ```
 
 ### Sensors
+
 ```typescript
-GET    /sensors                // Get all sensors
-GET    /sensors/{id}           // Get sensor by ID
-GET    /sensors/gateway/{id}   // Get sensors by gateway
-POST   /sensors                // Create new sensor
-PUT    /sensors/{id}           // Update sensor
-DELETE /sensors/{id}           // Delete sensor
+GET / sensors; // Get all sensors
+GET / sensors / { id }; // Get sensor by ID
+GET / sensors / gateway / { id }; // Get sensors by gateway
+POST / sensors; // Create new sensor
+PUT / sensors / { id }; // Update sensor
+DELETE / sensors / { id }; // Delete sensor
 ```
 
 ### Farmers
+
 ```typescript
-GET    /farmers         // Get all farmers
-GET    /farmers/{id}    // Get farmer by ID
-POST   /farmers         // Create new farmer
-PUT    /farmers/{id}    // Update farmer
-DELETE /farmers/{id}    // Delete farmer
+GET / farmers; // Get all farmers
+GET / farmers / { id }; // Get farmer by ID
+POST / farmers; // Create new farmer
+PUT / farmers / { id }; // Update farmer
+DELETE / farmers / { id }; // Delete farmer
 ```
 
 ### Farms
+
 ```typescript
-GET    /farms              // Get all farms
-GET    /farms/{id}         // Get farm by ID
-GET    /farms/farmer/{id}  // Get farms by farmer
-POST   /farms              // Create new farm
-PUT    /farms/{id}         // Update farm
-DELETE /farms/{id}         // Delete farm
+GET / farms; // Get all farms
+GET / farms / { id }; // Get farm by ID
+GET / farms / farmer / { id }; // Get farms by farmer
+POST / farms; // Create new farm
+PUT / farms / { id }; // Update farm
+DELETE / farms / { id }; // Delete farm
 ```
 
 ### Gateway Assignments
+
 ```typescript
-GET    /gateway-assignments         // Get all assignments
-GET    /gateway-assignments/{id}    // Get assignment by ID
-POST   /gateway-assignments         // Create assignment
-PUT    /gateway-assignments/{id}    // Update assignment
-DELETE /gateway-assignments/{id}    // Delete assignment
+GET / gateway - assignments; // Get all assignments
+GET / gateway - assignments / { id }; // Get assignment by ID
+POST / gateway - assignments; // Create assignment
+PUT / gateway - assignments / { id }; // Update assignment
+DELETE / gateway - assignments / { id }; // Delete assignment
 ```
 
 ---
@@ -442,6 +472,7 @@ apiClient.interceptors.request.use((config) => {
 ## ✅ Checklist Integrasi
 
 ### Farmers Page
+
 - [ ] Enable `useFarmers()` hook
 - [ ] Update form fields sesuai `FarmerCreate` type
 - [ ] Hapus dummy data import
@@ -451,6 +482,7 @@ apiClient.interceptors.request.use((config) => {
 - [ ] Update table columns sesuai `FarmerResponse`
 
 ### Devices Page (Gateways & Sensors)
+
 - [ ] Enable `useGateways()` hook
 - [ ] Enable `useSensors()` hook
 - [ ] Update status enum dari `active/inactive/maintenance` ke `GatewayStatus`
@@ -460,11 +492,13 @@ apiClient.interceptors.request.use((config) => {
 - [ ] Integrate delete gateway
 
 ### Farms Page (Belum ada)
+
 - [ ] Create farms page
 - [ ] Use `useFarms()` hook
 - [ ] Link dengan farmers via `farmer_id`
 
 ### Assignments Page
+
 - [ ] Enable `useGatewayAssignments()` hook (need to create)
 - [ ] Show gateway-farm relationships
 
@@ -473,26 +507,33 @@ apiClient.interceptors.request.use((config) => {
 ## 🐛 Troubleshooting
 
 ### 1. CORS Error
+
 **Problem**: `Access-Control-Allow-Origin` error
 
 **Solution**: Backend sudah di-fix di `.env.local`:
+
 ```env
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3002
 ```
+
 Restart backend server!
 
 ### 2. 401 Unauthorized
+
 **Problem**: API returns 401
 
 **Solution**:
+
 - Check if token exists: `localStorage.getItem("token")`
 - Login lagi jika token expired
 - Verify token format di Network tab
 
 ### 3. Type Errors
+
 **Problem**: TypeScript errors dengan API types
 
 **Solution**:
+
 - Import types dari `/src/types/api.ts`
 - Gunakan types yang sudah didefinisikan, jangan buat sendiri
 - Check field names match dengan API (e.g., `gateway_uid` bukan `gatewayUid`)

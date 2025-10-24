@@ -17,9 +17,7 @@ export function RecentActivity({ assignments }: RecentActivityProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Recent Activity
-        </CardTitle>
+        <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

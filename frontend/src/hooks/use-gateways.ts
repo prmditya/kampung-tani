@@ -34,7 +34,7 @@ export function useGateways(filters?: {
       if (filters?.search) params.append("search", filters.search);
 
       const response = await apiClient.get<PaginatedResponse<GatewayResponse>>(
-        `/gateways?${params}`
+        `/gateways?${params}`,
       );
       return response.data;
     },
@@ -84,7 +84,7 @@ export function useUpdateGateway() {
     mutationFn: async ({ id, data }: { id: number; data: GatewayUpdate }) => {
       const response = await apiClient.put<GatewayResponse>(
         `/gateways/${id}`,
-        data
+        data,
       );
       return response.data;
     },
@@ -104,7 +104,7 @@ export function useDeleteGateway() {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.delete<MessageResponse>(
-        `/gateways/${id}`
+        `/gateways/${id}`,
       );
       return response.data;
     },

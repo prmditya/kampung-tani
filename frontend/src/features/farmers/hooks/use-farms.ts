@@ -12,7 +12,8 @@ import type {
 export const farmKeys = {
   all: ["farms"] as const,
   lists: () => [...farmKeys.all, "list"] as const,
-  list: (filters?: Record<string, any>) => [...farmKeys.lists(), filters] as const,
+  list: (filters?: Record<string, any>) =>
+    [...farmKeys.lists(), filters] as const,
   details: () => [...farmKeys.all, "detail"] as const,
   detail: (id: number) => [...farmKeys.details(), id] as const,
   byFarmer: (farmerId: number) =>
@@ -20,7 +21,11 @@ export const farmKeys = {
 };
 
 // ==================== GET ALL FARMS ====================
-export function useFarms(filters?: { page?: number; size?: number; search?: string }) {
+export function useFarms(filters?: {
+  page?: number;
+  size?: number;
+  search?: string;
+}) {
   return useQuery({
     queryKey: farmKeys.list(filters),
     queryFn: async () => {
@@ -29,7 +34,9 @@ export function useFarms(filters?: { page?: number; size?: number; search?: stri
       if (filters?.size) params.append("size", filters.size.toString());
       if (filters?.search) params.append("search", filters.search);
 
-      const response = await apiClient.get<PaginatedResponse<FarmResponse>>(`/farms?${params}`);
+      const response = await apiClient.get<PaginatedResponse<FarmResponse>>(
+        `/farms?${params}`,
+      );
       return response.data;
     },
   });
@@ -52,7 +59,7 @@ export function useFarmsByFarmer(farmerId: number) {
     queryKey: farmKeys.byFarmer(farmerId),
     queryFn: async () => {
       const response = await apiClient.get<FarmResponse[]>(
-        `/farms/farmer/${farmerId}`
+        `/farms/farmer/${farmerId}`,
       );
       return response.data;
     },

@@ -44,14 +44,19 @@ export function DevicesTable({ devices }: DevicesTableProps) {
       <TableBody>
         {devices.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+            <TableCell
+              colSpan={6}
+              className="text-center py-8 text-muted-foreground"
+            >
               No devices found. Add a new device to get started.
             </TableCell>
           </TableRow>
         ) : (
           devices.map((device) => (
             <TableRow key={device.id}>
-              <TableCell className="font-medium">{device.gateway_uid}</TableCell>
+              <TableCell className="font-medium">
+                {device.gateway_uid}
+              </TableCell>
               <TableCell>
                 {device.name || (
                   <span className="text-muted-foreground">Unnamed</span>

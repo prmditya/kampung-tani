@@ -14,7 +14,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Download, Filter, RefreshCw, CalendarIcon, RotateCw } from "lucide-react";
+import {
+  Download,
+  Filter,
+  RefreshCw,
+  CalendarIcon,
+  RotateCw,
+} from "lucide-react";
 import { format } from "date-fns";
 import type { GatewayResponse, SensorResponse } from "@/types/api";
 import { cn } from "@/lib/utils";
@@ -108,7 +114,7 @@ export function DataFilter({
                   variant="outline"
                   className={cn(
                     "justify-start text-left font-normal",
-                    !dateFrom && "text-muted-foreground"
+                    !dateFrom && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -134,7 +140,7 @@ export function DataFilter({
                   variant="outline"
                   className={cn(
                     "justify-start text-left font-normal",
-                    !dateTo && "text-muted-foreground"
+                    !dateTo && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -147,9 +153,7 @@ export function DataFilter({
                   selected={dateTo}
                   onSelect={onDateToChange}
                   initialFocus
-                  disabled={(date) =>
-                    dateFrom ? date < dateFrom : false
-                  }
+                  disabled={(date) => (dateFrom ? date < dateFrom : false)}
                 />
               </PopoverContent>
             </Popover>
@@ -163,7 +167,9 @@ export function DataFilter({
             className="flex-1"
             disabled={isRefreshing}
           >
-            <RotateCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+            <RotateCw
+              className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+            />
             {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
           <Button onClick={onReset} variant="outline" className="flex-1">

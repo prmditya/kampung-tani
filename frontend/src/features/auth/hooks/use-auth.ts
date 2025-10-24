@@ -2,7 +2,12 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import apiClient from "@/lib/api-client";
 import axios from "axios";
-import type { UserUpdate, UserResponse, PasswordChange, MessageResponse } from "@/types/api";
+import type {
+  UserUpdate,
+  UserResponse,
+  PasswordChange,
+  MessageResponse,
+} from "@/types/api";
 
 interface LoginCredentials {
   username: string;
@@ -28,12 +33,13 @@ export function useLogin() {
       try {
         const response = await apiClient.post<LoginResponse>(
           "/auth/login",
-          credentials
+          credentials,
         );
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          const message = error.response?.data?.detail || "Login failed. Please try again.";
+          const message =
+            error.response?.data?.detail || "Login failed. Please try again.";
           throw new Error(message);
         }
         throw error;
@@ -121,11 +127,16 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: PasswordChange) => {
       try {
-        const response = await apiClient.post<MessageResponse>("/auth/change-password", data);
+        const response = await apiClient.post<MessageResponse>(
+          "/auth/change-password",
+          data,
+        );
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          const message = error.response?.data?.detail || "Failed to change password. Please try again.";
+          const message =
+            error.response?.data?.detail ||
+            "Failed to change password. Please try again.";
           throw new Error(message);
         }
         throw error;

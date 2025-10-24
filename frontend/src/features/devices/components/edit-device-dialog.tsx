@@ -54,7 +54,7 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
         onSuccess: () => {
           setOpen(false);
         },
-      }
+      },
     );
   };
 

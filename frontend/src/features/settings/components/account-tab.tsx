@@ -56,7 +56,7 @@ export default function AccountTab() {
             window.location.reload();
           }, 1500);
         },
-      }
+      },
     );
   };
 
@@ -90,7 +90,7 @@ export default function AccountTab() {
             resetPasswordMutation();
           }, 3000);
         },
-      }
+      },
     );
   };
 

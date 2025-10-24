@@ -56,7 +56,7 @@ export default function DashboardPage() {
 
     return assignmentsData.items.slice(0, 5).map((assignment) => {
       const gateway = gatewaysData.items.find(
-        (g) => g.id === assignment.gateway_id
+        (g) => g.id === assignment.gateway_id,
       );
       const farm = farmsData.items.find((f) => f.id === assignment.farm_id);
 
