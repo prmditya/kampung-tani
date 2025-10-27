@@ -27,7 +27,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 md:px-6">
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={200}>
           <AreaChart
             data={data}
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}

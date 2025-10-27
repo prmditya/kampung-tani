@@ -360,7 +360,7 @@ export default function DataPage() {
           </Card>
         )}
 
-      {!isLoading && selectedSensor !== 'all' && (
+      {!isLoading && selectedSensor !== 'none' && (
         <>
           {/* Measurement Type Filter */}
           {availableMeasurementTypes.length > 0 && (
