@@ -151,13 +151,22 @@ async def create_assignment(
                    f"Deactivate the current assignment first."
         )
 
+    # Strip timezone info to make datetime timezone-naive (database uses TIMESTAMP WITHOUT TIME ZONE)
+    start_date = assignment_data.start_date
+    end_date = assignment_data.end_date
+
+    if start_date and start_date.tzinfo:
+        start_date = start_date.replace(tzinfo=None)
+    if end_date and end_date.tzinfo:
+        end_date = end_date.replace(tzinfo=None)
+
     try:
         assignment = await assignment_repo.create(
             gateway_id=assignment_data.gateway_id,
             farm_id=assignment_data.farm_id,
             assigned_by=current_user.id,
-            start_date=assignment_data.start_date,
-            end_date=assignment_data.end_date,
+            start_date=start_date,
+            end_date=end_date,
             is_active=True
         )
 
@@ -261,6 +270,12 @@ async def update_assignment(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Farm with ID {update_data['farm_id']} not found"
             )
+
+    # Strip timezone info from dates if present (database uses TIMESTAMP WITHOUT TIME ZONE)
+    if "start_date" in update_data and update_data["start_date"] and update_data["start_date"].tzinfo:
+        update_data["start_date"] = update_data["start_date"].replace(tzinfo=None)
+    if "end_date" in update_data and update_data["end_date"] and update_data["end_date"].tzinfo:
+        update_data["end_date"] = update_data["end_date"].replace(tzinfo=None)
 
     try:
         updated_assignment = await assignment_repo.update(assignment_id, **update_data)
