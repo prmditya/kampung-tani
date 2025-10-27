@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Activity, HardDrive, TrendingUp, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -18,56 +18,37 @@ interface StatConfig {
   title: string;
   key: keyof DashboardStats;
   icon: LucideIcon;
-  color: 'blue' | 'emerald' | 'purple' | 'orange';
+  gradient: string;
   description: string;
 }
-
-const COLOR_CLASSES = {
-  blue: {
-    icon: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-100 dark:bg-blue-950',
-  },
-  emerald: {
-    icon: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-100 dark:bg-emerald-950',
-  },
-  purple: {
-    icon: 'text-purple-600 dark:text-purple-400',
-    bg: 'bg-purple-100 dark:bg-purple-950',
-  },
-  orange: {
-    icon: 'text-orange-600 dark:text-orange-400',
-    bg: 'bg-orange-100 dark:bg-orange-950',
-  },
-} as const;
 
 const STATS_CONFIG: StatConfig[] = [
   {
     title: 'Total Gateways',
     key: 'totalDevices',
     icon: HardDrive,
-    color: 'blue',
+    gradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
     description: 'Registered in system',
   },
   {
     title: 'Active Now',
     key: 'activeDevices',
     icon: Activity,
-    color: 'emerald',
+    gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     description: 'Currently operational',
   },
   {
     title: 'Assignments',
     key: 'assignedDevices',
     icon: Users,
-    color: 'purple',
+    gradient: 'bg-gradient-to-br from-purple-500 to-purple-600',
     description: 'Deployed to farms',
   },
   {
     title: "Today's Readings",
     key: 'todayReadings',
     icon: TrendingUp,
-    color: 'orange',
+    gradient: 'bg-gradient-to-br from-orange-500 to-orange-600',
     description: 'Sensor data points',
   },
 ];
@@ -75,29 +56,29 @@ const STATS_CONFIG: StatConfig[] = [
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {STATS_CONFIG.map(({ key, title, icon: Icon, color, description }) => {
-        const colorClass = COLOR_CLASSES[color];
-
+      {STATS_CONFIG.map(({ key, title, icon: Icon, gradient, description }) => {
         return (
-          <Card key={key} className="transition-shadow hover:shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-lg ${colorClass.bg}`}
-                >
-                  <Icon className={`h-5 w-5 ${colorClass.icon}`} />
+          <Card
+            key={key}
+            className={`relative overflow-hidden ${gradient} text-white border-1 hover:shadow-lg hover:scale-105 transition-all duration-300`}
+          >
+            <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
+              <Icon className="h-32 w-32" />
+            </div>
+            <div className="relative p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="rounded-lg bg-white/20 p-3 backdrop-blur-sm">
+                  <Icon className="h-6 w-6" />
                 </div>
               </div>
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {title}
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-white/90">{title}</p>
+                <p className="text-4xl font-bold tracking-tight">
+                  {stats[key].toLocaleString()}
                 </p>
-                <p className="text-2xl font-bold tracking-tight">
-                  {stats[key]}
-                </p>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                <p className="text-xs text-white/80">{description}</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
         );
       })}

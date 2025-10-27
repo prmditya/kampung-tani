@@ -75,11 +75,16 @@ export default function DashboardPage() {
   const isLoading = isLoadingDashboard;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Section */}
-      <div className="flex items-start justify-between flex-col gap-1">
-        <h1 className="text-3xl font-bold">Admin IoT Monitoring Dashboard</h1>
-        <div className="flex items-center gap-1 text-muted-foreground">
+      <div className="flex items-start justify-between flex-col gap-2">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's what's happening with your IoT system today.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
           <Calendar className="h-4 w-4" />
           <span>
             {new Date().toLocaleDateString('en-US', {
@@ -94,22 +99,27 @@ export default function DashboardPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">
+              Loading dashboard...
+            </p>
+          </div>
         </div>
       )}
 
       {/* Main Grid Layout */}
       {!isLoading && (
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid gap-6 lg:grid-cols-12">
           {/* Left Column - Main Content */}
-          <div className="lg:col-span-9 space-y-4">
+          <div className="lg:col-span-9 space-y-6">
             <StatsCards stats={stats} />
             <ActivityChart data={activityData} />
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="lg:col-span-3 space-y-4  grid">
+          <div className="lg:col-span-3 space-y-6">
             <RecentActivity assignments={recentAssignments} />
             <QuickActions />
           </div>

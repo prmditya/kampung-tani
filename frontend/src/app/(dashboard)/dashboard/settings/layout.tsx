@@ -9,12 +9,9 @@ export default function devicesLayout({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Farmers</h1>
-          <p className="text-muted-foreground">
-            Manage farmer profiles and farm information
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">Manage your profile</p>
         </div>
-        <AddFarmerDialog />
       </div>
       {children}
     </div>

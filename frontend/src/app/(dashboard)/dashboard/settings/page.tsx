@@ -1,30 +1,23 @@
-"use client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+'use client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import AccountTab from "@/features/settings/components/account-tab";
-import AdminTab from "@/features/settings/components/admin-tab";
-import { useCurrentUser, isSuperAdmin } from "@/features/auth/hooks/use-auth";
-import { ShieldAlert } from "lucide-react";
+} from '@/components/ui/card';
+import AccountTab from '@/features/settings/components/account-tab';
+import AdminTab from '@/features/settings/components/admin-tab';
+import { useCurrentUser, isSuperAdmin } from '@/features/auth/hooks/use-auth';
+import { ShieldAlert } from 'lucide-react';
 
 export default function SettingsPage() {
   const currentUser = useCurrentUser();
   const isUserSuperAdmin = isSuperAdmin(currentUser);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage system settings and admin users
-        </p>
-      </div>
-
+    <div className="space-y-8 animate-in fade-in duration-500">
       <Tabs defaultValue="account" className="space-y-4">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
