@@ -1,12 +1,12 @@
-"use client";
-import { useState } from "react";
+'use client';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -14,11 +14,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,21 +37,21 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2, Shield, Loader2 } from "lucide-react";
+} from '@/components/ui/select';
+import { Plus, Trash2, Shield, ShieldPlus, Loader2 } from 'lucide-react';
 import {
   useCreateUser,
   useGetUsers,
   useDeleteUser,
-} from "@/features/settings/hooks/use-users";
-import type { UserCreate, UserRole } from "@/types/api";
+} from '@/features/settings/hooks/use-users';
+import type { UserCreate, UserRole } from '@/types/api';
 
 export default function AdminTab() {
   const { data: users, isLoading, error } = useGetUsers();
@@ -64,10 +64,10 @@ export default function AdminTab() {
     username: string;
   } | null>(null);
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    role: "admin" as UserRole,
+    username: '',
+    email: '',
+    password: '',
+    role: 'admin' as UserRole,
   });
 
   const handleAddAdmin = (e: React.FormEvent<HTMLFormElement>) => {
@@ -84,10 +84,10 @@ export default function AdminTab() {
       onSuccess: () => {
         setIsDialogOpen(false);
         setFormData({
-          username: "",
-          email: "",
-          password: "",
-          role: "admin" as UserRole,
+          username: '',
+          email: '',
+          password: '',
+          role: 'admin' as UserRole,
         });
       },
     });
@@ -233,7 +233,7 @@ export default function AdminTab() {
                       Adding...
                     </>
                   ) : (
-                    "Add Admin"
+                    'Add Admin'
                   )}
                 </Button>
               </DialogFooter>
@@ -273,10 +273,16 @@ export default function AdminTab() {
                   <TableCell>
                     <Badge
                       variant={
-                        user.role === "super admin" ? "default" : "secondary"
+                        user.role === 'super admin' ? 'default' : 'secondary'
                       }
+                      className="py-1 rounded-xl"
                     >
-                      <Shield className="mr-1 h-3 w-3" />
+                      {user.role === 'super admin' ? (
+                        <ShieldPlus className=" h-3 w-3" />
+                      ) : (
+                        <Shield className=" h-3 w-3" />
+                      )}
+
                       {user.role}
                     </Badge>
                   </TableCell>
@@ -288,7 +294,7 @@ export default function AdminTab() {
                       variant="ghost"
                       size="icon"
                       disabled={
-                        user.role === "super admin" ||
+                        user.role === 'super admin' ||
                         (deletingUserId === user.id && isDeleting)
                       }
                       onClick={() => handleDeleteUser(user.id, user.username)}
@@ -316,7 +322,7 @@ export default function AdminTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the user account for{" "}
+              This will permanently delete the user account for{' '}
               <span className="font-semibold">{userToDelete?.username}</span>.
               This action cannot be undone.
             </AlertDialogDescription>
@@ -336,7 +342,7 @@ export default function AdminTab() {
                   Deleting...
                 </>
               ) : (
-                "Delete"
+                'Delete'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

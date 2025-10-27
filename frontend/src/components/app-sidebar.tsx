@@ -6,6 +6,7 @@ import {
   Tractor,
   Settings,
   Database,
+  LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,7 +26,7 @@ import {
 import { Separator } from './ui/separator';
 import Image from 'next/image';
 import { NavUser } from './nav-user';
-import { useCurrentUser } from '@/features/auth/hooks/use-auth';
+import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 
 // Menu items.
 const items = [
@@ -33,31 +34,26 @@ const items = [
     title: 'Dashboard',
     url: '/dashboard',
     icon: LayoutDashboard,
-    description: 'Overview & analytics',
   },
   {
     title: 'Devices',
     url: '/dashboard/devices',
     icon: HardDrive,
-    description: 'Gateway management',
   },
   {
     title: 'Assignments',
     url: '/dashboard/assignments',
     icon: Unplug,
-    description: 'Gateway to farm',
   },
   {
     title: 'Farmers',
     url: '/dashboard/farmers',
     icon: Tractor,
-    description: 'Farmers & farms',
   },
   {
     title: 'Data',
     url: '/dashboard/data',
     icon: Database,
-    description: 'Sensor readings',
   },
 ];
 
@@ -66,13 +62,13 @@ const secondaryItems = [
     title: 'Settings',
     url: '/dashboard/settings',
     icon: Settings,
-    description: 'System config',
   },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const currentUser = useCurrentUser();
+  const logoutMutation = useLogout();
 
   return (
     <Sidebar variant="inset">
@@ -130,7 +126,7 @@ export function AppSidebar() {
         <SidebarGroup className="mt-auto">
           <SidebarGroupLabel className="pl-0">Other</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
+            <SidebarMenu className="gap-1">
               {secondaryItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
@@ -153,6 +149,15 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem key={'logout'}>
+                <SidebarMenuButton
+                  className="h-auto px-2 py-1 text-red-400 hover:text-red-400 hover:bg-red-400/10 "
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  <LogOut />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
