@@ -153,6 +153,11 @@ export function useSensorData(
     page?: number;
     size?: number;
     hours?: number;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+    farmer_id?: number;
+    farm_id?: number;
   },
 ) {
   return useQuery({
@@ -162,6 +167,14 @@ export function useSensorData(
       if (filters?.page) params.append("page", filters.page.toString());
       if (filters?.size) params.append("size", filters.size.toString());
       if (filters?.hours) params.append("hours", filters.hours.toString());
+      if (filters?.start_date)
+        params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
+      if (filters?.search) params.append("search", filters.search);
+      if (filters?.farmer_id)
+        params.append("farmer_id", filters.farmer_id.toString());
+      if (filters?.farm_id)
+        params.append("farm_id", filters.farm_id.toString());
 
       const response = await apiClient.get<
         PaginatedResponse<SensorDataResponse>

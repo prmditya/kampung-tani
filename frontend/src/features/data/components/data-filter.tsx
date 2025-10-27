@@ -1,29 +1,30 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from '@/components/ui/popover';
 import {
   Download,
   Filter,
   RefreshCw,
   CalendarIcon,
   RotateCw,
-} from "lucide-react";
-import { format } from "date-fns";
-import type { GatewayResponse, SensorResponse } from "@/types/api";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+import { format } from 'date-fns';
+import type { GatewayResponse, SensorResponse } from '@/types/api';
+import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 interface DataFilterProps {
   gateways: GatewayResponse[];
@@ -90,7 +91,7 @@ export function DataFilter({
             <Select
               value={selectedSensor}
               onValueChange={onSensorChange}
-              disabled={selectedGateway === "all"}
+              disabled={selectedGateway === 'all'}
             >
               <SelectTrigger id="sensor-filter">
                 <SelectValue placeholder="Select Sensor" />
@@ -113,20 +114,20 @@ export function DataFilter({
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal",
-                    !dateFrom && "text-muted-foreground",
+                    'justify-start text-left font-normal',
+                    !dateFrom && 'text-muted-foreground',
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "PPP") : "Pick a date"}
+                  {dateFrom ? format(dateFrom, 'PPP') : 'Pick a date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={dateFrom}
+                  captionLayout="dropdown"
                   onSelect={onDateFromChange}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>
@@ -139,20 +140,20 @@ export function DataFilter({
                 <Button
                   variant="outline"
                   className={cn(
-                    "justify-start text-left font-normal",
-                    !dateTo && "text-muted-foreground",
+                    'justify-start text-left font-normal',
+                    !dateTo && 'text-muted-foreground',
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "PPP") : "Pick a date"}
+                  {dateTo ? format(dateTo, 'PPP') : 'Pick a date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={dateTo}
+                  captionLayout="dropdown"
                   onSelect={onDateToChange}
-                  initialFocus
                   disabled={(date) => (dateFrom ? date < dateFrom : false)}
                 />
               </PopoverContent>
@@ -168,9 +169,9 @@ export function DataFilter({
             disabled={isRefreshing}
           >
             <RotateCw
-              className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+              className={cn('mr-2 h-4 w-4', isRefreshing && 'animate-spin')}
             />
-            {isRefreshing ? "Refreshing..." : "Refresh"}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           <Button onClick={onReset} variant="outline" className="flex-1">
             <RefreshCw className="mr-2 h-4 w-4" />

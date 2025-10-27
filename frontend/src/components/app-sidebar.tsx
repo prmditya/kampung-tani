@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import {
   Unplug,
   LayoutDashboard,
@@ -6,9 +6,9 @@ import {
   Tractor,
   Settings,
   Database,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import {
   Sidebar,
@@ -20,46 +20,53 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
-} from "@/components/ui/sidebar";
-import { Separator } from "./ui/separator";
-import Image from "next/image";
-import { NavUser } from "./nav-user";
-import { useCurrentUser } from "@/features/auth/hooks/use-auth";
+  SidebarGroupLabel,
+} from '@/components/ui/sidebar';
+import { Separator } from './ui/separator';
+import Image from 'next/image';
+import { NavUser } from './nav-user';
+import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 
 // Menu items.
 const items = [
   {
-    title: "Dashboard",
-    url: "/dashboard",
+    title: 'Dashboard',
+    url: '/dashboard',
     icon: LayoutDashboard,
+    description: 'Overview & analytics',
   },
   {
-    title: "Devices",
-    url: "/dashboard/devices",
+    title: 'Devices',
+    url: '/dashboard/devices',
     icon: HardDrive,
+    description: 'Gateway management',
   },
   {
-    title: "Assignments",
-    url: "/dashboard/assignments",
+    title: 'Assignments',
+    url: '/dashboard/assignments',
     icon: Unplug,
+    description: 'Gateway to farm',
   },
   {
-    title: "Farmers",
-    url: "/dashboard/farmers",
+    title: 'Farmers',
+    url: '/dashboard/farmers',
     icon: Tractor,
+    description: 'Farmers & farms',
   },
   {
-    title: "Data",
-    url: "/dashboard/data",
+    title: 'Data',
+    url: '/dashboard/data',
     icon: Database,
+    description: 'Sensor readings',
   },
 ];
 
 const secondaryItems = [
   {
-    title: "Settings",
-    url: "/dashboard/settings",
+    title: 'Settings',
+    url: '/dashboard/settings',
     icon: Settings,
+    description: 'System config',
   },
 ];
 
@@ -90,6 +97,9 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel className="pl-0">
+            Main Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -97,13 +107,19 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.url}
-                    className={
-                      pathname === item.url ? "bg-muted hover:bg-muted/80" : ""
-                    }
+                    className={`h-auto px-2 py-1 ${
+                      pathname === item.url ? 'bg-primary/10' : ''
+                    }`}
                   >
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                    <Link href={item.url} className="flex flex-row gap-1 ">
+                      <item.icon
+                        className={`h-5 w-5 ${pathname === item.url ? 'text-primary' : 'text-muted-foreground'}`}
+                      />
+                      <span
+                        className={`font-medium ${pathname === item.url ? 'text-primary' : ''}`}
+                      >
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -112,20 +128,27 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup className="mt-auto">
+          <SidebarGroupLabel className="pl-0">Other</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {secondaryItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.url}
-                    className={
-                      pathname === item.url ? "bg-muted hover:bg-muted/80" : ""
-                    }
+                    className={`h-auto  px-2 py-1 ${
+                      pathname === item.url ? 'bg-primary/10 ' : ''
+                    }`}
                   >
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                    <Link href={item.url} className="flex flex-row gap-1 ">
+                      <item.icon
+                        className={`h-5 w-5 ${pathname === item.url ? 'text-primary' : 'text-muted-foreground'}`}
+                      />
+                      <span
+                        className={`font-medium ${pathname === item.url ? 'text-primary' : ''}`}
+                      >
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -138,8 +161,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavUser
           user={{
-            name: currentUser?.username || "User",
-            email: currentUser?.email || "user@kampoengtani.com",
+            name: currentUser?.username || 'User',
+            email: currentUser?.email || 'user@kampoengtani.com',
           }}
         />
       </SidebarFooter>

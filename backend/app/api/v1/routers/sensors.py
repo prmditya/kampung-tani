@@ -327,6 +327,11 @@ async def get_sensor_data(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=1000, description="Items per page"),
     hours: Optional[int] = Query(None, ge=1, le=8760, description="Last N hours of data"),
+    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
+    search: Optional[str] = Query(None, description="Search in measurement type, sensor name, or value"),
+    farmer_id: Optional[int] = Query(None, description="Filter by farmer ID"),
+    farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -337,6 +342,13 @@ async def get_sensor_data(
     - **page**: Page number (default: 1)
     - **size**: Items per page (default: 50, max: 1000)
     - **hours**: Get data from last N hours (optional, max: 8760 = 1 year)
+    - **start_date**: Start date filter in ISO format (optional)
+    - **end_date**: End date filter in ISO format (optional)
+    - **search**: Search term for measurement type, sensor name, or value (optional)
+    - **farmer_id**: Filter by farmer ID (optional)
+    - **farm_id**: Filter by farm ID (optional)
+
+    Note: If both hours and start_date/end_date are provided, start_date/end_date take precedence.
     """
     gateway_repo = GatewayRepository(db)
     sensor_repo = SensorRepository(db)
@@ -360,9 +372,16 @@ async def get_sensor_data(
         )
 
     # Calculate date filters
-    start_date = None
-    if hours:
+    # If start_date and end_date are provided, use them
+    # Otherwise, use hours parameter
+    if start_date is None and end_date is None and hours:
         start_date = datetime.utcnow() - timedelta(hours=hours)
+
+    # Strip timezone info to make datetime timezone-naive (database uses TIMESTAMP WITHOUT TIME ZONE)
+    if start_date and start_date.tzinfo:
+        start_date = start_date.replace(tzinfo=None)
+    if end_date and end_date.tzinfo:
+        end_date = end_date.replace(tzinfo=None)
 
     # Get paginated sensor data
     skip = (page - 1) * size
@@ -370,12 +389,20 @@ async def get_sensor_data(
         sensor_id=sensor_id,
         skip=skip,
         limit=size,
-        start_date=start_date
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        farmer_id=farmer_id,
+        farm_id=farm_id
     )
 
     total = await sensor_data_repo.count_by_sensor(
         sensor_id=sensor_id,
-        start_date=start_date
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        farmer_id=farmer_id,
+        farm_id=farm_id
     )
 
     return PaginatedResponse(

@@ -22,7 +22,7 @@ import { useFarmers } from "@/features/farmers/hooks/use-farmers";
 import { useFarms } from "@/features/farmers/hooks/use-farms";
 import useAssignments from "@/features/assignments/hooks/use-assignment";
 import type { SensorDataResponse } from "@/types/api";
-import { Loader2, Clock, Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 
 export default function DataPage() {
   const [selectedGateway, setSelectedGateway] = useState<string>("all");
@@ -32,8 +32,6 @@ export default function DataPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [hours, setHours] = useState(5);
-  const [chartHours, setChartHours] = useState(5);
-  const [customHours, setCustomHours] = useState<number>(5);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedMeasurementTypes, setSelectedMeasurementTypes] = useState<
@@ -59,17 +57,34 @@ export default function DataPage() {
   // Parse selected sensor ID
   const sensorId = selectedSensor !== "all" ? parseInt(selectedSensor) : 0;
 
-  // Calculate hours from date range if provided (for table data)
+  // Prepare start_date and end_date for API
+  const startDate = useMemo(() => {
+    if (dateFrom) {
+      return dateFrom.toISOString();
+    }
+    return undefined;
+  }, [dateFrom]);
+
+  const endDate = useMemo(() => {
+    if (dateTo) {
+      return dateTo.toISOString();
+    }
+    return undefined;
+  }, [dateTo]);
+
+  // Calculate hours if no date range is provided (for table data)
   const calculatedHours = useMemo(() => {
-    if (dateFrom && dateTo) {
-      const from = new Date(dateFrom);
-      const to = new Date(dateTo);
-      return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60));
+    if (dateFrom || dateTo) {
+      return undefined; // Use date range instead of hours
     }
     return hours;
   }, [dateFrom, dateTo, hours]);
 
-  // Fetch sensor data for table (paginated)
+  // Parse farmer_id and farm_id for API
+  const farmerId = selectedFarmer !== "all" ? parseInt(selectedFarmer) : undefined;
+  const farmId = selectedFarm !== "all" ? parseInt(selectedFarm) : undefined;
+
+  // Fetch sensor data for table (paginated) with all filters
   const {
     data: sensorDataResponse,
     isLoading: isLoadingData,
@@ -78,14 +93,24 @@ export default function DataPage() {
     page,
     size: pageSize,
     hours: calculatedHours,
+    start_date: startDate,
+    end_date: endDate,
+    search: tableSearch || undefined,
+    farmer_id: farmerId,
+    farm_id: farmId,
   });
 
-  // Fetch sensor data for chart (non-paginated, based on chartHours)
+  // Fetch sensor data for chart (non-paginated, using same filters as table but larger size)
   const { data: chartDataResponse, isLoading: isLoadingChartData } =
     useSensorData(sensorId, {
       page: 1,
-      size: 1000,
-      hours: chartHours,
+      size: 1000, // Get more data for chart visualization
+      hours: calculatedHours,
+      start_date: startDate,
+      end_date: endDate,
+      search: tableSearch || undefined,
+      farmer_id: farmerId,
+      farm_id: farmId,
     });
 
   // Process sensor data for table display
@@ -118,63 +143,7 @@ export default function DataPage() {
     }
   }, [availableMeasurementTypes, selectedMeasurementTypes.length]);
 
-  // Filter table data by search, farmer, and farm
-  const filteredTableReadings = useMemo(() => {
-    let filtered = sensorReadings;
-
-    // Filter by search
-    if (tableSearch) {
-      const searchLower = tableSearch.toLowerCase();
-      filtered = filtered.filter((reading) => {
-        const measurementType = reading.metadata?.measurement_type || "Unknown";
-        const sensorInfo = sensorsData?.items.find(
-          (s) => s.id === reading.sensor_id,
-        );
-        const sensorName = sensorInfo?.name || sensorInfo?.sensor_uid || "";
-
-        return (
-          measurementType.toLowerCase().includes(searchLower) ||
-          sensorName.toLowerCase().includes(searchLower) ||
-          reading.value.toString().includes(searchLower)
-        );
-      });
-    }
-
-    // Filter by farmer
-    if (selectedFarmer !== "all") {
-      const farmerId = parseInt(selectedFarmer);
-      filtered = filtered.filter((reading) => {
-        const assignment = assignmentsData?.items.find(
-          (a) => a.gateway_id === reading.gateway_id && a.is_active,
-        );
-        const farm = assignment
-          ? farmsData?.items.find((f) => f.id === assignment.farm_id)
-          : null;
-        return farm?.farmer_id === farmerId;
-      });
-    }
-
-    // Filter by farm
-    if (selectedFarm !== "all") {
-      const farmId = parseInt(selectedFarm);
-      filtered = filtered.filter((reading) => {
-        const assignment = assignmentsData?.items.find(
-          (a) => a.gateway_id === reading.gateway_id && a.is_active,
-        );
-        return assignment?.farm_id === farmId;
-      });
-    }
-
-    return filtered;
-  }, [
-    sensorReadings,
-    tableSearch,
-    selectedFarmer,
-    selectedFarm,
-    sensorsData?.items,
-    assignmentsData?.items,
-    farmsData?.items,
-  ]);
+  // No need for client-side filtering anymore - all filtering is done by API
 
   // Prepare separate chart data for each measurement type (to avoid scale issues)
   const chartDataByType = useMemo(() => {
@@ -249,8 +218,6 @@ export default function DataPage() {
     setDateFrom(undefined);
     setDateTo(undefined);
     setHours(5);
-    setChartHours(5);
-    setCustomHours(5);
     setPage(1);
     setTableSearch("");
   };
@@ -278,6 +245,21 @@ export default function DataPage() {
 
   const handleDateToChange = (date: Date | undefined) => {
     setDateTo(date);
+    setPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setTableSearch(value);
+    setPage(1);
+  };
+
+  const handleFarmerChange = (value: string) => {
+    setSelectedFarmer(value);
+    setPage(1);
+  };
+
+  const handleFarmChange = (value: string) => {
+    setSelectedFarm(value);
     setPage(1);
   };
 
@@ -384,8 +366,7 @@ export default function DataPage() {
           </Card>
         )}
 
-      {!isLoading &&
-        (sensorReadings.length > 0 || chartSensorReadings.length > 0) && (
+      {!isLoading && selectedSensor !== "all" && (
           <>
             {/* Measurement Type Filter */}
             {availableMeasurementTypes.length > 0 && (
@@ -420,72 +401,6 @@ export default function DataPage() {
               </Card>
             )}
 
-            {/* Chart Time Range Selector */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Chart Time Range
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Button
-                    variant={chartHours === 1 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setChartHours(1)}
-                  >
-                    1 Hour
-                  </Button>
-                  <Button
-                    variant={chartHours === 5 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setChartHours(5)}
-                  >
-                    5 Hours
-                  </Button>
-                  <Button
-                    variant={chartHours === 12 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setChartHours(12)}
-                  >
-                    12 Hours
-                  </Button>
-                  <Button
-                    variant={chartHours === 24 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setChartHours(24)}
-                  >
-                    24 Hours
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="custom-hours" className="text-sm">
-                      Custom:
-                    </Label>
-                    <Input
-                      id="custom-hours"
-                      type="number"
-                      min="1"
-                      max="168"
-                      value={customHours}
-                      onChange={(e) =>
-                        setCustomHours(parseInt(e.target.value) || 1)
-                      }
-                      className="w-20"
-                    />
-                    <span className="text-sm text-muted-foreground">hours</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setChartHours(customHours)}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Separate Charts for Each Measurement Type */}
             {isChartLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -497,22 +412,21 @@ export default function DataPage() {
                   <DataChart
                     key={type}
                     data={data.map((d) => ({ time: d.time, [type]: d.value }))}
-                    title={`${type} ${
-                      data[0]?.unit ? `(${data[0].unit})` : ""
-                    } - Last ${chartHours}h`}
+                    title={`${type}${data[0]?.unit ? ` (${data[0].unit})` : ""}`}
                   />
                 ))}
               </div>
-            ) : chartSensorReadings.length > 0 ? (
+            ) : (
               <Card>
                 <CardContent className="py-8">
                   <p className="text-center text-muted-foreground">
-                    No data available for selected measurement types in the last{" "}
-                    {chartHours} hour(s).
+                    {chartSensorReadings.length > 0
+                      ? "No data available for selected measurement types with current filters."
+                      : "No sensor data available with current filters. Try adjusting your date range, filters, or check if the sensor is sending data."}
                   </p>
                 </CardContent>
               </Card>
-            ) : null}
+            )}
 
             <Card>
               <CardHeader>
@@ -524,7 +438,7 @@ export default function DataPage() {
                     <Input
                       placeholder="Search readings..."
                       value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
+                      onChange={(e) => handleSearchChange(e.target.value)}
                       className="w-64"
                     />
                   </div>
@@ -534,7 +448,7 @@ export default function DataPage() {
                     <Label className="text-sm whitespace-nowrap">Farmer:</Label>
                     <Select
                       value={selectedFarmer}
-                      onValueChange={setSelectedFarmer}
+                      onValueChange={handleFarmerChange}
                     >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="All Farmers" />
@@ -558,7 +472,7 @@ export default function DataPage() {
                     <Label className="text-sm whitespace-nowrap">Farm:</Label>
                     <Select
                       value={selectedFarm}
-                      onValueChange={setSelectedFarm}
+                      onValueChange={handleFarmChange}
                     >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="All Farms" />
@@ -586,7 +500,7 @@ export default function DataPage() {
               </CardHeader>
               <CardContent>
                 <ReadingsTable
-                  readings={filteredTableReadings}
+                  readings={sensorReadings}
                   sensors={sensorsData?.items || []}
                   farmers={farmersData?.items || []}
                   farms={farmsData?.items || []}
@@ -600,8 +514,6 @@ export default function DataPage() {
                     Showing {(page - 1) * pageSize + 1} to{" "}
                     {Math.min(page * pageSize, sensorDataResponse?.total || 0)}{" "}
                     of {sensorDataResponse?.total || 0} results
-                    {tableSearch &&
-                      ` (filtered from ${sensorReadings.length} total)`}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

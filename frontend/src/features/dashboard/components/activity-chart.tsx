@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Area,
   XAxis,
@@ -7,7 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   AreaChart,
-} from "recharts";
+} from 'recharts';
 
 interface ActivityData {
   date: string;
@@ -51,24 +51,25 @@ export function ActivityChart({ data }: ActivityChartProps) {
             <XAxis
               dataKey="date"
               className="text-xs"
-              tick={{ fill: "currentColor" }}
+              tick={{ fill: 'currentColor' }}
               stroke="hsl(var(--border))"
               axisLine={true}
               tickLine={false}
             />
             <YAxis
               className="text-xs"
-              tick={{ fill: "currentColor" }}
+              tick={{ fill: 'currentColor' }}
               stroke="hsl(var(--border))"
               axisLine={true}
               tickLine={false}
             />
+
             <Tooltip
               contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-                color: "var(--foreground)",
+                backgroundColor: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                color: 'var(--foreground)',
               }}
             />
             <Area
@@ -79,9 +80,9 @@ export function ActivityChart({ data }: ActivityChartProps) {
               fill="url(#colorQty)"
               dot={{
                 r: 3,
-                fill: "var(--chart-1)",
+                fill: 'var(--chart-1)',
                 strokeWidth: 2,
-                stroke: "var(--chart-1)",
+                stroke: 'var(--chart-1)',
               }}
               activeDot={{ r: 6 }}
             />

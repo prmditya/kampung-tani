@@ -1,24 +1,32 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Plus } from "lucide-react";
-import { useCreateAssignment } from "@/features/assignments/hooks/use-assignment";
+} from '@/components/ui/select';
+import { Plus } from 'lucide-react';
+import { useCreateAssignment } from '@/features/assignments/hooks/use-assignment';
 import type {
   GatewayResponse,
   FarmResponse,
   GatewayAssignmentCreate,
-} from "@/types/api";
+} from '@/types/api';
 
 interface AssignmentFormProps {
   gateways: GatewayResponse[];
@@ -26,10 +34,10 @@ interface AssignmentFormProps {
 }
 
 export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
-  const [selectedGateway, setSelectedGateway] = useState<string>("");
-  const [selectedFarm, setSelectedFarm] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [selectedGateway, setSelectedGateway] = useState<string>('');
+  const [selectedFarm, setSelectedFarm] = useState<string>('');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const createMutation = useCreateAssignment();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,11 +47,10 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
       return;
     }
 
-    // Convert date strings to ISO datetime format (add time component)
-    const formatDateTime = (dateStr: string) => {
-      if (!dateStr) return null;
-      // Add time component (00:00:00) to make it a valid datetime
-      return `${dateStr}T00:00:00`;
+    // Convert date to ISO datetime format
+    const formatDateTime = (date: Date | undefined) => {
+      if (!date) return null;
+      return date.toISOString();
     };
 
     const data: GatewayAssignmentCreate = {
@@ -53,13 +60,15 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
       end_date: formatDateTime(endDate),
     };
 
+    console.log(data);
+
     createMutation.mutate(data, {
       onSuccess: () => {
         // Reset form
-        setSelectedGateway("");
-        setSelectedFarm("");
-        setStartDate("");
-        setEndDate("");
+        setSelectedGateway('');
+        setSelectedFarm('');
+        setStartDate(undefined);
+        setEndDate(undefined);
       },
     });
   };
@@ -73,7 +82,9 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="gateway">Gateway *</Label>
+              <Label htmlFor="gateway">
+                Gateway<span className="text-red-500 ml-[-5px]">*</span>
+              </Label>
               <Select
                 value={selectedGateway}
                 onValueChange={setSelectedGateway}
@@ -94,7 +105,9 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="farm">Farm *</Label>
+              <Label htmlFor="farm">
+                Farm<span className="text-red-500 ml-[-5px]">*</span>
+              </Label>
               <Select
                 value={selectedFarm}
                 onValueChange={setSelectedFarm}
@@ -114,31 +127,62 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="start_date">Start Date (Optional)</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                disabled={createMutation.isPending}
-              />
+              <Label>Start Date (Optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !startDate && 'text-muted-foreground',
+                    )}
+                    disabled={createMutation.isPending}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="end_date">End Date (Optional)</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={createMutation.isPending}
-              />
+              <Label>End Date (Optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !endDate && 'text-muted-foreground',
+                    )}
+                    disabled={createMutation.isPending}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    disabled={(date) => (startDate ? date < startDate : false)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
           {createMutation.isError && (
             <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
-              {createMutation.error?.message || "Failed to create assignment"}
+              {createMutation.error?.message || 'Failed to create assignment'}
             </div>
           )}
 
@@ -151,7 +195,7 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
               className="w-full"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {createMutation.isPending ? "Creating..." : "Create Assignment"}
+              {createMutation.isPending ? 'Creating...' : 'Create Assignment'}
             </Button>
           </div>
         </form>

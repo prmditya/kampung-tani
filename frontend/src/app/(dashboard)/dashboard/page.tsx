@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { Calendar, Loader2 } from "lucide-react";
+import { useMemo } from 'react';
+import { Calendar, Loader2 } from 'lucide-react';
 import {
   StatsCards,
   ActivityChart,
   RecentActivity,
   QuickActions,
-} from "@/features/dashboard";
-import { useGateways } from "@/hooks/use-gateways";
-import useAssignments from "@/features/assignments/hooks/use-assignment";
-import { useFarms } from "@/features/farmers/hooks/use-farms";
-import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
+} from '@/features/dashboard';
+import { useGateways } from '@/hooks/use-gateways';
+import useAssignments from '@/features/assignments/hooks/use-assignment';
+import { useFarms } from '@/features/farmers/hooks/use-farms';
+import { useDashboard } from '@/features/dashboard/hooks/use-dashboard';
 
 export default function DashboardPage() {
   // Fetch dashboard data from new aggregated endpoint
@@ -67,7 +67,7 @@ export default function DashboardPage() {
           gateway?.gateway_uid ||
           `Gateway ${assignment.gateway_id}`,
         farmName: farm?.name || `Farm ${assignment.farm_id}`,
-        status: assignment.is_active ? "active" : "inactive",
+        status: assignment.is_active ? 'active' : 'inactive',
       };
     });
   }, [assignmentsData, farmsData, gatewaysData]);
@@ -79,14 +79,14 @@ export default function DashboardPage() {
       {/* Header Section */}
       <div className="flex items-start justify-between flex-col gap-1">
         <h1 className="text-3xl font-bold">Admin IoT Monitoring Dashboard</h1>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 text-muted-foreground">
           <Calendar className="h-4 w-4" />
           <span>
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
             })}
           </span>
         </div>
@@ -101,15 +101,15 @@ export default function DashboardPage() {
 
       {/* Main Grid Layout */}
       {!isLoading && (
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 lg:grid-cols-12">
           {/* Left Column - Main Content */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-9 space-y-4">
             <StatsCards stats={stats} />
             <ActivityChart data={activityData} />
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="lg:col-span-4 space-y-6 grid">
+          <div className="lg:col-span-3 space-y-4  grid">
             <RecentActivity assignments={recentAssignments} />
             <QuickActions />
           </div>
