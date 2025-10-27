@@ -76,7 +76,7 @@ export function DataFilter({
                 <SelectValue placeholder="Select Gateway" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Gateways</SelectItem>
+                <SelectItem value="none">Select Gateway</SelectItem>
                 {gateways.map((gateway) => (
                   <SelectItem key={gateway.id} value={gateway.id.toString()}>
                     {gateway.name || gateway.gateway_uid}
@@ -91,13 +91,13 @@ export function DataFilter({
             <Select
               value={selectedSensor}
               onValueChange={onSensorChange}
-              disabled={selectedGateway === 'all'}
+              disabled={selectedGateway === 'none'}
             >
               <SelectTrigger id="sensor-filter">
                 <SelectValue placeholder="Select Sensor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Sensors</SelectItem>
+                <SelectItem value="none">Select Sensors</SelectItem>
                 {sensors.map((sensor) => (
                   <SelectItem key={sensor.id} value={sensor.id.toString()}>
                     {sensor.name || sensor.sensor_uid} ({sensor.type})
@@ -161,10 +161,10 @@ export function DataFilter({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 grid md:flex gap-2 md:gap-3">
           <Button
             onClick={onRefresh}
-            variant="outline"
+            variant="default"
             className="flex-1"
             disabled={isRefreshing}
           >
@@ -177,7 +177,7 @@ export function DataFilter({
             <RefreshCw className="mr-2 h-4 w-4" />
             Reset Filters
           </Button>
-          <Button onClick={onExport} variant="outline">
+          <Button onClick={onExport} variant="secondary">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>

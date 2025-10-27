@@ -1,4 +1,4 @@
-import { AddDeviceDialog } from "@/features/devices";
+import { AddDeviceDialog } from '@/features/devices';
 
 export default function devicesLayout({
   children,
@@ -7,12 +7,12 @@ export default function devicesLayout({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="flex-row md:flex items-center justify-between">
+        <div className="mb-2 md:mb-0">
+          <h1 className="text-4xl font-bold tracking-tight">
             Device Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Manage and monitor all IoT devices
           </p>
         </div>

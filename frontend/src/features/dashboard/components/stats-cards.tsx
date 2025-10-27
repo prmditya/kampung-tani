@@ -60,7 +60,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         return (
           <Card
             key={key}
-            className={`relative overflow-hidden ${gradient} text-white border-1 hover:shadow-lg hover:scale-105 transition-all duration-300`}
+            className={`relative overflow-hidden ${gradient} text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300`}
           >
             <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
               <Icon className="h-32 w-32" />

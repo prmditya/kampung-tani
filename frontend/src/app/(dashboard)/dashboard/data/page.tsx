@@ -25,8 +25,8 @@ import type { SensorDataResponse } from '@/types/api';
 import { Loader2, Search } from 'lucide-react';
 
 export default function DataPage() {
-  const [selectedGateway, setSelectedGateway] = useState<string>('all');
-  const [selectedSensor, setSelectedSensor] = useState<string>('all');
+  const [selectedGateway, setSelectedGateway] = useState<string>('none');
+  const [selectedSensor, setSelectedSensor] = useState<string>('none');
   const [selectedFarmer, setSelectedFarmer] = useState<string>('all');
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();

@@ -6,10 +6,10 @@ export default function AssignmentsLayout({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-4xl font-bold tracking-tight">
           Gateway Assignments
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Assign gateways to farms for monitoring
         </p>
       </div>
