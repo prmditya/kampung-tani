@@ -14,10 +14,10 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
-      <SidebarInset>
-        <div className="flex min-h-screen w-full flex-col overflow-x-hidden rounded-xl shadow-lg border-1">
+      <SidebarInset className="overflow-hidden">
+        <div className="flex h-screen w-full flex-col overflow-hidden md:h-[calc(100vh-1rem)] md:rounded-xl md:border">
           <Topbar />
-          <main className="flex-1 bg-muted/40 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden">
+          <main className="flex-1 bg-muted/40 p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar-hide">
             <div className="max-w-[100vw] sm:max-w-none">{children}</div>
           </main>
         </div>
