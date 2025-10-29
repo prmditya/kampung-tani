@@ -1,0 +1,15 @@
+# MQTT Client
+paho-mqtt==1.6.1
+
+# ORM
+sqlalchemy==2.0.23
+
+# DB Connection
+psycopg2-binary==2.9.9
+
+# Data Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# env
+python-dotenv==1.0.0

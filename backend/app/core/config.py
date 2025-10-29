@@ -8,7 +8,6 @@ from pydantic import Field, field_validator
 from typing import List, Optional
 from functools import lru_cache
 from pathlib import Path
-import os
 
 
 class Settings(BaseSettings):
@@ -19,17 +18,17 @@ class Settings(BaseSettings):
 
     # Application Settings (from .env)
     APP_NAME: str = Field(default="Kampung Tani IoT Backend")
-    APP_VERSION: str = Field(default="3.0.0")
-    VERSION: str = Field(default="3.0.0")  # Backward compatibility
+    APP_VERSION: str = Field(default="1.0.0")
+    VERSION: str = Field(default="1.0.0")  # API version
     DEBUG: bool = Field(default=False)
     LOG_LEVEL: str = Field(default="INFO")
 
     # Database Configuration (from .env)
     POSTGRES_HOST: str = Field(default="db")
     POSTGRES_PORT: int = Field(default=5432)
-    POSTGRES_DB: str = Field(default="kampung_tani_db")
-    POSTGRES_USER: str = Field(default="kampung_tani")
-    POSTGRES_PASSWORD: str = Field(default="secure_password")
+    POSTGRES_DB: str = Field(default="kampoeng_tani_test")
+    POSTGRES_USER: str = Field(default="admin")
+    POSTGRES_PASSWORD: str = Field(default="admin123")
     DATABASE_URL: Optional[str] = Field(default=None)
 
     # JWT Configuration (SENSITIVE - from .env)
@@ -37,20 +36,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = Field(default="HS256")
     JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = Field(default=24)
 
-    # MQTT Configuration (from .env)
-    MQTT_BROKER: str = Field(default="host.docker.internal")
-    MQTT_PORT: int = Field(default=1883)
-    MQTT_KEEPALIVE: int = Field(default=60)
-    MQTT_CLIENT_ID: str = Field(default="kampungtani_backend")
-    MQTT_TOPICS: str = Field(default="sensors/+/data")
-
     # API Configuration
-    API_PREFIX: str = Field(default="/api/v3")
-    DOCS_URL: str = Field(default="/api/v3/docs")
-    REDOC_URL: str = Field(default="/api/v3/redoc")
+    API_PREFIX: str = Field(default="/api/v1")
+    DOCS_URL: str = Field(default="/api/v1/docs")
+    REDOC_URL: str = Field(default="/api/v1/redoc")
 
     # CORS Configuration (from .env)
-    ALLOWED_ORIGINS: str = Field(default="http://localhost:3000")
+    ALLOWED_ORIGINS: str = Field(default="*")
 
     @property
     def database_url(self) -> str:
@@ -99,8 +91,10 @@ class Settings(BaseSettings):
     class Config:
         # Load environment variables from files in order
         env_file = [
-            Path(__file__).parent.parent.parent / ".env",  # Global config
-            Path(__file__).parent.parent / ".env.local",  # Backend-specific overrides
+            Path(__file__).parent.parent.parent.parent
+            / ".env",  # Global config (project root)
+            Path(__file__).parent.parent.parent
+            / ".env.local",  # Backend-specific overrides
         ]
         env_file_encoding = "utf-8"
         case_sensitive = True

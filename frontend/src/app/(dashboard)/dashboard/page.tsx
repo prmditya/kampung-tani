@@ -1,206 +1,130 @@
-"use client";
+'use client';
 
-import { IoThermometer, IoWater } from "react-icons/io5";
+import { useMemo } from 'react';
+import { Calendar, Loader2 } from 'lucide-react';
 import {
-	MdCheckCircle,
-	MdElectricBolt,
-	MdError,
-	MdRefresh,
-	MdScience,
-	MdWaterDrop,
-} from "react-icons/md";
+  StatsCards,
+  ActivityChart,
+  RecentActivity,
+  QuickActions,
+} from '@/features/dashboard';
+import { useGateways } from '@/hooks/use-gateways';
+import useAssignments from '@/features/assignments/hooks/use-assignment';
+import { useFarms } from '@/features/farmers/hooks/use-farms';
+import { useDashboard } from '@/features/dashboard/hooks/use-dashboard';
 
-import { Button } from "@/shared/components/ui/button";
-import { ErrorMessage } from "@/shared/components/ui/error-message";
-import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
-import { SensorCard } from "@/shared/components/ui/sensor-card";
-import { useDeviceStats, useSensorData } from "@/shared/hooks/useApi";
+export default function DashboardPage() {
+  // Fetch dashboard data from new aggregated endpoint
+  const { data: dashboardData, isLoading: isLoadingDashboard } = useDashboard();
 
-function Dashboard() {
-	const {
-		data: sensorData,
-		loading: isLoading,
-		error,
-		refetch,
-	} = useSensorData(true, 5000, 1, 20);
+  // Also fetch assignments and farms for recent activity
+  const { data: assignmentsData } = useAssignments({ size: 100 });
+  const { data: farmsData } = useFarms({ size: 100 });
+  const { data: gatewaysData } = useGateways({ size: 100 });
 
-	const { data: deviceStats, loading: statsLoading } = useDeviceStats();
+  // Prepare stats from dashboard data
+  const stats = useMemo(() => {
+    if (!dashboardData?.stats) {
+      return {
+        totalDevices: 0,
+        activeDevices: 0,
+        assignedDevices: 0,
+        totalFarms: 0,
+        todayReadings: 0,
+      };
+    }
 
-	// Helper to get latest value for a sensor type
-	const getLatestSensorValue = (sensorType: string): number | null => {
-		if (!sensorData || sensorData.length === 0) return null;
+    return {
+      totalDevices: dashboardData.stats.total_gateways,
+      activeDevices: dashboardData.stats.active_gateways,
+      assignedDevices: dashboardData.stats.active_assignments,
+      totalFarms: dashboardData.stats.total_farms,
+      todayReadings: dashboardData.stats.today_readings_count,
+    };
+  }, [dashboardData]);
 
-		// Find the most recent sensor reading for the given type
-		const latestSensor = sensorData.find(
-			(sensor) => sensor.sensor_type.toLowerCase() === sensorType.toLowerCase(),
-		);
+  // Prepare activity data for chart
+  const activityData = useMemo(() => {
+    if (!dashboardData?.activity?.data) return [];
+    return dashboardData.activity.data;
+  }, [dashboardData]);
 
-		return latestSensor ? latestSensor.value : null;
-	};
+  // Prepare recent assignments for display
+  const recentAssignments = useMemo(() => {
+    if (!assignmentsData?.items || !farmsData?.items || !gatewaysData?.items)
+      return [];
 
-	const handleRefresh = async () => {
-		await refetch();
-	};
+    return assignmentsData.items.slice(0, 5).map((assignment) => {
+      const gateway = gatewaysData.items.find(
+        (g) => g.id === assignment.gateway_id,
+      );
+      const farm = farmsData.items.find((f) => f.id === assignment.farm_id);
 
-	if (isLoading && !sensorData) {
-		return (
-			<div className="flex items-center justify-center h-64">
-				<LoadingSpinner size="lg" text="Loading Sensors data..." />
-			</div>
-		);
-	}
+      return {
+        id: assignment.id.toString(),
+        deviceName:
+          gateway?.name ||
+          gateway?.gateway_uid ||
+          `Gateway ${assignment.gateway_id}`,
+        farmName: farm?.name || `Farm ${assignment.farm_id}`,
+        status: assignment.is_active ? 'active' : 'inactive',
+      };
+    });
+  }, [assignmentsData, farmsData, gatewaysData]);
 
-	if (error) {
-		return (
-			<ErrorMessage
-				title="Failed to load dashboard data"
-				message={error}
-				retry={handleRefresh}
-				className="max-w-md mx-auto mt-8"
-			/>
-		);
-	}
+  const isLoading = isLoadingDashboard;
 
-	// Define sensor configurations with their display properties
-	const sensorConfigs = [
-		{ type: "moisture" as const, title: "Soil Moisture", icon: IoWater },
-		{ type: "temperature" as const, title: "Temperature", icon: IoThermometer },
-		{ type: "ph" as const, title: "pH Level", icon: MdScience },
-		{
-			type: "conductivity" as const,
-			title: "Conductivity",
-			icon: MdElectricBolt,
-		},
-		{ type: "nitrogen" as const, title: "Nitrogen (N)", iconText: "N" },
-		{ type: "phosphorus" as const, title: "Phosphorus (P)", iconText: "P" },
-		{ type: "potassium" as const, title: "Potassium (K)", iconText: "K" },
-		{ type: "salinity" as const, title: "Salinity", icon: MdWaterDrop },
-	];
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="flex items-start justify-between flex-col gap-2">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back! Here's what's happening with your IoT system today.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-md">
+          <Calendar className="h-4 w-4" />
+          <span>
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </span>
+        </div>
+      </div>
 
-	const onlineCount = deviceStats?.online_devices ?? 0;
-	const totalDevices = deviceStats?.total_devices ?? 0;
-	const isSystemOnline = onlineCount > 0;
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">
+              Loading dashboard...
+            </p>
+          </div>
+        </div>
+      )}
 
-	return (
-		<div className="space-y-6">
-			{/* Header Section */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-					<p className="text-muted-foreground mt-1">
-						Real-time sensor monitoring and current values
-					</p>
-				</div>
-				<Button
-					onClick={handleRefresh}
-					disabled={isLoading}
-					className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					<MdRefresh className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-					Refresh
-				</Button>
-			</div>
+      {/* Main Grid Layout */}
+      {!isLoading && (
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-9 space-y-6">
+            <StatsCards stats={stats} />
+            <ActivityChart data={activityData} />
+          </div>
 
-			{/* System Status Banner */}
-			<div
-				className={`
-        flex items-center justify-between p-4 rounded-lg border
-        ${
-					isSystemOnline
-						? "bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800"
-						: "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
-				}
-      `}
-			>
-				<div className="flex items-center gap-3">
-					{isSystemOnline ? (
-						<MdCheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-					) : (
-						<MdError className="w-5 h-5 text-red-600 dark:text-red-400" />
-					)}
-					<div>
-						<h3
-							className={`font-semibold ${
-								isSystemOnline
-									? "text-emerald-800 dark:text-emerald-200"
-									: "text-red-800 dark:text-red-200"
-							}`}
-						>
-							System Status
-						</h3>
-						<p
-							className={`text-sm ${
-								isSystemOnline
-									? "text-emerald-600 dark:text-emerald-400"
-									: "text-red-600 dark:text-red-400"
-							}`}
-						>
-							{isSystemOnline
-								? `${onlineCount} devices online - System active`
-								: "No devices online - System inactive"}
-						</p>
-					</div>
-				</div>
-
-				<div className="flex items-center justify-between">
-					<div>
-						<p className="text-sm font-medium text-muted-foreground dark:text-slate-300">
-							Active Devices
-						</p>
-						<p
-							className={`text-lg font-bold ${
-								isSystemOnline
-									? "text-emerald-600 dark:text-emerald-400"
-									: "text-red-600 dark:text-red-400"
-							}`}
-						>
-							{onlineCount}/{totalDevices}
-						</p>
-						<p
-							className={`text-xs font-medium ${
-								isSystemOnline
-									? "text-emerald-700 dark:text-emerald-300"
-									: "text-red-700 dark:text-red-300"
-							}`}
-						>
-							{isSystemOnline ? "ONLINE" : "OFFLINE"}
-						</p>
-					</div>
-					<div className="w-12"></div>
-
-					<div className="text-right">
-						<p className="text-sm font-medium text-muted-foreground dark:text-slate-300">
-							Device
-						</p>
-						<p className="text-sm font-medium text-foreground">SEM225</p>
-						<p
-							className={`text-xs font-medium ${
-								isSystemOnline
-									? "text-emerald-700 dark:text-emerald-300"
-									: "text-red-700 dark:text-red-300"
-							}`}
-						>
-							{isSystemOnline ? "CONNECTED" : "DISCONNECTED"}
-						</p>
-					</div>
-				</div>
-			</div>
-
-			{/* Sensor Cards Grid */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				{sensorConfigs.map((config) => (
-					<SensorCard
-						key={config.type}
-						sensorType={config.type}
-						title={config.title}
-						value={getLatestSensorValue(config.type) ?? 0}
-						iconText={"iconText" in config ? config.iconText : undefined}
-						icon={"icon" in config ? config.icon : undefined}
-					/>
-				))}
-			</div>
-		</div>
-	);
+          {/* Right Column - Sidebar */}
+          <div className="lg:col-span-3 space-y-6">
+            <RecentActivity assignments={recentAssignments} />
+            <QuickActions />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
-
-export default Dashboard;

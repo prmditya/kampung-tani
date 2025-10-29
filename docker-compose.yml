@@ -36,6 +36,19 @@ services:
       - ./.env:/app/.env:ro
       - ./backend/.env.local:/app/backend/.env.local:ro
 
+  ingestion:
+    build: ./ingestion
+    container_name: kampungtani_ingestion
+    depends_on:
+      - db
+    environment:
+      - NODE_ENV=${NODE_ENV}
+    volumes:
+      - ./ingestion:/app
+      - ./.env:/app/.env:ro
+      - ./ingestion/.env.local:/app/.env.local:ro
+    restart: unless-stopped
+
   db:
     image: postgres:15
     container_name: kampungtani_db

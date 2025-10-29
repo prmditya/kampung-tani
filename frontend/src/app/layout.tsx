@@ -1,32 +1,40 @@
 import type { Metadata } from "next";
-import "../styles/globals.css";
-import { ThemeProvider } from "@/shared/components/theme-provider";
-import { AuthProvider } from "@/shared/hooks/useAuth";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/lib/query-provider";
+import "@/app/globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-	title: "Kampung Tani",
-	description: "IoT Monitoring System for Agriculture",
+  title: "Kampoeng Tani - Admin Dashboard",
+  description: "IoT Device Management System for Agriculture",
+  icons: {
+    icon: "/favicon.webp",
+  },
 };
 
 export default function RootLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	return (
-		<html lang="en" suppressHydrationWarning>
-			<body>
-				<AuthProvider>
-					<ThemeProvider
-						attribute="class"
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						{children}
-					</ThemeProvider>
-				</AuthProvider>
-			</body>
-		</html>
-	);
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn(geistSans.className, "antialiased")}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
 }

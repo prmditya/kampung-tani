@@ -69,3 +69,6 @@ coverage/
 
 # Docker volumes data (optional)
 pgdata/
+
+# Claude Settings
+.claude/
