@@ -82,7 +82,8 @@
 
 ## About The Project
 
-[![Kampung Tani Dashboard Screenshot][product-screenshot]](https://github.com/prmditya/kampung-tani)
+[![Kampung Tani Dashboard Screenshot Dark Mode][product-screenshot-dark]](https://github.com/prmditya/kampung-tani)
+[![Kampung Tani Dashboard Screenshot Light Mode][product-screenshot-light]](https://github.com/prmditya/kampung-tani)
 
 Kampung Tani IoT Monitoring Dashboard is a comprehensive agricultural monitoring system that enables real-time tracking and management of IoT sensors in farming environments. The platform provides farmers and agricultural professionals with intuitive tools to monitor soil conditions, environmental parameters, and gateway status through a modern web interface.
 
@@ -923,7 +924,8 @@ We would like to thank the following projects and resources that made this proje
 [license-url]: https://github.com/prmditya/kampung-tani/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/prmdtya
-[product-screenshot]: images/screenshot.png
+[product-screenshot-dark]: images/screenshot-dark.png
+[product-screenshot-light]: images/screenshot-light.png
 
 <!-- Technology Badges -->
 
