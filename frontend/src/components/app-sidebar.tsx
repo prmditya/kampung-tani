@@ -166,8 +166,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavUser
           user={{
-            name: currentUser?.username || 'User',
-            email: currentUser?.email || 'user@kampoengtani.com',
+            name: currentUser?.username ?? 'User',
+            email: currentUser?.email ?? 'user@example.com',
           }}
         />
       </SidebarFooter>
