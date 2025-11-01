@@ -113,7 +113,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,  # Use configured origins
+    allow_origins=["*"],  # Use configured origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -139,14 +139,16 @@ app.include_router(
 app.include_router(
     farmers.router, prefix=f"{settings.API_PREFIX}/farmers", tags=["Farmers"]
 )
+app.include_router(farms.router, prefix=f"{settings.API_PREFIX}/farms", tags=["Farms"])
 app.include_router(
-    farms.router, prefix=f"{settings.API_PREFIX}/farms", tags=["Farms"]
+    gateway_assignments.router,
+    prefix=f"{settings.API_PREFIX}/gateway-assignments",
+    tags=["Gateway Assignments"],
 )
 app.include_router(
-    gateway_assignments.router, prefix=f"{settings.API_PREFIX}/gateway-assignments", tags=["Gateway Assignments"]
-)
-app.include_router(
-    gateway_status_history.router, prefix=f"{settings.API_PREFIX}/gateway-status-history", tags=["Gateway Status History"]
+    gateway_status_history.router,
+    prefix=f"{settings.API_PREFIX}/gateway-status-history",
+    tags=["Gateway Status History"],
 )
 
 
@@ -167,5 +169,9 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app", host="0.0.0.0", port=5000, reload=settings.DEBUG, log_level="info"
+        "main:app",
+        host="0.0.0.0",
+        port=5000,
+        reload=settings.DEBUG,
+        log_level="info",
     )

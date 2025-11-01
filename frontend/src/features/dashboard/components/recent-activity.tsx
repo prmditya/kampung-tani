@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { HardDrive } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { HardDrive } from 'lucide-react';
 
 interface Assignment {
   id: string;
@@ -39,7 +39,7 @@ export function RecentActivity({ assignments }: RecentActivityProps) {
               </div>
               <Badge
                 variant={
-                  assignment.status === "active" ? "default" : "secondary"
+                  assignment.status === 'active' ? 'default' : 'secondary'
                 }
                 className="text-xs shrink-0"
               >

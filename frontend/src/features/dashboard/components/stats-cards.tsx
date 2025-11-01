@@ -27,7 +27,7 @@ const STATS_CONFIG: StatConfig[] = [
     title: 'Total Gateways',
     key: 'totalDevices',
     icon: HardDrive,
-    gradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     description: 'Registered in system',
   },
   {
@@ -41,14 +41,14 @@ const STATS_CONFIG: StatConfig[] = [
     title: 'Assignments',
     key: 'assignedDevices',
     icon: Users,
-    gradient: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     description: 'Deployed to farms',
   },
   {
     title: "Today's Readings",
     key: 'todayReadings',
     icon: TrendingUp,
-    gradient: 'bg-gradient-to-br from-orange-500 to-orange-600',
+    gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     description: 'Sensor data points',
   },
 ];

@@ -13,8 +13,9 @@ export default function farmerStatsCard({
   farms,
   getFarmsCount,
 }: FarmerStatsCardProps) {
-  const farmersWithFarms = farmers.filter((f) => getFarmsCount(f.id) > 0)
-    .length;
+  const farmersWithFarms = farmers.filter(
+    (f) => getFarmsCount(f.id) > 0,
+  ).length;
   const percentage =
     farmers.length > 0
       ? Math.round((farmersWithFarms / farmers.length) * 100)
@@ -22,7 +23,7 @@ export default function farmerStatsCard({
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
         <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
           <Users className="h-32 w-32" />
         </div>
@@ -60,7 +61,7 @@ export default function farmerStatsCard({
         </div>
       </Card>
 
-      <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
         <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
           <CheckCircle2 className="h-32 w-32" />
         </div>
