@@ -7,7 +7,10 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { AssignmentForm, AssignmentsTable } from '@/features/assignments';
+import {
+  AssignmentForm,
+  AssignmentsTable,
+} from '@/features/assignments/components';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGateways } from '@/hooks/use-gateways';
 import { useFarms } from '@/features/farmers/hooks/use-farms';

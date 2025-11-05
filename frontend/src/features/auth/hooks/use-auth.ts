@@ -8,6 +8,7 @@ import type {
   PasswordChange,
   MessageResponse,
 } from '@/types/api';
+import { toast } from 'sonner';
 
 interface LoginCredentials {
   username: string;
@@ -46,18 +47,15 @@ export function useLogin() {
       }
     },
     onSuccess: (data) => {
-      // Store token in localStorage
       localStorage.setItem('token', data.access_token);
-
-      // Store token expiration time (current time + expires_in seconds)
       const expirationTime = Date.now() + data.expires_in * 1000;
       localStorage.setItem('token_expiration', expirationTime.toString());
-
-      // Store user data
       localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Redirect to dashboard
       router.push('/dashboard');
+      toast.success('Login successful!');
+    },
+    onError: (error) => {
+      toast.error('Login Failed, Please try again! ');
     },
   });
 }

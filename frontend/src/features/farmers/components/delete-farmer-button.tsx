@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Trash2, Loader2 } from "lucide-react";
-import { useDeleteFarmer } from "@/features/farmers/hooks/use-farmers";
+} from '@/components/ui/alert-dialog';
+import { Trash2, Loader2 } from 'lucide-react';
+import { useDeleteFarmer } from '@/features/farmers/hooks/use-farmers';
+import { toast } from 'sonner';
 
 interface DeleteFarmerButtonProps {
   farmerId: number;
@@ -29,7 +30,16 @@ export function DeleteFarmerButton({
   const deleteMutation = useDeleteFarmer();
 
   const handleDelete = () => {
-    deleteMutation.mutate(farmerId);
+    deleteMutation.mutate(farmerId, {
+      onSuccess: () => {
+        toast.success(`Farmer ${farmerName} deleted successfully`);
+      },
+      onError: (error) => {
+        toast.error(
+          error?.message || 'Failed to delete farmer. Please try again.',
+        );
+      },
+    });
   };
 
   return (
@@ -49,13 +59,13 @@ export function DeleteFarmerButton({
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>
-                This will permanently delete farmer{" "}
+                This will permanently delete farmer{' '}
                 <strong>{farmerName}</strong>.
               </p>
               {farmsCount > 0 && (
                 <p className="text-red-600 font-medium">
                   ⚠️ Warning: This will also delete {farmsCount} farm
-                  {farmsCount > 1 ? "s" : ""} associated with this farmer.
+                  {farmsCount > 1 ? 's' : ''} associated with this farmer.
                 </p>
               )}
               <p className="text-muted-foreground">
@@ -79,7 +89,7 @@ export function DeleteFarmerButton({
                 Deleting...
               </>
             ) : (
-              "Delete Farmer"
+              'Delete Farmer'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

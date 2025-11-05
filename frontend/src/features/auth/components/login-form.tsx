@@ -1,34 +1,58 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
-import { useLogin } from "@/features/auth/hooks/use-auth";
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import Image from 'next/image';
+import { useLogin } from '@/features/auth/hooks/use-auth';
+import z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
+
+const loginSchema = z.object({
+  username: z
+    .string()
+    .min(2, 'Username must be at least 2 characters long')
+    .max(100),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters long')
+    .max(100),
+});
 
 export function LoginForm({
   className,
   ...props
-}: React.ComponentProps<"div">) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+}: React.ComponentProps<'div'>) {
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+  });
 
   const loginMutation = useLogin();
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginMutation.mutate({ username, password });
+  const onSubmit = (data: z.infer<typeof loginSchema>) => {
+    loginMutation.mutate({
+      username: data.username,
+      password: data.password,
+    });
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <form className="p-8 md:p-10" onSubmit={onSubmit}>
+          <form className="p-8 md:p-10" onSubmit={form.handleSubmit(onSubmit)}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-3 text-center mb-2">
                 <Image
@@ -44,49 +68,54 @@ export function LoginForm({
                   </p>
                 </div>
               </div>
-              <Field>
-                <FieldLabel htmlFor="username">Username</FieldLabel>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="admin"
-                  required
-                  autoComplete="username"
-                  onChange={(e) => setUsername(e.target.value)}
+              <FieldGroup>
+                <Controller
+                  name="username"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field>
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder="Enter your username"
+                        required
+                        autoComplete="username"
+                        {...field}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
                 />
-              </Field>
-              <Field>
-                <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <Link
-                    href="#"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  autoComplete="current-password"
-                  onChange={(e) => setPassword(e.target.value)}
+
+                <Controller
+                  name="password"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Password"
+                        required
+                        autoComplete="current-password"
+                        {...field}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
                 />
-              </Field>
-              {loginMutation.isError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
-                  {loginMutation.error?.message ||
-                    "Login failed. Please try again."}
-                </div>
-              )}
+              </FieldGroup>
               <Field>
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={loginMutation.isPending}
                 >
-                  {loginMutation.isPending ? "Signing in..." : "Sign in"}
+                  {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
                 </Button>
               </Field>
             </FieldGroup>

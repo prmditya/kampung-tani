@@ -1,23 +1,23 @@
-import apiClient from "@/lib/api-client";
+import apiClient from '@/lib/api-client';
 import {
   GatewayAssignmentResponse,
   GatewayAssignmentCreate,
   GatewayAssignmentUpdate,
   MessageResponse,
   PaginatedResponse,
-} from "@/types/api";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+} from '@/types/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Query Keys
 export const assignmentKeys = {
-  all: ["assignments"] as const,
-  lists: () => [...assignmentKeys.all, "list"] as const,
+  all: ['assignments'] as const,
+  lists: () => [...assignmentKeys.all, 'list'] as const,
   list: (filters?: Record<string, any>) =>
     [...assignmentKeys.lists(), filters] as const,
-  details: () => [...assignmentKeys.all, "detail"] as const,
+  details: () => [...assignmentKeys.all, 'detail'] as const,
   detail: (id: number) => [...assignmentKeys.details(), id] as const,
   byGateway: (gatewayId: number) =>
-    [...assignmentKeys.all, "gateway", gatewayId] as const,
+    [...assignmentKeys.all, 'gateway', gatewayId] as const,
 };
 
 // ==================== GET ALL ASSIGNMENT ====================
@@ -29,13 +29,14 @@ export default function useAssignments(filters?: {
   return useQuery<PaginatedResponse<GatewayAssignmentResponse>>({
     queryKey: assignmentKeys.list(filters),
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.size) params.append("size", filters.size.toString());
-      if (filters?.search) params.append("search", filters.search);
+      const params: Record<string, string> = {};
+      if (filters?.page !== undefined) params.page = filters.page.toString();
+      if (filters?.size !== undefined) params.size = filters.size.toString();
+      if (filters?.search) params.search = filters.search;
+
       const response = await apiClient.get<
         PaginatedResponse<GatewayAssignmentResponse>
-      >(`/gateway-assignments?${params}`);
+      >('/gateway-assignments', { params });
       return response.data;
     },
     // Prevent refetching on window focus if we have data
@@ -82,7 +83,7 @@ export function useCreateAssignment() {
   return useMutation({
     mutationFn: async (data: GatewayAssignmentCreate) => {
       const response = await apiClient.post<GatewayAssignmentResponse>(
-        "/gateway-assignments",
+        '/gateway-assignments',
         data,
       );
       return response.data;

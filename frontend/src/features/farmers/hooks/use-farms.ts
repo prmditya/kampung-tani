@@ -1,23 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import apiClient from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/api-client';
 import type {
   FarmResponse,
   FarmCreate,
   FarmUpdate,
   MessageResponse,
   PaginatedResponse,
-} from "@/types/api";
+} from '@/types/api';
+import { toast } from 'sonner';
 
 // Query Keys
 export const farmKeys = {
-  all: ["farms"] as const,
-  lists: () => [...farmKeys.all, "list"] as const,
+  all: ['farms'] as const,
+  lists: () => [...farmKeys.all, 'list'] as const,
   list: (filters?: Record<string, any>) =>
     [...farmKeys.lists(), filters] as const,
-  details: () => [...farmKeys.all, "detail"] as const,
+  details: () => [...farmKeys.all, 'detail'] as const,
   detail: (id: number) => [...farmKeys.details(), id] as const,
   byFarmer: (farmerId: number) =>
-    [...farmKeys.all, "farmer", farmerId] as const,
+    [...farmKeys.all, 'farmer', farmerId] as const,
 };
 
 // ==================== GET ALL FARMS ====================
@@ -30,9 +31,9 @@ export function useFarms(filters?: {
     queryKey: farmKeys.list(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.size) params.append("size", filters.size.toString());
-      if (filters?.search) params.append("search", filters.search);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.size) params.append('size', filters.size.toString());
+      if (filters?.search) params.append('search', filters.search);
 
       const response = await apiClient.get<PaginatedResponse<FarmResponse>>(
         `/farms?${params}`,
@@ -72,7 +73,7 @@ export function useCreateFarm() {
 
   return useMutation({
     mutationFn: async (data: FarmCreate) => {
-      const response = await apiClient.post<FarmResponse>("/farms", data);
+      const response = await apiClient.post<FarmResponse>('/farms', data);
       return response.data;
     },
     onSuccess: (data) => {
