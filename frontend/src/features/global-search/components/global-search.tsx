@@ -110,7 +110,7 @@ export default function GlobalSearch() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl p-0 gap-0 [&>button]:hidden">
-          <DialogHeader className="px-4 pt-4 pb-2">
+          <DialogHeader className="px-4 py-4">
             <DialogTitle className="sr-only">Global Search</DialogTitle>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
