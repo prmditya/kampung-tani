@@ -27,11 +27,11 @@ export function DeleteFarmButton({ farmId, farmName }: DeleteFarmButtonProps) {
   const handleDelete = () => {
     deleteMutation.mutate(farmId, {
       onSuccess: () => {
-        toast.success('Farm deleted successfully');
+        toast.success(`${farmName} deleted successfully`);
       },
       onError: (error) => {
         toast.error(
-          error?.message || 'Failed to delete farm. Please try again.',
+          error?.message || `Failed to delete ${farmName}. Please try again.`,
         );
       },
     });
