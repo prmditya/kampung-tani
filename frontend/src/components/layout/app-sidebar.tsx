@@ -23,10 +23,11 @@ import {
   SidebarFooter,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { Separator } from './ui/separator';
+import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { NavUser } from './nav-user';
+import { NavUser } from '@/components/nav-user';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
+import GlobalSearch from '@/features/global-search/components/global-search';
 
 // Menu items.
 const items = [
@@ -92,6 +93,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup className="mb-[-20px]">
+          <GlobalSearch />
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="pl-0">
             Main Navigation
