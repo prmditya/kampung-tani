@@ -2,9 +2,9 @@ import { useRouter } from 'next/navigation';
 import type { NavigationItem } from '../types/search-result';
 import {
   LayoutDashboard,
-  Wifi,
+  HardDrive,
   Users,
-  GitBranch,
+  Unplug,
   LineChart,
   Settings,
   Plus,
@@ -21,9 +21,9 @@ interface SearchResultItemProps {
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
-  Wifi,
+  HardDrive,
   Users,
-  GitBranch,
+  Unplug,
   LineChart,
   Settings,
   Plus,

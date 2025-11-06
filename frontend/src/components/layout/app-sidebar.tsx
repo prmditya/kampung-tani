@@ -3,9 +3,9 @@ import {
   Unplug,
   LayoutDashboard,
   HardDrive,
-  Tractor,
+  Users,
   Settings,
-  Database,
+  LineChart,
   LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -49,12 +49,12 @@ const items = [
   {
     title: 'Farmers',
     url: '/dashboard/farmers',
-    icon: Tractor,
+    icon: Users,
   },
   {
     title: 'Data',
     url: '/dashboard/data',
-    icon: Database,
+    icon: LineChart,
   },
 ];
 
