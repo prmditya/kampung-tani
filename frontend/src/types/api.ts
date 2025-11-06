@@ -29,8 +29,8 @@ export interface PaginatedResponse<T> {
 // ==================== USER TYPES ====================
 
 export enum UserRole {
-  SUPER_ADMIN = "super admin",
-  ADMIN = "admin",
+  SUPER_ADMIN = 'super admin',
+  ADMIN = 'admin',
 }
 
 export interface UserBase {
@@ -73,9 +73,9 @@ export interface Token {
 // ==================== GATEWAY TYPES ====================
 
 export enum GatewayStatus {
-  ONLINE = "online",
-  OFFLINE = "offline",
-  MAINTENANCE = "maintenance",
+  ONLINE = 'online',
+  OFFLINE = 'offline',
+  MAINTENANCE = 'maintenance',
 }
 
 export interface GatewayBase {
@@ -106,9 +106,9 @@ export interface GatewayResponse extends GatewayBase {
 // ==================== SENSOR TYPES ====================
 
 export enum SensorStatus {
-  ACTIVE = "active",
-  INACTIVE = "inactive",
-  ERROR = "error",
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  ERROR = 'error',
 }
 
 export interface SensorBase {
@@ -236,7 +236,7 @@ export interface GatewayAssignmentBase {
 export interface GatewayAssignmentCreate {
   gateway_id: number;
   farm_id: number;
-  start_date?: string | null;
+  start_date: string;
   end_date?: string | null;
 }
 

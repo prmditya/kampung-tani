@@ -34,7 +34,10 @@ import { toast } from 'sonner';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { assignmentSchema } from '@/features/assignments/schemas';
+import {
+  assignmentSchema,
+  AssignmentFormData,
+} from '@/features/assignments/schemas';
 
 interface AssignmentFormProps {
   gateways: GatewayResponse[];
@@ -49,31 +52,16 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
     error: assignmentsError,
   } = useAssignments({ size: 100 });
 
-  console.log('Assignments Query State:', {
-    isLoading: assignmentsLoading,
-    hasData: !!assignmentsData,
-    error: assignmentsError,
-  });
-
   // Get list of gateway IDs that are currently assigned
   const assignedGatewayIds = useMemo(() => {
-    console.log('Assignments Data:', assignmentsData);
-    console.log('Assignments Items:', assignmentsData?.items);
     if (!assignmentsData?.items) return new Set<number>();
     const assigned = new Set(
       assignmentsData.items
         .filter((assignment) => {
-          console.log(
-            'Assignment:',
-            assignment,
-            'is_active:',
-            assignment.is_active,
-          );
           return assignment.is_active;
         })
         .map((assignment) => assignment.gateway_id),
     );
-    console.log('Assigned Gateway IDs:', Array.from(assigned));
     return assigned;
   }, [assignmentsData]);
 
@@ -86,23 +74,19 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
       );
       return !isAssigned;
     });
-    console.log('Total Gateways:', gateways.length);
-    console.log('Available Gateways:', available.length);
-    console.log('Filtered out:', gateways.length - available.length);
     return available;
   }, [gateways, assignedGatewayIds]);
 
-  const form = useForm<z.infer<typeof assignmentSchema>>({
+  const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
       gateway_id: '',
       farm_id: '',
-      start_date: undefined,
-      end_date: undefined,
+      start_date: new Date().toISOString(),
     },
   });
 
-  const handleSubmit = (data: z.infer<typeof assignmentSchema>) => {
+  const handleSubmit = (data: AssignmentFormData) => {
     createMutation.mutate(
       {
         gateway_id: parseInt(data.gateway_id, 10),
@@ -131,7 +115,7 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(handleSubmit)}>
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
+          <FieldGroup className="grid gap-4 md:grid-cols-2 items-start">
             <Controller
               name="gateway_id"
               control={form.control}
@@ -206,7 +190,9 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field className="grid gap-2">
-                  <Label>Start Date (Optional)</Label>
+                  <Label>
+                    Start Date<span className="text-red-500 ml-[-5px]">*</span>
+                  </Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -220,14 +206,14 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {field.value
                           ? format(new Date(field.value), 'PPP')
-                          : format(new Date(), 'PPP')}
+                          : 'Pick a date'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={
-                          field.value ? new Date(field.value) : undefined
+                          field.value ? new Date(field.value) : new Date()
                         }
                         onSelect={(date) =>
                           field.onChange(
