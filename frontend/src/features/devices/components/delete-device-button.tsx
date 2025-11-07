@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
-import { useDeleteGateway } from "@/hooks/use-gateways";
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
+import { useDeleteGateway } from '@/hooks/use-gateways';
+import { toast } from 'sonner';
 
 interface DeleteDeviceButtonProps {
   deviceId: number;
@@ -29,7 +30,16 @@ export function DeleteDeviceButton({
   const deleteMutation = useDeleteGateway();
 
   const handleDelete = () => {
-    deleteMutation.mutate(deviceId);
+    deleteMutation.mutate(deviceId, {
+      onSuccess: () => {
+        toast.success(`${deviceName} deleted successfully`);
+      },
+      onError: (error) => {
+        toast.error(
+          error?.message || `Failed to delete ${deviceName}. Please try again.`,
+        );
+      },
+    });
   };
 
   return (
@@ -45,7 +55,7 @@ export function DeleteDeviceButton({
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>
-                This will permanently delete gateway device{" "}
+                This will permanently delete gateway device{' '}
                 <strong>{deviceName || gatewayUid}</strong>.
               </p>
               <p className="text-red-600 font-medium">
@@ -67,7 +77,7 @@ export function DeleteDeviceButton({
             disabled={deleteMutation.isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {deleteMutation.isPending ? "Deleting..." : "Delete Device"}
+            {deleteMutation.isPending ? 'Deleting...' : 'Delete Device'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

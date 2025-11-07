@@ -26,7 +26,7 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         gateway_id: int,
         active_only: bool = False,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[GatewayAssignment]:
         """
         Get assignments for a specific gateway
@@ -40,22 +40,30 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         Returns:
             List of GatewayAssignment instances
         """
-        query = select(GatewayAssignment).where(GatewayAssignment.gateway_id == gateway_id)
+        query = (
+            select(GatewayAssignment)
+            .options(
+                selectinload(GatewayAssignment.gateway),
+                selectinload(GatewayAssignment.farm),
+                selectinload(GatewayAssignment.assigned_by_user),
+            )
+            .where(GatewayAssignment.gateway_id == gateway_id)
+        )
 
         if active_only:
             query = query.where(GatewayAssignment.is_active == True)
 
-        query = query.order_by(GatewayAssignment.start_date.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(GatewayAssignment.start_date.desc())
+            .offset(skip)
+            .limit(limit)
+        )
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
     async def get_by_farm(
-        self,
-        farm_id: int,
-        active_only: bool = False,
-        skip: int = 0,
-        limit: int = 100
+        self, farm_id: int, active_only: bool = False, skip: int = 0, limit: int = 100
     ) -> List[GatewayAssignment]:
         """
         Get assignments for a specific farm
@@ -69,19 +77,30 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         Returns:
             List of GatewayAssignment instances
         """
-        query = select(GatewayAssignment).where(GatewayAssignment.farm_id == farm_id)
+        query = (
+            select(GatewayAssignment)
+            .options(
+                selectinload(GatewayAssignment.gateway),
+                selectinload(GatewayAssignment.farm),
+                selectinload(GatewayAssignment.assigned_by_user),
+            )
+            .where(GatewayAssignment.farm_id == farm_id)
+        )
 
         if active_only:
             query = query.where(GatewayAssignment.is_active == True)
 
-        query = query.order_by(GatewayAssignment.start_date.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(GatewayAssignment.start_date.desc())
+            .offset(skip)
+            .limit(limit)
+        )
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
     async def get_active_assignment_for_gateway(
-        self,
-        gateway_id: int
+        self, gateway_id: int
     ) -> Optional[GatewayAssignment]:
         """
         Get the current active assignment for a gateway
@@ -97,7 +116,7 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
             .where(
                 and_(
                     GatewayAssignment.gateway_id == gateway_id,
-                    GatewayAssignment.is_active == True
+                    GatewayAssignment.is_active == True,
                 )
             )
             .order_by(GatewayAssignment.start_date.desc())
@@ -122,7 +141,7 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
             .where(
                 and_(
                     GatewayAssignment.gateway_id == gateway_id,
-                    GatewayAssignment.is_active == True
+                    GatewayAssignment.is_active == True,
                 )
             )
             .values(is_active=False, end_date=datetime.utcnow())
@@ -143,8 +162,10 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         """
         from sqlalchemy import func
 
-        query = select(func.count()).select_from(GatewayAssignment).where(
-            GatewayAssignment.gateway_id == gateway_id
+        query = (
+            select(func.count())
+            .select_from(GatewayAssignment)
+            .where(GatewayAssignment.gateway_id == gateway_id)
         )
 
         if active_only:
@@ -166,8 +187,10 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         """
         from sqlalchemy import func
 
-        query = select(func.count()).select_from(GatewayAssignment).where(
-            GatewayAssignment.farm_id == farm_id
+        query = (
+            select(func.count())
+            .select_from(GatewayAssignment)
+            .where(GatewayAssignment.farm_id == farm_id)
         )
 
         if active_only:
@@ -176,7 +199,9 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
         result = await self.db.execute(query)
         return result.scalar_one()
 
-    async def get_with_relations(self, assignment_id: int) -> Optional[GatewayAssignment]:
+    async def get_with_relations(
+        self, assignment_id: int
+    ) -> Optional[GatewayAssignment]:
         """
         Get assignment with gateway and farm eager loaded
 
@@ -190,8 +215,41 @@ class GatewayAssignmentRepository(BaseRepository[GatewayAssignment]):
             select(GatewayAssignment)
             .options(
                 selectinload(GatewayAssignment.gateway),
-                selectinload(GatewayAssignment.farm)
+                selectinload(GatewayAssignment.farm),
+                selectinload(GatewayAssignment.assigned_by_user),
             )
             .where(GatewayAssignment.id == assignment_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_all_with_relations(
+        self, skip: int = 0, limit: int = 100, active_only: bool = False
+    ) -> List[GatewayAssignment]:
+        """
+        Get all assignments with gateway and farm eager loaded
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records
+            active_only: Only return active assignments
+
+        Returns:
+            List of GatewayAssignment instances with relations
+        """
+        query = select(GatewayAssignment).options(
+            selectinload(GatewayAssignment.gateway),
+            selectinload(GatewayAssignment.farm),
+            selectinload(GatewayAssignment.assigned_by_user),
+        )
+
+        if active_only:
+            query = query.where(GatewayAssignment.is_active == True)
+
+        query = (
+            query.order_by(GatewayAssignment.start_date.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())

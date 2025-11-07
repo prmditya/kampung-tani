@@ -249,7 +249,22 @@ export interface GatewayAssignmentUpdate {
 
 export interface GatewayAssignmentResponse extends GatewayAssignmentBase {
   id: number;
-  assigned_by: number;
+  assigned_by: number | null;
+  gateway?: {
+    id: number;
+    gateway_uid: string;
+    name?: string | null;
+  };
+  farm?: {
+    id: number;
+    name: string;
+    location?: string | null;
+  };
+  assigned_by_user?: {
+    id: number;
+    username: string;
+  };
+  can_unassign: boolean;
 }
 
 // ==================== GATEWAY STATUS HISTORY TYPES ====================

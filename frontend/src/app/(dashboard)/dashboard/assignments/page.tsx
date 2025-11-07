@@ -88,9 +88,18 @@ export default function AssignmentsPage() {
 
   // Calculate stats
   const activeAssignments = assignments.filter((a) => a.is_active).length;
-  const totalGateways = gateways.length;
   const totalFarms = farms.length;
-  const assignedGateways = new Set(assignments.map((a) => a.gateway_id)).size;
+
+  // Get unique gateway IDs from assignments (this includes all gateways in the system)
+  const assignedGatewayIds = new Set(assignments.map((a) => a.gateway_id));
+  const totalAssignedGateways = assignedGatewayIds.size;
+
+  // For available gateways, only count the ones the current user owns that aren't assigned
+  const userGatewayIds = new Set(gateways.map((g) => g.id));
+  const userAssignedGateways = Array.from(assignedGatewayIds).filter((id) =>
+    userGatewayIds.has(id),
+  ).length;
+  const availableGateways = gateways.length - userAssignedGateways;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -136,11 +145,9 @@ export default function AssignmentsPage() {
                 Assigned Gateways
               </p>
               <p className="text-4xl font-bold tracking-tight">
-                {assignedGateways}
+                {totalAssignedGateways}
               </p>
-              <p className="text-xs text-white/80">
-                of {totalGateways} total gateways
-              </p>
+              <p className="text-xs text-white/80">Total in system</p>
             </div>
           </div>
         </Card>
@@ -178,9 +185,9 @@ export default function AssignmentsPage() {
                 Available Gateways
               </p>
               <p className="text-4xl font-bold tracking-tight">
-                {totalGateways - assignedGateways}
+                {availableGateways}
               </p>
-              <p className="text-xs text-white/80">Unassigned</p>
+              <p className="text-xs text-white/80">Your unassigned devices</p>
             </div>
           </div>
         </Card>

@@ -18,7 +18,7 @@ import { useSearchFilter } from '../hooks/use-search-filter';
 import { SearchResultItem } from './search-result-item';
 import { useRouter } from 'next/navigation';
 
-export default function GlobalSearch() {
+export default function GlobalSearch({ className = '' }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -92,18 +92,18 @@ export default function GlobalSearch() {
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="flex justify-between bg-accent text-muted-foreground shadow-sm border border-foreground/10 hover:bg-accent/80 w-full"
+        className={`flex justify-between bg-accent text-muted-foreground shadow-sm border border-foreground/10 hover:bg-accent/80 w-full ${className}`}
       >
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4" />
           <span className="text-sm">Search...</span>
         </div>
         <KbdGroup>
-          <Kbd className="bg-muted border border-foreground/10 rounded-md">
+          <Kbd className="h-6 w-6 bg-muted border border-foreground/10 rounded-md">
             ⌘
           </Kbd>
-          <Kbd className="bg-muted border border-foreground/10 rounded-md">
-            K
+          <Kbd className="h-6 w-6 bg-muted border border-foreground/10 rounded-md">
+            k
           </Kbd>
         </KbdGroup>
       </Button>

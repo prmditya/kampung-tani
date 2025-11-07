@@ -28,7 +28,7 @@ const STATS_CONFIG: StatConfig[] = [
     key: 'totalDevices',
     icon: HardDrive,
     gradient: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-    description: 'Registered in system',
+    description: 'Total in system',
   },
   {
     title: 'Active Now',

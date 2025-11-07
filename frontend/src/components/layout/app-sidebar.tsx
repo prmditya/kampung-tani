@@ -94,7 +94,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="mb-[-20px]">
-          <GlobalSearch />
+          <GlobalSearch className="rounded-xl px-2" />
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="pl-0">
@@ -170,8 +170,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavUser
           user={{
-            name: currentUser?.username ?? 'User',
-            email: currentUser?.email ?? 'user@example.com',
+            name: currentUser?.username || 'User',
+            email: currentUser?.email || 'example@example.com',
           }}
         />
       </SidebarFooter>
