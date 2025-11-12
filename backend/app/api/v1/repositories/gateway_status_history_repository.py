@@ -7,6 +7,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.gateway_status_history import GatewayStatusHistory
 from app.api.v1.repositories.base_repository import BaseRepository
@@ -210,3 +211,30 @@ class GatewayStatusHistoryRepository(BaseRepository[GatewayStatusHistory]):
 
         result = await self.db.execute(query)
         return [{"status": row.status, "count": row.count} for row in result.all()]
+
+    async def get_recent_by_gateway_ids(
+        self,
+        gateway_ids: List[int],
+        limit: int = 10
+    ) -> List[GatewayStatusHistory]:
+        """
+        Get recent status changes for multiple gateways with gateway details
+
+        Args:
+            gateway_ids: List of gateway IDs
+            limit: Maximum number of records to return
+
+        Returns:
+            List of GatewayStatusHistory instances with gateway relationship loaded
+        """
+        if not gateway_ids:
+            return []
+
+        result = await self.db.execute(
+            select(GatewayStatusHistory)
+            .options(selectinload(GatewayStatusHistory.gateway))
+            .where(GatewayStatusHistory.gateway_id.in_(gateway_ids))
+            .order_by(GatewayStatusHistory.created_at.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())

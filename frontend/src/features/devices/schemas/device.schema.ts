@@ -12,7 +12,6 @@ const baseGatewaySchema = z.object({
       'MAC address must be in format XX:XX:XX:XX:XX:XX',
     ),
   description: z.string().optional(),
-  status: z.enum(['online', 'offline', 'maintenance']),
 });
 
 export const addGatewaySchema = baseGatewaySchema.extend({
@@ -23,8 +22,10 @@ export const addGatewaySchema = baseGatewaySchema.extend({
       /^GTW-[A-Fa-f0-9]{6}$/,
       'Gateway UID must be in format GTW-XXXXXX (6 hex digits from last 6 digits of MAC address)',
     ),
+  // Status will be automatically set to 'offline' by backend
 });
 
 export const updateGatewaySchema = baseGatewaySchema.extend({
   id: z.number().min(1, 'Failed to get device ID'),
+  status: z.enum(['online', 'offline', 'maintenance']),
 });

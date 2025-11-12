@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 const apiClient = axios.create({
   // backend uses /api/v1 as API prefix
@@ -11,7 +12,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   // make headers object safe to mutate and add Authorization if token exists
-  const token = localStorage.getItem('token');
+  const token = Cookies.get('token');
   config.headers = config.headers ?? {};
   if (token) {
     // cast to any to avoid TS complaining about index signature

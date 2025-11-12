@@ -58,7 +58,7 @@ export function DeleteDeviceButton({
                 This will permanently delete gateway device{' '}
                 <strong>{deviceName || gatewayUid}</strong>.
               </p>
-              <p className="text-red-600 font-medium">
+              <p className="text-destructive font-medium">
                 ⚠️ Warning: All sensor data and assignments associated with this
                 device will also be affected.
               </p>

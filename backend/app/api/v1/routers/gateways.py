@@ -108,6 +108,15 @@ async def create_gateway(
             detail=f"Gateway with UID '{gateway_data.gateway_uid}' already exists"
         )
 
+    # Validate status - only allow offline (default) or maintenance
+    # online status is automatically detected when device sends data
+    initial_status = gateway_data.status.value if gateway_data.status else "offline"
+    if initial_status == "online":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create gateway with online status. New gateways default to offline and will be marked online automatically when they send data."
+        )
+
     try:
         gateway = await gateway_repo.create(
             user_id=current_user.id,
@@ -115,7 +124,7 @@ async def create_gateway(
             name=gateway_data.name,
             mac_address=gateway_data.mac_address,
             description=gateway_data.description,
-            status=gateway_data.status.value
+            status=initial_status
         )
 
         logger.info(f"Gateway created: {gateway.gateway_uid} by user {current_user.username}")
@@ -239,9 +248,25 @@ async def update_gateway(
     # Prepare update data
     update_data = gateway_data.model_dump(exclude_unset=True)
 
-    # Convert enum to string if present
+    # Convert enum to string if present and validate status changes
     if "status" in update_data and update_data["status"]:
-        update_data["status"] = update_data["status"].value
+        new_status = update_data["status"].value
+        current_status = gateway.status
+
+        # Validation logic:
+        # - ALLOW: any → maintenance (turning on maintenance)
+        # - ALLOW: maintenance → offline (turning off maintenance)
+        # - REJECT: online ↔ offline (manual override not allowed)
+
+        # Block manual switching between online and offline
+        if current_status in ["online", "offline"] and new_status in ["online", "offline"]:
+            if current_status != new_status:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot manually switch between online and offline status. These are automatically detected. You can only toggle maintenance mode."
+                )
+
+        update_data["status"] = new_status
 
     if not update_data:
         raise HTTPException(
@@ -337,6 +362,13 @@ async def ping_gateway(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Gateway not found"
+        )
+
+    # Don't update status if in maintenance mode
+    if gateway.status == "maintenance":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot ping gateway in maintenance mode. Please take gateway out of maintenance first."
         )
 
     # Update last_seen

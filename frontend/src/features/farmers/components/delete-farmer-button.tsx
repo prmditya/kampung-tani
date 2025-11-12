@@ -63,7 +63,7 @@ export function DeleteFarmerButton({
                 <strong>{farmerName}</strong>.
               </p>
               {farmsCount > 0 && (
-                <p className="text-red-600 font-medium">
+                <p className="text-destructive font-medium">
                   ⚠️ Warning: This will also delete {farmsCount} farm
                   {farmsCount > 1 ? 's' : ''} associated with this farmer.
                 </p>

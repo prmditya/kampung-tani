@@ -10,6 +10,7 @@ import type {
   MessageResponse,
 } from '@/types/api';
 import { toast } from 'sonner';
+import Cookies from 'js-cookie';
 
 interface LoginCredentials {
   username: string;
@@ -48,10 +49,11 @@ export function useLogin() {
       }
     },
     onSuccess: (data) => {
-      localStorage.setItem('token', data.access_token);
-      const expirationTime = Date.now() + data.expires_in * 1000;
-      localStorage.setItem('token_expiration', expirationTime.toString());
-      localStorage.setItem('user', JSON.stringify(data.user));
+      Cookies.set('token', data.access_token, {
+        expires: data.expires_in / 86400,
+        secure: false,
+        sameSite: 'Strict',
+      });
       router.push('/dashboard');
       toast.success('Login successful!');
     },
@@ -71,9 +73,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       // Remove token, expiration, and user data from localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('token_expiration');
-      localStorage.removeItem('user');
+      Cookies.remove('token');
 
       // Redirect to login page
       router.push('/login');

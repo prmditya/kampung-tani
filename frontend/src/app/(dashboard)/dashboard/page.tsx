@@ -8,19 +8,16 @@ import {
   RecentActivity,
   QuickActions,
 } from '@/features/dashboard';
-import { useGateways } from '@/hooks/use-gateways';
-import useAssignments from '@/features/assignments/hooks/use-assignment';
-import { useFarms } from '@/features/farmers/hooks/use-farms';
 import { useDashboard } from '@/features/dashboard/hooks/use-dashboard';
+import { useRecentStatusChanges } from '@/hooks/use-gateway-status-history';
 
 export default function DashboardPage() {
   // Fetch dashboard data from new aggregated endpoint
   const { data: dashboardData, isLoading: isLoadingDashboard } = useDashboard();
 
-  // Also fetch assignments and farms for recent activity
-  const { data: assignmentsData } = useAssignments({ size: 100 });
-  const { data: farmsData } = useFarms({ size: 100 });
-  const { data: gatewaysData } = useGateways({ size: 100 });
+  // Fetch recent device status changes
+  const { data: statusChanges, isLoading: isLoadingStatusChanges } =
+    useRecentStatusChanges(10);
 
   // Prepare stats from dashboard data
   const stats = useMemo(() => {
@@ -49,30 +46,7 @@ export default function DashboardPage() {
     return dashboardData.activity.data;
   }, [dashboardData]);
 
-  // Prepare recent assignments for display
-  const recentAssignments = useMemo(() => {
-    if (!assignmentsData?.items || !farmsData?.items || !gatewaysData?.items)
-      return [];
-
-    return assignmentsData.items.slice(0, 5).map((assignment) => {
-      const gateway = gatewaysData.items.find(
-        (g) => g.id === assignment.gateway_id,
-      );
-      const farm = farmsData.items.find((f) => f.id === assignment.farm_id);
-
-      return {
-        id: assignment.id.toString(),
-        deviceName:
-          gateway?.name ||
-          gateway?.gateway_uid ||
-          `Gateway ${assignment.gateway_id}`,
-        farmName: farm?.name || `Farm ${assignment.farm_id}`,
-        status: assignment.is_active ? 'active' : 'inactive',
-      };
-    });
-  }, [assignmentsData, farmsData, gatewaysData]);
-
-  const isLoading = isLoadingDashboard;
+  const isLoading = isLoadingDashboard || isLoadingStatusChanges;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -119,8 +93,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="lg:col-span-3 space-y-6">
-            <RecentActivity assignments={recentAssignments} />
+          <div className="lg:col-span-3 space-y-6 grid">
+            <RecentActivity statusChanges={statusChanges || []} />
             <QuickActions />
           </div>
         </div>

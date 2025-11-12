@@ -5,6 +5,7 @@ from .farm import Farm
 from .farmer import Farmer
 from .assignment import GatewayAssignment
 from .user import User
+from .gateway_status_history import GatewayStatusHistory
 
 __all__ = [
     "Gateway",
@@ -14,4 +15,5 @@ __all__ = [
     "Farmer",
     "GatewayAssignment",
     "User",
+    "GatewayStatusHistory",
 ]

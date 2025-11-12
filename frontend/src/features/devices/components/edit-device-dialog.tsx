@@ -13,14 +13,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Pencil } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Pencil, Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useUpdateGateway } from '@/hooks/use-gateways';
 import type {
   GatewayResponse,
@@ -42,6 +37,9 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
   const [open, setOpen] = useState(false);
   const updateMutation = useUpdateGateway();
 
+  // Track the original device status when dialog opens
+  const [originalStatus, setOriginalStatus] = useState(device.status);
+
   const form = useForm<z.infer<typeof updateGatewaySchema>>({
     resolver: zodResolver(updateGatewaySchema),
     defaultValues: {
@@ -52,6 +50,22 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
       status: device.status,
     },
   });
+
+  // Reset form when dialog opens with fresh device data
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
+      // Store original status
+      setOriginalStatus(device.status);
+      form.reset({
+        id: device.id,
+        name: device.name || '',
+        mac_address: device.mac_address || '',
+        description: device.description || '',
+        status: device.status,
+      });
+    }
+  };
 
   const handleSubmit = (data: z.infer<typeof updateGatewaySchema>) => {
     updateMutation.mutate(
@@ -67,7 +81,7 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
       {
         onSuccess: () => {
           toast.success('Device updated successfully');
-          setOpen(false);
+          handleOpenChange(false);
         },
         onError: (error) => {
           toast.error(
@@ -80,11 +94,11 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
 
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="icon" onClick={() => handleOpenChange(true)}>
         <Pencil className="h-4 w-4" />
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={form.handleSubmit(handleSubmit)}>
             <DialogHeader>
@@ -141,29 +155,60 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
                 )}
               />
 
+              <Field className="grid gap-2">
+                <Label>Current Status (Auto-detected)</Label>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      device.status === 'online'
+                        ? 'default'
+                        : device.status === 'offline'
+                          ? 'secondary'
+                          : 'outline'
+                    }
+                  >
+                    {device.status === 'online'
+                      ? 'Online'
+                      : device.status === 'offline'
+                        ? 'Offline'
+                        : 'Maintenance'}
+                  </Badge>
+                  {device.status !== 'maintenance' && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      Online/Offline status is automatically detected
+                    </p>
+                  )}
+                </div>
+              </Field>
+
               <Controller
                 name="status"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Field className="grid gap-2">
-                    <Label htmlFor="edit-status">
-                      Status <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
+                  <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="edit-maintenance">Maintenance Mode</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Device will not store data when in maintenance mode
+                      </p>
+                    </div>
+                    <Switch
+                      id="edit-maintenance"
+                      checked={field.value === 'maintenance'}
+                      className="!w-[32.5px]"
+                      onCheckedChange={(checked) => {
+                        // Toggle: ON = maintenance, OFF = return to original status (offline if was in maintenance)
+                        field.onChange(
+                          checked
+                            ? 'maintenance'
+                            : originalStatus === 'maintenance'
+                              ? 'offline'
+                              : originalStatus,
+                        );
+                      }}
                       disabled={updateMutation.isPending}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="online">Online</SelectItem>
-                        <SelectItem value="offline">Offline</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FieldError errors={[fieldState.error]} />
+                    />
                   </Field>
                 )}
               />
@@ -190,7 +235,7 @@ export function EditDeviceDialog({ device }: EditDeviceDialogProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={updateMutation.isPending}
               >
                 Cancel

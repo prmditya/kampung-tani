@@ -25,6 +25,7 @@ from app.api.v1.routers import (
 )
 from app.core.config import get_settings
 from app.core.database import check_database_health, close_db
+from app.services.gateway_status_scheduler import start_scheduler, stop_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -55,10 +56,23 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Database connection error: {e}")
         logger.info("🔄 API will start without database")
 
+    # Start gateway status scheduler
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"❌ Failed to start scheduler: {e}")
+
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down Kampung Tani IoT API")
+
+    # Stop scheduler
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.error(f"❌ Error stopping scheduler: {e}")
+
     await close_db()
     logger.info("✅ Database connections closed")
 
@@ -113,7 +127,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use configured origins
+    allow_origins=settings.ALLOWED_ORIGINS,  # Use configured origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -14,16 +14,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 import { useCreateGateway } from '@/hooks/use-gateways';
-import { GatewayStatus } from '@/types/api';
 import type { GatewayCreate } from '@/types/api';
 import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import { toast } from 'sonner';
@@ -43,7 +35,6 @@ export function AddDeviceDialog() {
       name: '',
       mac_address: '',
       description: '',
-      status: GatewayStatus.ONLINE,
     },
   });
 
@@ -54,7 +45,7 @@ export function AddDeviceDialog() {
         name: data.name,
         mac_address: data.mac_address,
         description: data.description,
-        status: data.status,
+        // Status will be set to 'offline' by default in backend
       } as GatewayCreate,
       {
         onSuccess: () => {
@@ -138,31 +129,21 @@ export function AddDeviceDialog() {
                 </Field>
               )}
             />
-            <Controller
-              name="status"
-              control={form.control}
-              render={({ field }) => (
-                <Field className="grid gap-2">
-                  <Label htmlFor="status">
-                    Status <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={createMutation.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="online">Online</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            />
+            <Field className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Auto-detected Status
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    The device will start as offline and will automatically be
+                    marked as online when it sends data. You can set it to
+                    maintenance mode after creation if needed.
+                  </p>
+                </div>
+              </div>
+            </Field>
             <Controller
               name="description"
               control={form.control}

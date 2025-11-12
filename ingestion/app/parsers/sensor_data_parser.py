@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.utils.logger import logger
 
 
@@ -48,7 +48,7 @@ class SensorDataParser:
 
     def parse(
         self, gateway_uid: str, sensor_uid: str, payload: dict
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Parse payload MQTT
 
@@ -56,25 +56,29 @@ class SensorDataParser:
         {
             "d": [
                 {"tag": "SEM225:Temperature", "value": 250},
-                {"tag": "SEM225:Moisture", "value": 450}
+                {"tag": "SEM225:Moisture", "value": 450},
+                {"tag": "#SYS_UPTIME", "value": 12345}
             ],
             "ts": "2025-10-10T10:00:00Z"
         }
 
         Output:
-        [
-            {
-                "gateway_uid": "GW-F3E2R3",
-                "sensor_uid": "SEM225-01",
-                "sensor_type": "temperature",
-                "value": 25.0,
-                "raw_value": 250,
-                "unit": "°C",
-                "timestamp": datetime(...),
-                "tag": "SEM225:Temperature"
-            },
-            ...
-        ]
+        {
+            "readings": [
+                {
+                    "gateway_uid": "GW-F3E2R3",
+                    "sensor_uid": "SEM225-01",
+                    "sensor_type": "temperature",
+                    "value": 25.0,
+                    "raw_value": 250,
+                    "unit": "°C",
+                    "timestamp": datetime(...),
+                    "tag": "SEM225:Temperature"
+                },
+                ...
+            ],
+            "uptime_seconds": 12345
+        }
         """
         try:
             readings = payload.get("d", [])
@@ -82,10 +86,19 @@ class SensorDataParser:
 
             if not readings:
                 logger.warning("No data in payload")
-                return []
+                return {"readings": [], "uptime_seconds": None}
 
             # Parse timestamp into datetime (fall back to now utc)
             timestamp = self._parse_timestamp(timestamp_str)
+
+            # Extract SYS_UPTIME before processing other readings
+            uptime_seconds = None
+            for reading in readings:
+                tag = reading.get("tag", "")
+                if tag == "#SYS_UPTIME":
+                    uptime_seconds = reading.get("value")
+                    logger.info(f"Extracted SYS_UPTIME: {uptime_seconds} seconds")
+                    break
 
             # Process every reading
             parsed_data = []
@@ -124,11 +137,11 @@ class SensorDataParser:
                     }
                 )
 
-            return parsed_data
+            return {"readings": parsed_data, "uptime_seconds": uptime_seconds}
 
         except Exception as e:
             logger.error(f"Error parsing data: {e}")
-            return []
+            return {"readings": [], "uptime_seconds": None}
 
     def _should_skip(self, tag: str) -> bool:
         """Check apakah reading harus diskip"""

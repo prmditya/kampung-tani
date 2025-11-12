@@ -24,7 +24,7 @@ class Gateway(Base):
     sensors = relationship("Sensor", back_populates="gateway")
     sensor_data = relationship("SensorData", back_populates="gateway")
     assignments = relationship("GatewayAssignment", back_populates="gateway")
-    assignments = relationship("GatewayAssignment", back_populates="gateway")
+    status_history = relationship("GatewayStatusHistory", back_populates="gateway")
 
     def __repr__(self):
         return f"<Gateway {self.gateway_uid}>"
