@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/provider/theme-provider';
-import { QueryProvider } from '@/lib/query-provider';
+import { QueryProvider } from '@/components/provider/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import '@/app/globals.css';
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
@@ -81,20 +82,21 @@ export function useLogout() {
 }
 
 export function useCurrentUser() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  const [user, setUser] = useState<LoginResponse['user'] | null>(null);
 
-  const userStr = localStorage.getItem('user');
-  if (!userStr) {
-    return null;
-  }
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch {
+        setUser(null);
+      }
+    }
+  }, []);
 
-  try {
-    return JSON.parse(userStr) as LoginResponse['user'];
-  } catch {
-    return null;
-  }
+  return user;
 }
 
 export function isSuperAdmin(user: LoginResponse['user'] | null): boolean {

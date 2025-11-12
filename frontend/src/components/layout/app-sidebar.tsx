@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { NavUser } from '@/components/nav-user';
+import { NavUser } from '@/components/layout/nav-user';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 import GlobalSearch from '@/features/global-search/components/global-search';
 
