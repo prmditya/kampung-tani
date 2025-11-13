@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine
 )
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, Session
 import logging
 
 from app.core.config import get_settings
@@ -50,6 +51,33 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
     autocommit=False,
     autoflush=False,
+)
+
+
+# Create sync engine and session factory for background jobs
+# (APScheduler and other sync background tasks need sync sessions)
+def get_sync_engine():
+    """Create synchronous database engine for background jobs"""
+    database_url = settings.database_url.replace("postgresql://", "postgresql+psycopg2://")
+
+    sync_engine = create_engine(
+        database_url,
+        echo=settings.DEBUG,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+    )
+
+    return sync_engine
+
+
+sync_engine = get_sync_engine()
+SessionLocal = sessionmaker(
+    bind=sync_engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
 )
 
 
@@ -117,4 +145,5 @@ async def close_db() -> None:
     Should be called on application shutdown
     """
     await engine.dispose()
+    sync_engine.dispose()
     logger.info("✅ Database connections closed")

@@ -76,7 +76,7 @@ export default function DevicesPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
           <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
             <HardDrive className="h-32 w-32" />
           </div>
@@ -96,7 +96,7 @@ export default function DevicesPage() {
           </div>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
           <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
             <Activity className="h-32 w-32" />
           </div>
@@ -116,7 +116,7 @@ export default function DevicesPage() {
           </div>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-red-500 to-red-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
           <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
             <Power className="h-32 w-32" />
           </div>
@@ -136,7 +136,7 @@ export default function DevicesPage() {
           </div>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
           <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
             <Wrench className="h-32 w-32" />
           </div>

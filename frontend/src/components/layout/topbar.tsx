@@ -1,7 +1,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import ThemeToggler from './theme-toggler';
-import NavBreadcrumbs from './nav-breadcrumbs';
-import { Separator } from './ui/separator';
+import ThemeToggler from '@/components/layout/theme-toggler';
+import NavBreadcrumbs from '@/components/layout/nav-breadcrumbs';
+import { Separator } from '@/components/ui/separator';
 
 export function Topbar() {
   return (

@@ -46,7 +46,10 @@ class IngestionService:
                 return 0
 
             # Parse sensor readings
-            parsed_readings = self.parser.parse(gateway_uid, sensor_uid, data)
+            parse_result = self.parser.parse(gateway_uid, sensor_uid, data)
+            parsed_readings = parse_result.get("readings", [])
+            uptime_seconds = parse_result.get("uptime_seconds")
+
             if not parsed_readings:
                 logger.warning("No valid readings to save")
                 return 0
@@ -60,9 +63,9 @@ class IngestionService:
                     # assignment may be a plain row; best-effort
                     r["metadata"]["farm_id"] = getattr(assignment, "farm_id", None)
 
-            # Save via data service
+            # Save via data service (pass uptime_seconds for status tracking)
             saved = self.data_service.save_sensor_readings(
-                db, gateway_uid, sensor_uid, parsed_readings
+                db, gateway_uid, sensor_uid, parsed_readings, uptime_seconds
             )
             return saved
 

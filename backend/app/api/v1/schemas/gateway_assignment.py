@@ -3,7 +3,7 @@ Gateway Assignment Pydantic Schemas
 Gateway-to-farm assignment management schemas
 """
 
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -38,8 +38,43 @@ class GatewayAssignmentUpdate(BaseSchema):
     is_active: Optional[bool] = None
 
 
+class GatewayInfo(BaseSchema):
+    """Gateway information for assignment response"""
+
+    id: int
+    gateway_uid: str
+    name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FarmInfo(BaseSchema):
+    """Farm information for assignment response"""
+
+    id: int
+    name: str
+    location: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AssignedByInfo(BaseSchema):
+    """Assigned by user information"""
+
+    id: int
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class GatewayAssignmentResponse(GatewayAssignmentBase):
     """Gateway assignment response schema"""
 
     id: int
     assigned_by: Optional[int] = None
+    gateway: Optional[GatewayInfo] = None
+    farm: Optional[FarmInfo] = None
+    assigned_by_user: Optional[AssignedByInfo] = None
+    can_unassign: bool = False
+
+    model_config = ConfigDict(from_attributes=True)

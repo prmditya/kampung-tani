@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -17,13 +17,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Eye, MapPin, Crop } from "lucide-react";
-import type { FarmerResponse, FarmResponse } from "@/types/api";
-import { AddFarmDialog } from "./add-farm-dialog";
-import { EditFarmDialog } from "./edit-farm-dialog";
-import { DeleteFarmButton } from "./delete-farm-button";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Eye, MapPin, Crop } from 'lucide-react';
+import type { FarmerResponse, FarmResponse } from '@/types/api';
+import { AddFarmDialog } from './add-farm-dialog';
+import { EditFarmDialog } from './edit-farm-dialog';
+import { DeleteFarmButton } from './delete-farm-button';
 
 interface ViewFarmerDialogProps {
   farmer: FarmerResponse;
@@ -40,7 +40,7 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
           <Eye className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Farmer Details</DialogTitle>
           <DialogDescription>
@@ -61,13 +61,13 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
               <h3 className="font-semibold text-sm text-muted-foreground">
                 Contact
               </h3>
-              <p className="text-base">{farmer.contact || "-"}</p>
+              <p className="text-base">{farmer.contact || '-'}</p>
             </div>
             <div className="md:col-span-2">
               <h3 className="font-semibold text-sm text-muted-foreground">
                 Address
               </h3>
-              <p className="text-base">{farmer.address || "-"}</p>
+              <p className="text-base">{farmer.address || '-'}</p>
             </div>
           </div>
 
@@ -76,7 +76,7 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
               <div>
                 <h3 className="font-semibold text-lg">Farms</h3>
                 <p className="text-sm text-muted-foreground">
-                  {farms.length} {farms.length === 1 ? "farm" : "farms"}{" "}
+                  {farms.length} {farms.length === 1 ? 'farm' : 'farms'}{' '}
                   registered
                 </p>
               </div>

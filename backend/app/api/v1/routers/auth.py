@@ -40,10 +40,7 @@ settings = get_settings()
     summary="Register New User",
     description="Create a new user account with username, email and password",
 )
-async def register_user(
-    user_data: UserCreate,
-    db: AsyncSession = Depends(get_db)
-):
+async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Register a new user account.
 
@@ -58,14 +55,13 @@ async def register_user(
     if await user_repo.username_exists(user_data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail="Username already registered",
         )
 
     # Check if email already exists
     if await user_repo.email_exists(user_data.email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
     # Hash password and create user
@@ -76,7 +72,7 @@ async def register_user(
             username=user_data.username,
             email=user_data.email,
             password_hash=hashed_password,
-            role=user_data.role.value
+            role=user_data.role.value,
         )
 
         logger.info(f"User created successfully: {user.username}")
@@ -86,7 +82,7 @@ async def register_user(
         logger.error(f"Error creating user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create user"
+            detail="Failed to create user",
         )
 
 
@@ -96,10 +92,7 @@ async def register_user(
     summary="User Login",
     description="Authenticate user and get JWT access token",
 )
-async def login_user(
-    credentials: UserLogin,
-    db: AsyncSession = Depends(get_db)
-):
+async def login_user(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """
     Authenticate user and return JWT access token.
 
@@ -132,8 +125,28 @@ async def login_user(
     return Token(
         access_token=access_token,
         expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_HOURS * 3600,  # in seconds
-        user=UserResponse.model_validate(user)
+        user=UserResponse.model_validate(user),
     )
+
+
+@router.post(
+    "/logout",
+    response_model=MessageResponse,
+    summary="User Logout",
+    description="Logout current user (client-side token removal)",
+)
+async def logout_user(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Logout user.
+
+    Note: Since we use JWT tokens, actual logout is handled client-side
+    by removing the token. This endpoint exists for API consistency
+    and to verify the token is still valid.
+    """
+    logger.info(f"User logged out: {current_user.username}")
+    return MessageResponse(message="Successfully logged out")
 
 
 @router.get(
@@ -159,9 +172,7 @@ async def get_current_user_info(
     summary="User Logout",
     description="Logout current user (client-side token removal)",
 )
-async def logout_user(
-    current_user: User = Depends(get_current_user)
-):
+async def logout_user(current_user: User = Depends(get_current_user)):
     """
     Logout current user.
 
@@ -201,7 +212,7 @@ async def update_own_profile(
         if await user_repo.email_exists(user_data.email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="Email already registered",
             )
 
     # Prepare update data (only email, users cannot change their own role)
@@ -219,7 +230,7 @@ async def update_own_profile(
         logger.error(f"Error updating user profile: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile"
+            detail="Failed to update profile",
         )
 
 
@@ -249,14 +260,14 @@ async def change_password(
     if not verify_password(password_data.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
+            detail="Current password is incorrect",
         )
 
     # Check if new password is same as current password
     if verify_password(password_data.new_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be different from current password"
+            detail="New password must be different from current password",
         )
 
     # Hash new password and update
@@ -266,13 +277,11 @@ async def change_password(
         await user_repo.update(current_user.id, password_hash=new_password_hash)
 
         logger.info(f"User changed password: {current_user.username}")
-        return MessageResponse(
-            message="Password changed successfully"
-        )
+        return MessageResponse(message="Password changed successfully")
 
     except Exception as e:
         logger.error(f"Error changing password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to change password"
+            detail="Failed to change password",
         )

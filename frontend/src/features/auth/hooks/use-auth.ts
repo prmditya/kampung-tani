@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
@@ -8,6 +9,8 @@ import type {
   PasswordChange,
   MessageResponse,
 } from '@/types/api';
+import { toast } from 'sonner';
+import Cookies from 'js-cookie';
 
 interface LoginCredentials {
   username: string;
@@ -46,18 +49,16 @@ export function useLogin() {
       }
     },
     onSuccess: (data) => {
-      // Store token in localStorage
-      localStorage.setItem('token', data.access_token);
-
-      // Store token expiration time (current time + expires_in seconds)
-      const expirationTime = Date.now() + data.expires_in * 1000;
-      localStorage.setItem('token_expiration', expirationTime.toString());
-
-      // Store user data
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Redirect to dashboard
+      Cookies.set('token', data.access_token, {
+        expires: data.expires_in / 86400,
+        secure: false,
+        sameSite: 'Strict',
+      });
       router.push('/dashboard');
+      toast.success('Login successful!');
+    },
+    onError: (error) => {
+      toast.error('Login Failed, Please try again! ');
     },
   });
 }
@@ -72,9 +73,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       // Remove token, expiration, and user data from localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('token_expiration');
-      localStorage.removeItem('user');
+      Cookies.remove('token');
 
       // Redirect to login page
       router.push('/login');
@@ -83,20 +82,21 @@ export function useLogout() {
 }
 
 export function useCurrentUser() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  const [user, setUser] = useState<LoginResponse['user'] | null>(null);
 
-  const userStr = localStorage.getItem('user');
-  if (!userStr) {
-    return null;
-  }
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch {
+        setUser(null);
+      }
+    }
+  }, []);
 
-  try {
-    return JSON.parse(userStr) as LoginResponse['user'];
-  } catch {
-    return null;
-  }
+  return user;
 }
 
 export function isSuperAdmin(user: LoginResponse['user'] | null): boolean {

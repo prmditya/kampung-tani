@@ -3,9 +3,9 @@ import {
   Unplug,
   LayoutDashboard,
   HardDrive,
-  Tractor,
+  Users,
   Settings,
-  Database,
+  LineChart,
   LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -23,10 +23,11 @@ import {
   SidebarFooter,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { Separator } from './ui/separator';
+import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { NavUser } from './nav-user';
+import { NavUser } from '@/components/layout/nav-user';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
+import GlobalSearch from '@/features/global-search/components/global-search';
 
 // Menu items.
 const items = [
@@ -48,12 +49,12 @@ const items = [
   {
     title: 'Farmers',
     url: '/dashboard/farmers',
-    icon: Tractor,
+    icon: Users,
   },
   {
     title: 'Data',
     url: '/dashboard/data',
-    icon: Database,
+    icon: LineChart,
   },
 ];
 
@@ -92,6 +93,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup className="mb-[-20px]">
+          <GlobalSearch className="rounded-xl px-2" />
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="pl-0">
             Main Navigation
@@ -166,8 +170,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavUser
           user={{
-            name: currentUser?.username ?? 'User',
-            email: currentUser?.email ?? 'user@example.com',
+            name: currentUser?.username || 'User',
+            email: currentUser?.email || 'example@example.com',
           }}
         />
       </SidebarFooter>

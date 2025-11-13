@@ -1,8 +1,9 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 const apiClient = axios.create({
   // backend uses /api/v1 as API prefix
-  baseURL: process.env.BACKEND_API_URL || 'http://192.168.1.26:5000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -11,7 +12,7 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   // make headers object safe to mutate and add Authorization if token exists
-  const token = localStorage.getItem('token');
+  const token = Cookies.get('token');
   config.headers = config.headers ?? {};
   if (token) {
     // cast to any to avoid TS complaining about index signature

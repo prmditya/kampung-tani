@@ -32,3 +32,17 @@ class GatewayStatusHistoryResponse(GatewayStatusHistoryBase):
 
     id: int
     created_at: datetime
+
+
+class GatewayInfo(BaseSchema):
+    """Gateway information for status history"""
+
+    id: int
+    gateway_uid: str
+    name: Optional[str] = None
+
+
+class GatewayStatusHistoryWithGateway(GatewayStatusHistoryResponse):
+    """Gateway status history with gateway details"""
+
+    gateway: GatewayInfo

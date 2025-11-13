@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +11,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Trash2, Loader2 } from "lucide-react";
-import { useDeleteFarm } from "@/features/farmers/hooks/use-farms";
+} from '@/components/ui/alert-dialog';
+import { Trash2, Loader2 } from 'lucide-react';
+import { useDeleteFarm } from '@/features/farmers/hooks/use-farms';
+import { toast } from 'sonner';
 
 interface DeleteFarmButtonProps {
   farmId: number;
@@ -24,7 +25,16 @@ export function DeleteFarmButton({ farmId, farmName }: DeleteFarmButtonProps) {
   const deleteMutation = useDeleteFarm();
 
   const handleDelete = () => {
-    deleteMutation.mutate(farmId);
+    deleteMutation.mutate(farmId, {
+      onSuccess: () => {
+        toast.success(`${farmName} deleted successfully`);
+      },
+      onError: (error) => {
+        toast.error(
+          error?.message || `Failed to delete ${farmName}. Please try again.`,
+        );
+      },
+    });
   };
 
   return (
@@ -61,7 +71,7 @@ export function DeleteFarmButton({ farmId, farmName }: DeleteFarmButtonProps) {
                 Deleting...
               </>
             ) : (
-              "Delete Farm"
+              'Delete Farm'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

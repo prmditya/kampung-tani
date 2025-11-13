@@ -1,3 +1,4 @@
-export { DataFilter } from "./components/data-filter";
-export { DataChart } from "./components/data-chart";
-export { ReadingsTable } from "./components/readings-table";
+export { DataFilter } from './components/data-filter';
+export { DataChart } from './components/data-chart';
+export { ReadingsTable } from './components/readings-table';
+export { useDataFilter } from './hooks/use-data-filter';

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,12 +9,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Pencil } from "lucide-react";
-import { useUpdateFarm } from "@/features/farmers/hooks/use-farms";
-import type { FarmResponse, FarmUpdate } from "@/types/api";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Pencil } from 'lucide-react';
+import { useUpdateFarm } from '@/features/farmers/hooks/use-farms';
+import type { FarmResponse, FarmUpdate } from '@/types/api';
 
 interface EditFarmDialogProps {
   farm: FarmResponse;
@@ -29,18 +29,18 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
     const formData = new FormData(e.currentTarget);
 
     const data: FarmUpdate = {
-      name: formData.get("name") as string,
-      location: (formData.get("location") as string) || null,
-      latitude: formData.get("latitude")
-        ? parseFloat(formData.get("latitude") as string)
+      name: formData.get('name') as string,
+      location: (formData.get('location') as string) || null,
+      latitude: formData.get('latitude')
+        ? parseFloat(formData.get('latitude') as string)
         : null,
-      longitude: formData.get("longitude")
-        ? parseFloat(formData.get("longitude") as string)
+      longitude: formData.get('longitude')
+        ? parseFloat(formData.get('longitude') as string)
         : null,
-      area_size: formData.get("area_size")
-        ? parseFloat(formData.get("area_size") as string)
+      area_size: formData.get('area_size')
+        ? parseFloat(formData.get('area_size') as string)
         : null,
-      soil_type: (formData.get("soil_type") as string) || null,
+      soil_type: (formData.get('soil_type') as string) || null,
     };
 
     updateMutation.mutate(
@@ -68,7 +68,9 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">Farm Name *</Label>
+                <Label htmlFor="edit-name">
+                  Farm Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="edit-name"
                   name="name"
@@ -82,7 +84,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                 <Input
                   id="edit-location"
                   name="location"
-                  defaultValue={farm.location || ""}
+                  defaultValue={farm.location || ''}
                   disabled={updateMutation.isPending}
                 />
               </div>
@@ -94,7 +96,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                     name="latitude"
                     type="number"
                     step="any"
-                    defaultValue={farm.latitude || ""}
+                    defaultValue={farm.latitude || ''}
                     disabled={updateMutation.isPending}
                   />
                 </div>
@@ -105,7 +107,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                     name="longitude"
                     type="number"
                     step="any"
-                    defaultValue={farm.longitude || ""}
+                    defaultValue={farm.longitude || ''}
                     disabled={updateMutation.isPending}
                   />
                 </div>
@@ -117,7 +119,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                   name="area_size"
                   type="number"
                   step="0.01"
-                  defaultValue={farm.area_size || ""}
+                  defaultValue={farm.area_size || ''}
                   disabled={updateMutation.isPending}
                 />
               </div>
@@ -126,14 +128,14 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                 <Input
                   id="edit-soil_type"
                   name="soil_type"
-                  defaultValue={farm.soil_type || ""}
+                  defaultValue={farm.soil_type || ''}
                   disabled={updateMutation.isPending}
                 />
               </div>
 
               {updateMutation.isError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
-                  {updateMutation.error?.message || "Failed to update farm"}
+                  {updateMutation.error?.message || 'Failed to update farm'}
                 </div>
               )}
             </div>
@@ -147,7 +149,7 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                 Cancel
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Updating..." : "Update Farm"}
+                {updateMutation.isPending ? 'Updating...' : 'Update Farm'}
               </Button>
             </DialogFooter>
           </form>

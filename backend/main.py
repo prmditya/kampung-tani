@@ -25,6 +25,7 @@ from app.api.v1.routers import (
 )
 from app.core.config import get_settings
 from app.core.database import check_database_health, close_db
+from app.services.gateway_status_scheduler import start_scheduler, stop_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -55,10 +56,23 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Database connection error: {e}")
         logger.info("🔄 API will start without database")
 
+    # Start gateway status scheduler
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"❌ Failed to start scheduler: {e}")
+
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down Kampung Tani IoT API")
+
+    # Stop scheduler
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.error(f"❌ Error stopping scheduler: {e}")
+
     await close_db()
     logger.info("✅ Database connections closed")
 
@@ -113,7 +127,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,  # Use configured origins
+    allow_origins=settings.ALLOWED_ORIGINS,  # Use configured origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -139,14 +153,16 @@ app.include_router(
 app.include_router(
     farmers.router, prefix=f"{settings.API_PREFIX}/farmers", tags=["Farmers"]
 )
+app.include_router(farms.router, prefix=f"{settings.API_PREFIX}/farms", tags=["Farms"])
 app.include_router(
-    farms.router, prefix=f"{settings.API_PREFIX}/farms", tags=["Farms"]
+    gateway_assignments.router,
+    prefix=f"{settings.API_PREFIX}/gateway-assignments",
+    tags=["Gateway Assignments"],
 )
 app.include_router(
-    gateway_assignments.router, prefix=f"{settings.API_PREFIX}/gateway-assignments", tags=["Gateway Assignments"]
-)
-app.include_router(
-    gateway_status_history.router, prefix=f"{settings.API_PREFIX}/gateway-status-history", tags=["Gateway Status History"]
+    gateway_status_history.router,
+    prefix=f"{settings.API_PREFIX}/gateway-status-history",
+    tags=["Gateway Status History"],
 )
 
 
@@ -167,5 +183,9 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app", host="0.0.0.0", port=5000, reload=settings.DEBUG, log_level="info"
+        "main:app",
+        host="0.0.0.0",
+        port=5000,
+        reload=settings.DEBUG,
+        log_level="info",
     )

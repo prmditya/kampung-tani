@@ -12,7 +12,9 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.api.v1.repositories.gateway_assignment_repository import GatewayAssignmentRepository
+from app.api.v1.repositories.gateway_assignment_repository import (
+    GatewayAssignmentRepository,
+)
 from app.api.v1.repositories.gateway_repository import GatewayRepository
 from app.api.v1.repositories.farm_repository import FarmRepository
 from app.api.v1.schemas import (
@@ -33,7 +35,7 @@ router = APIRouter()
     "/",
     response_model=PaginatedResponse[GatewayAssignmentResponse],
     summary="Get Gateway Assignments",
-    description="Get paginated list of gateway assignments"
+    description="Get paginated list of gateway assignments",
 )
 async def get_assignments(
     page: int = Query(1, ge=1, description="Page number"),
@@ -42,7 +44,7 @@ async def get_assignments(
     farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
     active_only: bool = Query(False, description="Show only active assignments"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get paginated list of gateway assignments.
@@ -60,36 +62,39 @@ async def get_assignments(
     # Get assignments based on filters
     if gateway_id:
         assignments = await assignment_repo.get_by_gateway(
-            gateway_id=gateway_id,
-            active_only=active_only,
-            skip=skip,
-            limit=size
+            gateway_id=gateway_id, active_only=active_only, skip=skip, limit=size
         )
         total = await assignment_repo.count_by_gateway(gateway_id, active_only)
     elif farm_id:
         assignments = await assignment_repo.get_by_farm(
-            farm_id=farm_id,
-            active_only=active_only,
-            skip=skip,
-            limit=size
+            farm_id=farm_id, active_only=active_only, skip=skip, limit=size
         )
         total = await assignment_repo.count_by_farm(farm_id, active_only)
     else:
-        # Get all assignments
+        # Get all assignments with relations
+        assignments = await assignment_repo.get_all_with_relations(
+            skip=skip, limit=size, active_only=active_only
+        )
         if active_only:
-            assignments = await assignment_repo.get_all(skip=skip, limit=size)
-            assignments = [a for a in assignments if a.is_active]
-            total = len(assignments)
+            total = await assignment_repo.count()  # This would need a better method
         else:
-            assignments = await assignment_repo.get_all(skip=skip, limit=size)
             total = await assignment_repo.count()
 
     return PaginatedResponse(
-        items=[GatewayAssignmentResponse.model_validate(a) for a in assignments],
+        items=[
+            GatewayAssignmentResponse(
+                **assignment.__dict__,
+                can_unassign=(
+                    assignment.assigned_by == current_user.id
+                    or current_user.role == "super admin"
+                ),
+            )
+            for assignment in assignments
+        ],
         total=total,
         page=page,
         size=size,
-        pages=math.ceil(total / size) if total > 0 else 0
+        pages=math.ceil(total / size) if total > 0 else 0,
     )
 
 
@@ -98,12 +103,12 @@ async def get_assignments(
     response_model=GatewayAssignmentResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create Gateway Assignment",
-    description="Assign a gateway to a farm"
+    description="Assign a gateway to a farm",
 )
 async def create_assignment(
     assignment_data: GatewayAssignmentCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new gateway assignment.
@@ -122,13 +127,13 @@ async def create_assignment(
     if not gateway:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Gateway with ID {assignment_data.gateway_id} not found"
+            detail=f"Gateway with ID {assignment_data.gateway_id} not found",
         )
 
     if gateway.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only assign your own gateways"
+            detail="You can only assign your own gateways",
         )
 
     # Verify farm exists
@@ -136,7 +141,7 @@ async def create_assignment(
     if not farm:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farm with ID {assignment_data.farm_id} not found"
+            detail=f"Farm with ID {assignment_data.farm_id} not found",
         )
 
     # Check if gateway already has an active assignment
@@ -148,7 +153,7 @@ async def create_assignment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Gateway is already assigned to farm ID {existing_assignment.farm_id}. "
-                   f"Deactivate the current assignment first."
+            f"Deactivate the current assignment first.",
         )
 
     # Strip timezone info to make datetime timezone-naive (database uses TIMESTAMP WITHOUT TIME ZONE)
@@ -167,23 +172,30 @@ async def create_assignment(
             assigned_by=current_user.id,
             start_date=start_date,
             end_date=end_date,
-            is_active=True
+            is_active=True,
         )
 
         await db.commit()
+
+        # Reload with relations
+        await db.refresh(assignment)
+        assignment = await assignment_repo.get_with_relations(assignment.id)
 
         logger.info(
             f"Gateway assignment created: Gateway {gateway.gateway_uid} -> "
             f"Farm {farm.name} by user {current_user.username}"
         )
-        return GatewayAssignmentResponse.model_validate(assignment)
+        return GatewayAssignmentResponse(
+            **assignment.__dict__,
+            can_unassign=True,  # User just created it, so they can unassign
+        )
 
     except Exception as e:
         await db.rollback()
         logger.error(f"Error creating gateway assignment: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create gateway assignment"
+            detail="Failed to create gateway assignment",
         )
 
 
@@ -191,40 +203,45 @@ async def create_assignment(
     "/{assignment_id}",
     response_model=GatewayAssignmentResponse,
     summary="Get Gateway Assignment",
-    description="Get a specific gateway assignment by ID"
+    description="Get a specific gateway assignment by ID",
 )
 async def get_assignment(
     assignment_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get a specific gateway assignment by ID.
     """
     assignment_repo = GatewayAssignmentRepository(db)
 
-    assignment = await assignment_repo.get_by_id(assignment_id)
+    assignment = await assignment_repo.get_with_relations(assignment_id)
 
     if not assignment:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway assignment not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
-    return GatewayAssignmentResponse.model_validate(assignment)
+    return GatewayAssignmentResponse(
+        **assignment.__dict__,
+        can_unassign=(
+            assignment.assigned_by == current_user.id
+            or current_user.role == "super admin"
+        ),
+    )
 
 
 @router.put(
     "/{assignment_id}",
     response_model=GatewayAssignmentResponse,
     summary="Update Gateway Assignment",
-    description="Update a gateway assignment"
+    description="Update a gateway assignment",
 )
 async def update_assignment(
     assignment_id: int,
     assignment_data: GatewayAssignmentUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update a gateway assignment.
@@ -238,18 +255,25 @@ async def update_assignment(
 
     if not assignment:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway assignment not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
     # Verify user owns the gateway
     gateway_repo = GatewayRepository(db)
     gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    if gateway.user_id != current_user.id:
+    # Allow update if:
+    # 1. User owns the gateway, OR
+    # 2. User created the assignment, OR
+    # 3. User is a super admin
+    if (
+        gateway.user_id != current_user.id
+        and assignment.assigned_by != current_user.id
+        and current_user.role != "super admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update assignments for your own gateways"
+            detail="You can only update assignments for your own gateways or assignments you created",
         )
 
     # Prepare update data
@@ -257,8 +281,7 @@ async def update_assignment(
 
     if not update_data:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields to update"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update"
         )
 
     # If farm_id is being updated, verify the new farm exists
@@ -268,13 +291,21 @@ async def update_assignment(
         if not farm:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Farm with ID {update_data['farm_id']} not found"
+                detail=f"Farm with ID {update_data['farm_id']} not found",
             )
 
     # Strip timezone info from dates if present (database uses TIMESTAMP WITHOUT TIME ZONE)
-    if "start_date" in update_data and update_data["start_date"] and update_data["start_date"].tzinfo:
+    if (
+        "start_date" in update_data
+        and update_data["start_date"]
+        and update_data["start_date"].tzinfo
+    ):
         update_data["start_date"] = update_data["start_date"].replace(tzinfo=None)
-    if "end_date" in update_data and update_data["end_date"] and update_data["end_date"].tzinfo:
+    if (
+        "end_date" in update_data
+        and update_data["end_date"]
+        and update_data["end_date"].tzinfo
+    ):
         update_data["end_date"] = update_data["end_date"].replace(tzinfo=None)
 
     try:
@@ -282,7 +313,9 @@ async def update_assignment(
 
         await db.commit()
 
-        logger.info(f"Gateway assignment updated: ID {assignment_id} by user {current_user.username}")
+        logger.info(
+            f"Gateway assignment updated: ID {assignment_id} by user {current_user.username}"
+        )
         return GatewayAssignmentResponse.model_validate(updated_assignment)
 
     except Exception as e:
@@ -290,7 +323,7 @@ async def update_assignment(
         logger.error(f"Error updating gateway assignment: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update gateway assignment"
+            detail="Failed to update gateway assignment",
         )
 
 
@@ -298,12 +331,12 @@ async def update_assignment(
     "/{assignment_id}",
     response_model=MessageResponse,
     summary="Delete Gateway Assignment",
-    description="Delete a gateway assignment"
+    description="Delete a gateway assignment",
 )
 async def delete_assignment(
     assignment_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a gateway assignment.
@@ -317,18 +350,25 @@ async def delete_assignment(
 
     if not assignment:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway assignment not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
     # Verify user owns the gateway
     gateway_repo = GatewayRepository(db)
     gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    if gateway.user_id != current_user.id:
+    # Allow deletion if:
+    # 1. User owns the gateway, OR
+    # 2. User created the assignment, OR
+    # 3. User is a super admin
+    if (
+        gateway.user_id != current_user.id
+        and assignment.assigned_by != current_user.id
+        and current_user.role != "super admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete assignments for your own gateways"
+            detail="You can only delete assignments for your own gateways or assignments you created",
         )
 
     try:
@@ -336,18 +376,18 @@ async def delete_assignment(
 
         await db.commit()
 
-        logger.info(f"Gateway assignment deleted: ID {assignment_id} by user {current_user.username}")
-
-        return MessageResponse(
-            message=f"Gateway assignment deleted successfully"
+        logger.info(
+            f"Gateway assignment deleted: ID {assignment_id} by user {current_user.username}"
         )
+
+        return MessageResponse(message=f"Gateway assignment deleted successfully")
 
     except Exception as e:
         await db.rollback()
         logger.error(f"Error deleting gateway assignment: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete gateway assignment"
+            detail="Failed to delete gateway assignment",
         )
 
 
@@ -355,12 +395,12 @@ async def delete_assignment(
     "/{assignment_id}/deactivate",
     response_model=GatewayAssignmentResponse,
     summary="Deactivate Gateway Assignment",
-    description="Deactivate a gateway assignment"
+    description="Deactivate a gateway assignment",
 )
 async def deactivate_assignment(
     assignment_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Deactivate a gateway assignment by setting is_active to False and end_date to now.
@@ -372,38 +412,45 @@ async def deactivate_assignment(
 
     if not assignment:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway assignment not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
     # Verify user owns the gateway
     gateway_repo = GatewayRepository(db)
     gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    if gateway.user_id != current_user.id:
+    # Allow deactivation if:
+    # 1. User owns the gateway, OR
+    # 2. User created the assignment, OR
+    # 3. User is a super admin
+    if (
+        gateway.user_id != current_user.id
+        and assignment.assigned_by != current_user.id
+        and current_user.role != "super admin"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only deactivate assignments for your own gateways"
+            detail="You can only deactivate assignments for your own gateways or assignments you created",
         )
 
     if not assignment.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment is already inactive"
+            detail="Assignment is already inactive",
         )
 
     try:
         from datetime import datetime
 
         updated_assignment = await assignment_repo.update(
-            assignment_id,
-            is_active=False,
-            end_date=datetime.utcnow()
+            assignment_id, is_active=False, end_date=datetime.utcnow()
         )
 
         await db.commit()
 
-        logger.info(f"Gateway assignment deactivated: ID {assignment_id} by user {current_user.username}")
+        logger.info(
+            f"Gateway assignment deactivated: ID {assignment_id} by user {current_user.username}"
+        )
         return GatewayAssignmentResponse.model_validate(updated_assignment)
 
     except Exception as e:
@@ -411,5 +458,5 @@ async def deactivate_assignment(
         logger.error(f"Error deactivating gateway assignment: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to deactivate gateway assignment"
+            detail="Failed to deactivate gateway assignment",
         )

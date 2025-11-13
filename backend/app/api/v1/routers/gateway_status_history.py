@@ -22,6 +22,7 @@ from app.api.v1.schemas import (
 from app.api.v1.schemas.gateway_status_history import (
     GatewayStatusHistoryCreate,
     GatewayStatusHistoryResponse,
+    GatewayStatusHistoryWithGateway,
 )
 
 logger = logging.getLogger(__name__)
@@ -323,3 +324,46 @@ async def get_recent_changes(
     )
 
     return [GatewayStatusHistoryResponse.model_validate(c) for c in changes]
+
+
+@router.get(
+    "/recent",
+    response_model=list[GatewayStatusHistoryWithGateway],
+    summary="Get Recent Status Changes for All User Gateways",
+    description="Get recent status changes for all user's gateways"
+)
+async def get_recent_status_changes_for_user(
+    limit: int = Query(10, ge=1, le=50, description="Number of recent changes to return"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get recent status changes for all user's gateways with gateway details.
+
+    - **limit**: Number of recent changes to return (default: 10, max: 50)
+
+    Returns status history entries with gateway information sorted by creation time (most recent first).
+    """
+    gateway_repo = GatewayRepository(db)
+    history_repo = GatewayStatusHistoryRepository(db)
+
+    # Get all user's gateways
+    user_gateways = await gateway_repo.get_by_user(
+        user_id=current_user.id,
+        skip=0,
+        limit=1000  # Get all gateways
+    )
+
+    if not user_gateways:
+        return []
+
+    # Get gateway IDs
+    gateway_ids = [g.id for g in user_gateways]
+
+    # Get recent status changes for all gateways with gateway details
+    recent_changes = await history_repo.get_recent_by_gateway_ids(
+        gateway_ids=gateway_ids,
+        limit=limit
+    )
+
+    return [GatewayStatusHistoryWithGateway.model_validate(c) for c in recent_changes]

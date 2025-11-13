@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
-from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 from app.models.gateway import Gateway
 from app.models.sensor import Sensor
 from app.models.sensor_data import SensorData
 from app.models.farm import Farm
 from app.models.farmer import Farmer
+from app.models.gateway_status_history import GatewayStatusHistory
 from app.services.assignment_service import get_active_assignment
 from app.utils.logger import logger
 
@@ -19,6 +20,7 @@ class DataService:
         gateway_uid: str,
         sensor_uid: str,
         readings: List[Dict[str, Any]],
+        uptime_seconds: Optional[int] = None,
     ) -> int:
         """
         Save data to database
@@ -34,16 +36,23 @@ class DataService:
                 )
                 return 0
 
-            # 2. Get or create sensor (sensor may be auto-registered on first message)
+            # 2. Check if gateway is in maintenance mode - block data storage
+            if gateway.status == "maintenance":
+                logger.warning(
+                    f"Gateway {gateway_uid} is in maintenance mode — skipping data storage"
+                )
+                return 0
+
+            # 3. Get or create sensor (sensor may be auto-registered on first message)
             sensor = self._get_or_create_sensor(db, gateway.id, sensor_uid, readings[0])
             if not sensor:
                 logger.error(f"Failed get/create sensor: {sensor_uid}")
                 return 0
 
-            # 3. Update gateway status
-            self._update_gateway_status(db, gateway)
+            # 4. Update gateway status (skip if in maintenance mode)
+            self._update_gateway_status(db, gateway, uptime_seconds)
 
-            # 3.5 Determine active assignment (which farm/farmer owns this gateway right now)
+            # 5. Determine active assignment (which farm/farmer owns this gateway right now)
             assignment = get_active_assignment(db, gateway.gateway_uid)
             if not assignment:
                 logger.warning(
@@ -65,7 +74,7 @@ class DataService:
             except Exception:
                 farmer_id = None
 
-            # 4. Save sensor data
+            # 6. Save sensor data
             saved_count = 0
             for reading in readings:
                 try:
@@ -154,7 +163,33 @@ class DataService:
     def _get_sensor(self, db: Session, gateway_id: int, sensor_uid: str) -> Sensor:
         return self._get_or_create_sensor(db, gateway_id, sensor_uid, {})
 
-    def _update_gateway_status(self, db: Session, gateway: Gateway):
-        """Update gateway status and last_seen"""
+    def _update_gateway_status(
+        self, db: Session, gateway: Gateway, uptime_seconds: Optional[int] = None
+    ):
+        """Update gateway status and last_seen (skip if in maintenance mode)"""
+        # Skip status update if gateway is in maintenance mode
+        if gateway.status == "maintenance":
+            logger.info(
+                f"Gateway {gateway.gateway_uid} is in maintenance — skipping status update"
+            )
+            return
+
+        # Update to online and record last_seen
+        old_status = gateway.status
         gateway.status = "online"
-        gateway.last_seen = datetime.now(timezone.utc)
+        gateway.last_seen = datetime.now()
+
+        # Create status history entry if status changed or uptime is available
+        if old_status != "online" or uptime_seconds is not None:
+            try:
+                history = GatewayStatusHistory(
+                    gateway_id=gateway.id,
+                    status="online",
+                    uptime_seconds=uptime_seconds,
+                )
+                db.add(history)
+                logger.info(
+                    f"Gateway {gateway.gateway_uid} status updated to online (uptime: {uptime_seconds}s)"
+                )
+            except Exception as e:
+                logger.error(f"Error creating status history: {e}")

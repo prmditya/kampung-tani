@@ -7,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from './ui/breadcrumb';
+} from '../ui/breadcrumb';
 import { usePathname } from 'next/dist/client/components/navigation';
 
 export default function NavBreadcrumbs() {
