@@ -64,11 +64,27 @@
       <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-        <li><a href="#environment-setup">Environment Setup</a></li>
+        <li><a href="#installation">Installation</a>
+          <ul>
+            <li><a href="#option-1-docker-setup-recommended">Option 1: Docker Setup</a></li>
+            <li><a href="#option-2-local-development-setup">Option 2: Local Development Setup</a></li>
+          </ul>
+        </li>
+        <li><a href="#environment-setup">Environment Setup</a>
+          <ul>
+            <li><a href="#mqtt-broker-configuration">MQTT Broker Configuration</a></li>
+            <li><a href="#troubleshooting-mqtt-connection">Troubleshooting MQTT Connection</a></li>
+          </ul>
+        </li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li><a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#starting-the-application">Starting the Application</a></li>
+        <li><a href="#accessing-the-dashboard">Accessing the Dashboard</a></li>
+        <li><a href="#testing-mqtt-integration">Testing MQTT Integration</a></li>
+      </ul>
+    </li>
     <li><a href="#architecture">Architecture</a></li>
     <li><a href="#api-documentation">API Documentation</a></li>
     <li><a href="#contributing">Contributing</a></li>
@@ -196,7 +212,7 @@ To get a local copy up and running, follow these simple steps.
 
 Make sure you have the following software installed on your system:
 
-- **Docker & Docker Compose**
+- **Docker & Docker Compose** (for Docker setup)
 
   ```sh
   # Install Docker Desktop (includes Docker Compose)
@@ -210,13 +226,42 @@ Make sure you have the following software installed on your system:
   git --version
   ```
 
-- **Node.js (optional, for local development)**
+- **Mosquitto MQTT Broker** (required for IoT data ingestion)
+
+  **Windows:**
+  ```powershell
+  # Download installer from https://mosquitto.org/download/
+  # Or install via Chocolatey
+  choco install mosquitto
+  ```
+
+  **Linux:**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install mosquitto mosquitto-clients
+  ```
+
+  **Mac:**
+  ```bash
+  brew install mosquitto
+  ```
+
+- **Node.js & pnpm** (for local frontend development)
   ```sh
-  node --version
-  npm --version
+  node --version  # v20.x or higher
+  npm install -g pnpm
+  ```
+
+- **Python 3.11+** (for local backend/ingestion development)
+  ```sh
+  python --version
   ```
 
 ### Installation
+
+There are two ways to run this application: using Docker (recommended) or running services locally.
+
+#### Option 1: Docker Setup (Recommended)
 
 1. **Clone the repository**
 
@@ -225,7 +270,45 @@ Make sure you have the following software installed on your system:
    cd kampung-tani
    ```
 
-2. **Environment Setup**
+2. **Setup Mosquitto MQTT Broker**
+
+   Start your local Mosquitto MQTT broker:
+
+   **Windows:**
+   ```powershell
+   # Start Mosquitto as a service
+   net start mosquitto
+
+   # Or run manually
+   mosquitto -v
+   ```
+
+   **Linux:**
+   ```bash
+   # Start Mosquitto service
+   sudo systemctl start mosquitto
+   sudo systemctl enable mosquitto  # Enable on boot
+
+   # Check status
+   sudo systemctl status mosquitto
+   ```
+
+   **Mac:**
+   ```bash
+   # Start Mosquitto
+   brew services start mosquitto
+
+   # Or run manually
+   mosquitto -v
+   ```
+
+   **Verify MQTT Broker:**
+   ```sh
+   # Test connection (in a new terminal)
+   mosquitto_sub -h localhost -t test/topic -v
+   ```
+
+3. **Environment Setup**
    Copy the example environment files and configure them:
 
    ```sh
@@ -242,17 +325,40 @@ Make sure you have the following software installed on your system:
    cp frontend/.env.local.example frontend/.env.local
    ```
 
-3. **Configure Environment Variables**
+4. **Configure Environment Variables**
    Edit the `.env`, `backend/.env.local`, and `ingestion/.env.local` files with your specific configuration:
 
-   - **Global (.env)**: Database credentials, ports, MQTT broker settings
-   - **Backend (.env.local)**: FastAPI server configuration, JWT secrets, CORS origins
-   - **Ingestion (.env.local)**: Database URL, MQTT broker connection, topic patterns
-   - **Frontend (.env.local)**: Next.js application settings (optional, currently empty)
+   **Global (.env)**:
+   ```env
+   POSTGRES_USER=admin
+   POSTGRES_PASSWORD=admin123
+   POSTGRES_DB=kampoeng_tani_test
+   JWT_SECRET_KEY=your-secret-key-min-32-chars
+   MQTT_BROKER=localhost  # or your MQTT broker IP
+   MQTT_PORT=1883
+   ```
 
-   **⚠️ Important**: Never commit `.env` or `.env.local` files to version control. They contain sensitive information.
+   **Backend (.env.local)**:
+   ```env
+   DATABASE_URL=postgresql://admin:admin123@db:5432/kampoeng_tani_test
+   JWT_SECRET_KEY=your-secret-key-min-32-chars
+   ALLOWED_ORIGINS=http://localhost:3001
+   ```
 
-4. **Build and Start the Application**
+   **Ingestion (.env.local)**:
+   ```env
+   DATABASE_URL=postgresql://admin:admin123@db:5432/kampoeng_tani_test
+   MQTT_BROKER=host.docker.internal  # Use host.docker.internal to access host machine's MQTT broker
+   MQTT_PORT=1883
+   MQTT_TOPIC_PATTERN=kampoengtani/+/+/data
+   ```
+
+   **⚠️ Important**:
+   - Never commit `.env` or `.env.local` files to version control
+   - Use `host.docker.internal` as MQTT_BROKER in Docker to connect to your host machine's MQTT broker
+   - If MQTT broker is on another machine, use its IP address
+
+5. **Build and Start the Application**
 
    ```sh
    # Build and start all services
@@ -262,13 +368,129 @@ Make sure you have the following software installed on your system:
    docker-compose up --build -d
    ```
 
-5. **Verify Installation**
+6. **Verify Installation**
    After the containers are running, verify the services:
+   - **Frontend**: http://localhost:3001
+   - **Backend API**: http://localhost:5000
+   - **API Documentation**: http://localhost:5000/api/v1/docs
+   - **Database**: localhost:5433 (mapped from container's 5432)
+   - **Ingestion Service**: Check logs with `docker logs kampungtani_ingestion`
+
+#### Option 2: Local Development Setup
+
+For local development without Docker:
+
+1. **Clone the repository**
+
+   ```sh
+   git clone https://github.com/prmditya/kampung-tani.git
+   cd kampung-tani
+   ```
+
+2. **Setup Mosquitto MQTT Broker** (same as Docker setup above)
+
+3. **Setup PostgreSQL Database**
+
+   Install PostgreSQL and create a database:
+   ```sql
+   CREATE DATABASE kampoeng_tani_test;
+   CREATE USER admin WITH PASSWORD 'admin123';
+   GRANT ALL PRIVILEGES ON DATABASE kampoeng_tani_test TO admin;
+   ```
+
+   Run the schema:
+   ```sh
+   psql -U admin -d kampoeng_tani_test -f db/schema.sql
+   ```
+
+4. **Environment Setup**
+
+   Copy environment files:
+   ```sh
+   cp .env.example .env
+   cp backend/.env.local.example backend/.env.local
+   cp ingestion/.env.local.example ingestion/.env.local
+   cp frontend/.env.local.example frontend/.env.local
+   ```
+
+   **Backend (.env.local)**:
+   ```env
+   DATABASE_URL=postgresql://admin:admin123@localhost:5432/kampoeng_tani_test
+   JWT_SECRET_KEY=your-secret-key-min-32-chars
+   ALLOWED_ORIGINS=http://localhost:3000
+   ```
+
+   **Ingestion (.env.local)**:
+   ```env
+   DATABASE_URL=postgresql://admin:admin123@localhost:5432/kampoeng_tani_test
+   MQTT_BROKER=localhost
+   MQTT_PORT=1883
+   MQTT_TOPIC_PATTERN=kampoengtani/+/+/data
+   ```
+
+   **Frontend (.env.local)**:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+   ```
+
+5. **Start Backend Service**
+
+   ```sh
+   cd backend
+   python -m venv venv
+
+   # Windows
+   venv\Scripts\activate
+
+   # Linux/Mac
+   source venv/bin/activate
+
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+   Backend will run on http://localhost:5000
+
+6. **Start Ingestion Service**
+
+   In a new terminal:
+   ```sh
+   cd ingestion
+   python -m venv venv
+
+   # Windows
+   venv\Scripts\activate
+
+   # Linux/Mac
+   source venv/bin/activate
+
+   pip install -r requirements.txt
+   python -m app.main
+   ```
+
+7. **Start Frontend Service**
+
+   In a new terminal:
+   ```sh
+   cd frontend
+
+   # Install pnpm if not already installed
+   npm install -g pnpm
+
+   # Install dependencies
+   pnpm install
+
+   # Start development server
+   pnpm dev
+   ```
+
+   Frontend will run on http://localhost:3000
+
+8. **Verify Installation**
    - **Frontend**: http://localhost:3000
    - **Backend API**: http://localhost:5000
    - **API Documentation**: http://localhost:5000/api/v1/docs
    - **Database**: localhost:5432
-   - **Ingestion Service**: Check logs with `docker logs kampungtani_ingestion`
 
 ### Environment Setup
 
@@ -284,6 +506,57 @@ The application requires environment configuration for:
 - **CORS Settings**: Allowed origins for development
 - **MQTT Broker**: Connection details and credentials for IoT gateway communication
 
+#### MQTT Broker Configuration
+
+The ingestion service requires a running MQTT broker to receive data from IoT gateways.
+
+**For Docker Setup:**
+- The MQTT broker runs on your host machine (laptop/desktop)
+- Use `host.docker.internal` as the MQTT_BROKER value in `ingestion/.env.local`
+- This special DNS name allows Docker containers to connect to services on the host
+
+**For Local Setup:**
+- Use `localhost` or `127.0.0.1` as the MQTT_BROKER value
+- Both the ingestion service and MQTT broker run on the same machine
+
+**For External MQTT Broker:**
+- If your MQTT broker is on another machine, use its IP address
+- Ensure firewall allows connections on port 1883 (default MQTT port)
+- Configure MQTT_USERNAME and MQTT_PASSWORD if authentication is enabled
+
+#### Troubleshooting MQTT Connection
+
+If the ingestion service cannot connect to MQTT broker:
+
+1. **Verify MQTT broker is running:**
+   ```sh
+   # Windows
+   netstat -an | findstr :1883
+
+   # Linux/Mac
+   netstat -an | grep 1883
+   ```
+
+2. **Test MQTT connection:**
+   ```sh
+   # Subscribe to test topic
+   mosquitto_sub -h localhost -t test/topic -v
+
+   # In another terminal, publish a message
+   mosquitto_pub -h localhost -t test/topic -m "Hello MQTT"
+   ```
+
+3. **Check Docker container can reach host:**
+   ```sh
+   # From inside a container
+   docker exec kampungtani_ingestion ping host.docker.internal
+   ```
+
+4. **Check ingestion service logs:**
+   ```sh
+   docker logs -f kampungtani_ingestion
+   ```
+
 #### Security Notes
 
 - Create strong, unique passwords and secret keys
@@ -291,6 +564,7 @@ The application requires environment configuration for:
 - Never commit `.env` or `.env.local` files to version control
 - Refer to example files for required variables
 - Use environment-specific configurations
+- Secure your MQTT broker with authentication in production
 
 #### Example Environment Files
 
@@ -313,26 +587,103 @@ Copy these files to their respective `.env.local` names and configure them accor
 
 ### Starting the Application
 
+**With Docker:**
 ```sh
 # Start all services
 docker-compose up
 
+# Start in detached mode (background)
+docker-compose up -d
+
 # View logs
 docker-compose logs -f
 
+# View specific service logs
+docker-compose logs -f frontend
+docker-compose logs -f backend
+docker-compose logs -f ingestion
+
 # Stop services
 docker-compose down
+
+# Rebuild and restart
+docker-compose up --build
+
+# Rebuild specific service
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
+```
+
+**Local Development:**
+```sh
+# Start each service in separate terminals
+
+# Terminal 1 - Backend
+cd backend && source venv/bin/activate && python main.py
+
+# Terminal 2 - Ingestion
+cd ingestion && source venv/bin/activate && python -m app.main
+
+# Terminal 3 - Frontend
+cd frontend && pnpm dev
 ```
 
 ### Accessing the Dashboard
 
-1. **Open the web application**: Navigate to http://localhost:3000
+**Docker Setup:**
+1. **Open the web application**: Navigate to http://localhost:3001
 2. **Login with default credentials** (change in production):
    - Username: `admin`
    - Password: `admin123`
 3. **Explore the dashboard**: View real-time sensor data, gateway status, farmers, and farm management
 
+**Local Setup:**
+1. **Open the web application**: Navigate to http://localhost:3000
+2. **Login with default credentials** (same as above)
+
 **⚠️ Security Note**: Change default credentials immediately in production environments.
+
+### Testing MQTT Integration
+
+To test if your MQTT broker and ingestion service are working:
+
+1. **Verify MQTT Broker is running:**
+   ```sh
+   # Check if port 1883 is listening
+   netstat -an | grep 1883  # Linux/Mac
+   netstat -an | findstr :1883  # Windows
+   ```
+
+2. **Subscribe to test topic:**
+   ```sh
+   mosquitto_sub -h localhost -t kampoengtani/+/+/data -v
+   ```
+
+3. **Publish test sensor data:**
+   ```sh
+   mosquitto_pub -h localhost -t kampoengtani/GW001/farm1/data -m '{
+     "d": [
+       {"tag": "SEM225:Temperature", "value": 250},
+       {"tag": "SEM225:Moisture", "value": 350},
+       {"tag": "SEM225:PH", "value": 65},
+       {"tag": "SEM225:Nitrogen", "value": 120},
+       {"tag": "SEM225:Phosphorus", "value": 45},
+       {"tag": "SEM225:Potassium", "value": 180}
+     ],
+     "ts": "2025-01-13T10:30:00Z"
+   }'
+   ```
+
+4. **Check ingestion service logs:**
+   ```sh
+   docker logs -f kampungtani_ingestion  # For Docker
+   # Or check terminal output for local setup
+   ```
+
+5. **Verify data in dashboard:**
+   - Login to dashboard at http://localhost:3001 (Docker) or http://localhost:3000 (Local)
+   - Navigate to Data page
+   - Check if sensor data appears for gateway GW001
 
 ### API Usage
 
