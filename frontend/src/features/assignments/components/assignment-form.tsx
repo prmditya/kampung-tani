@@ -33,7 +33,6 @@ import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import { toast } from 'sonner';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   assignmentSchema,
   AssignmentFormData,
@@ -219,6 +218,9 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
                           field.onChange(
                             date ? formatDateTimeToISO(date) : undefined,
                           )
+                        }
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
                         }
                       />
                     </PopoverContent>
