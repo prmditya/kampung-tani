@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 
 export function Topbar() {
   return (
-    <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 md:px-6 ">
+    <header className="sticky top-0 z-10 flex h-14 sm:h-18 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 md:px-6 ">
       <SidebarTrigger className="-ml-1" />
 
       <Separator

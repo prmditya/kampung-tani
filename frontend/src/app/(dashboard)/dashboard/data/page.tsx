@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DataFilter, DataChart, ReadingsTable } from '@/features/data';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DataChart, ReadingsTable } from '@/features/data';
 import { useGateways } from '@/hooks/use-gateways';
 import {
   useSensorsByGateway,
@@ -22,7 +23,24 @@ import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import type { SensorDataResponse } from '@/types/api';
-import { Loader2, Search } from 'lucide-react';
+import {
+  Loader2,
+  Search,
+  Filter,
+  RefreshCw,
+  Download,
+  Clock,
+  Calendar as CalendarIcon,
+  RotateCw,
+} from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function DataPage() {
   const [selectedGateway, setSelectedGateway] = useState<string>('none');
@@ -31,13 +49,15 @@ export default function DataPage() {
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [hours, setHours] = useState(5);
+  const [hours, setHours] = useState(12);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedMeasurementTypes, setSelectedMeasurementTypes] = useState<
     string[]
   >([]);
   const [tableSearch, setTableSearch] = useState('');
+  const [labelInterval, setLabelInterval] = useState<number>(60); // Label interval in minutes
+  const [timeMode, setTimeMode] = useState<'quick' | 'custom'>('quick'); // Time selection mode
 
   // Fetch gateways
   const { data: gatewaysData, isLoading: isLoadingGateways } = useGateways();
@@ -72,13 +92,13 @@ export default function DataPage() {
     return undefined;
   }, [dateTo]);
 
-  // Calculate hours if no date range is provided (for table data)
+  // Calculate hours based on time mode
   const calculatedHours = useMemo(() => {
-    if (dateFrom || dateTo) {
+    if (timeMode === 'custom' && (dateFrom || dateTo)) {
       return undefined; // Use date range instead of hours
     }
     return hours;
-  }, [dateFrom, dateTo, hours]);
+  }, [timeMode, dateFrom, dateTo, hours]);
 
   // Parse farmer_id and farm_id for API
   const farmerId =
@@ -89,7 +109,7 @@ export default function DataPage() {
   const {
     data: sensorDataResponse,
     isLoading: isLoadingData,
-    refetch,
+    refetch: refetchTable,
   } = useSensorData(sensorId, {
     page,
     size: pageSize,
@@ -102,17 +122,20 @@ export default function DataPage() {
   });
 
   // Fetch sensor data for chart (non-paginated, using same filters as table but larger size)
-  const { data: chartDataResponse, isLoading: isLoadingChartData } =
-    useSensorData(sensorId, {
-      page: 1,
-      size: 1000, // Get more data for chart visualization
-      hours: calculatedHours,
-      start_date: startDate,
-      end_date: endDate,
-      search: tableSearch || undefined,
-      farmer_id: farmerId,
-      farm_id: farmId,
-    });
+  const {
+    data: chartDataResponse,
+    isLoading: isLoadingChartData,
+    refetch: refetchChart,
+  } = useSensorData(sensorId, {
+    page: 1,
+    size: 1000, // Get more data for chart visualization
+    hours: calculatedHours,
+    start_date: startDate,
+    end_date: endDate,
+    search: tableSearch || undefined,
+    farmer_id: farmerId,
+    farm_id: farmId,
+  });
 
   // Process sensor data for table display
   const sensorReadings: SensorDataResponse[] = useMemo(() => {
@@ -152,7 +175,7 @@ export default function DataPage() {
 
     const dataByType: Record<
       string,
-      Array<{ time: string; value: number; unit?: string }>
+      Array<{ time: string; value: number | null; unit?: string }>
     > = {};
 
     // Filter by selected measurement types only (time filtering is done by API)
@@ -160,6 +183,14 @@ export default function DataPage() {
       const measurementType = reading.metadata?.measurement_type || 'Unknown';
       return selectedMeasurementTypes.includes(measurementType);
     });
+
+    // First pass: collect all data points
+    const rawDataByType: Record<
+      string,
+      Map<number, { value: number; unit?: string }>
+    > = {};
+    let minTimestamp = Infinity;
+    let maxTimestamp = -Infinity;
 
     filteredReadings.forEach((reading) => {
       const date = new Date(reading.timestamp);
@@ -169,43 +200,59 @@ export default function DataPage() {
       const roundedSeconds = Math.floor(seconds / 10) * 10;
       date.setSeconds(roundedSeconds, 0);
 
-      // Format time to show hours:minutes:seconds
-      const time = date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
+      const timestamp = date.getTime();
+      minTimestamp = Math.min(minTimestamp, timestamp);
+      maxTimestamp = Math.max(maxTimestamp, timestamp);
 
       const measurementType = reading.metadata?.measurement_type || 'Unknown';
 
-      if (!dataByType[measurementType]) {
-        dataByType[measurementType] = [];
+      if (!rawDataByType[measurementType]) {
+        rawDataByType[measurementType] = new Map();
       }
 
-      // Check if we already have this time point
-      const existingPoint = dataByType[measurementType].find(
-        (d) => d.time === time,
-      );
-      if (existingPoint) {
-        // Update with latest value
-        existingPoint.value = reading.value;
-        existingPoint.unit = reading.unit || undefined;
-      } else {
-        dataByType[measurementType].push({
-          time,
-          value: reading.value,
-          unit: reading.unit || undefined,
-        });
-      }
+      // Store by timestamp for easy lookup
+      rawDataByType[measurementType].set(timestamp, {
+        value: reading.value,
+        unit: reading.unit || undefined,
+      });
     });
 
-    // Sort each type's data by time
-    Object.keys(dataByType).forEach((type) => {
-      dataByType[type].sort((a, b) => {
-        const timeA = new Date(`1970-01-01 ${a.time}`).getTime();
-        const timeB = new Date(`1970-01-01 ${b.time}`).getTime();
-        return timeA - timeB;
-      });
+    // Second pass: fill gaps with null for each measurement type
+    Object.keys(rawDataByType).forEach((type) => {
+      const typeData: Array<{
+        time: string;
+        value: number | null;
+        unit?: string;
+      }> = [];
+      const dataMap = rawDataByType[type];
+
+      // Generate complete timeline with 10-second intervals
+      for (let ts = minTimestamp; ts <= maxTimestamp; ts += 10000) {
+        const date = new Date(ts);
+        const time = date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+
+        const dataPoint = dataMap.get(ts);
+        if (dataPoint) {
+          typeData.push({
+            time,
+            value: dataPoint.value,
+            unit: dataPoint.unit,
+          });
+        } else {
+          // Fill gap with null
+          typeData.push({
+            time,
+            value: null,
+            unit: undefined,
+          });
+        }
+      }
+
+      dataByType[type] = typeData;
     });
 
     return dataByType;
@@ -218,13 +265,23 @@ export default function DataPage() {
     setSelectedFarm('all');
     setDateFrom(undefined);
     setDateTo(undefined);
-    setHours(5);
+    setHours(12);
     setPage(1);
     setTableSearch('');
+    setTimeMode('quick');
   };
 
-  const handleRefresh = () => {
-    refetch();
+  const handleRefresh = async () => {
+    await Promise.all([refetchTable(), refetchChart()]);
+  };
+
+  const handleTimeModeChange = (mode: 'quick' | 'custom') => {
+    setTimeMode(mode);
+    // Clear custom dates when switching to quick select
+    if (mode === 'quick') {
+      setDateFrom(undefined);
+      setDateTo(undefined);
+    }
   };
 
   // Reset page when filters change
@@ -320,25 +377,251 @@ export default function DataPage() {
 
   const isLoading = isLoadingGateways || isLoadingSensors || isLoadingData;
   const isChartLoading = isLoadingChartData;
+  const isRefreshing = isLoadingData || isLoadingChartData;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <DataFilter
-        gateways={gatewaysData?.items || []}
-        sensors={sensorsData?.items || []}
-        selectedGateway={selectedGateway}
-        selectedSensor={selectedSensor}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        onGatewayChange={handleGatewayChange}
-        onSensorChange={handleSensorChange}
-        onDateFromChange={handleDateFromChange}
-        onDateToChange={handleDateToChange}
-        onReset={handleReset}
-        onRefresh={handleRefresh}
-        onExport={handleExport}
-        isRefreshing={isLoadingData}
-      />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Filters Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            {/* Gateway Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="gateway-filter">Gateway</Label>
+              <Select
+                value={selectedGateway}
+                onValueChange={handleGatewayChange}
+              >
+                <SelectTrigger id="gateway-filter" className="w-full">
+                  <SelectValue placeholder="Select Gateway" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select Gateway</SelectItem>
+                  {(gatewaysData?.items || []).map((gateway) => (
+                    <SelectItem key={gateway.id} value={gateway.id.toString()}>
+                      {gateway.name || gateway.gateway_uid}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sensor Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="sensor-filter">Sensor</Label>
+              <Select
+                value={selectedSensor}
+                onValueChange={handleSensorChange}
+                disabled={selectedGateway === 'none'}
+              >
+                <SelectTrigger id="sensor-filter" className="w-full">
+                  <SelectValue placeholder="Select Sensor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select Sensor</SelectItem>
+                  {(sensorsData?.items || []).map((sensor) => (
+                    <SelectItem key={sensor.id} value={sensor.id.toString()}>
+                      {sensor.name || sensor.sensor_uid} ({sensor.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Farmer Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="farmer-filter">Farmer</Label>
+              <Select value={selectedFarmer} onValueChange={handleFarmerChange}>
+                <SelectTrigger id="farmer-filter" className="w-full">
+                  <SelectValue placeholder="All Farmers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Farmers</SelectItem>
+                  {(farmersData?.items || []).map((farmer) => (
+                    <SelectItem key={farmer.id} value={farmer.id.toString()}>
+                      {farmer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Farm Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="farm-filter">Farm</Label>
+              <Select value={selectedFarm} onValueChange={handleFarmChange}>
+                <SelectTrigger id="farm-filter" className="w-full">
+                  <SelectValue placeholder="All Farms" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Farms</SelectItem>
+                  {(farmsData?.items || [])
+                    .filter(
+                      (farm) =>
+                        selectedFarmer === 'all' ||
+                        farm.farmer_id === parseInt(selectedFarmer),
+                    )
+                    .map((farm) => (
+                      <SelectItem key={farm.id} value={farm.id.toString()}>
+                        {farm.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid sm:flex gap-2 w-full">
+            <Button
+              onClick={handleRefresh}
+              variant="default"
+              disabled={isRefreshing}
+              className="flex-auto"
+            >
+              <RotateCw
+                className={cn('mr-2 h-4 w-4', isRefreshing && 'animate-spin')}
+              />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button
+              onClick={handleReset}
+              variant="outline"
+              className="flex-auto"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Reset Filters
+            </Button>
+            <Button
+              onClick={handleExport}
+              variant="secondary"
+              className="flex-auto"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Time Range Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Time Range
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs
+            value={timeMode}
+            onValueChange={(v) => handleTimeModeChange(v as 'quick' | 'custom')}
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="quick">Quick Select</TabsTrigger>
+              <TabsTrigger value="custom">Custom Range</TabsTrigger>
+            </TabsList>
+
+            {/* Quick Select Tab */}
+            <TabsContent value="quick" className="space-y-3">
+              <div className="space-y-2">
+                <Label>Select Time Range</Label>
+                <Select
+                  value={hours.toString()}
+                  onValueChange={(value) => setHours(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Last 1 Hour</SelectItem>
+                    <SelectItem value="12">Last 12 Hours</SelectItem>
+                    <SelectItem value="24">Last 24 Hours</SelectItem>
+                    <SelectItem value="48">Last 48 Hours (2 Days)</SelectItem>
+                    <SelectItem value="72">Last 72 Hours (3 Days)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Showing data from the last {hours} hour{hours > 1 ? 's' : ''}{' '}
+                until now
+              </p>
+            </TabsContent>
+
+            {/* Custom Range Tab */}
+            <TabsContent value="custom" className="space-y-3">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Date From</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !dateFrom && 'text-muted-foreground',
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFrom ? format(dateFrom, 'PPP') : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom}
+                        captionLayout="dropdown"
+                        onSelect={handleDateFromChange}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Date To</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !dateTo && 'text-muted-foreground',
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateTo ? format(dateTo, 'PPP') : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateTo}
+                        captionLayout="dropdown"
+                        onSelect={handleDateToChange}
+                        disabled={(date) =>
+                          dateFrom ? date < dateFrom : false
+                        }
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              {dateFrom && dateTo && (
+                <p className="text-sm text-muted-foreground">
+                  Showing data from {format(dateFrom, 'PPP')} to{' '}
+                  {format(dateTo, 'PPP')}
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {isLoading && (
         <div className="flex items-center justify-center py-8">
@@ -362,34 +645,65 @@ export default function DataPage() {
 
       {!isLoading && selectedSensor !== 'none' && (
         <>
-          {/* Measurement Type Filter */}
+          {/* Chart Settings */}
           {availableMeasurementTypes.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Select Measurement Types to Display</CardTitle>
+                <CardTitle>Chart Display Settings</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {availableMeasurementTypes.map((type) => (
-                    <Button
-                      key={type}
-                      variant={
-                        selectedMeasurementTypes.includes(type)
-                          ? 'default'
-                          : 'outline'
-                      }
-                      size="sm"
-                      onClick={() => {
-                        setSelectedMeasurementTypes((prev) =>
-                          prev.includes(type)
-                            ? prev.filter((t) => t !== type)
-                            : [...prev, type],
-                        );
-                      }}
-                    >
-                      {type}
-                    </Button>
-                  ))}
+              <CardContent className="space-y-4">
+                {/* Measurement Type Filter */}
+                <div className="space-y-2">
+                  <Label>Select Measurement Types</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableMeasurementTypes.map((type) => (
+                      <Button
+                        key={type}
+                        variant={
+                          selectedMeasurementTypes.includes(type)
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMeasurementTypes((prev) =>
+                            prev.includes(type)
+                              ? prev.filter((t) => t !== type)
+                              : [...prev, type],
+                          );
+                        }}
+                      >
+                        {type}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select which measurement types to display in charts
+                  </p>
+                </div>
+
+                {/* Chart Label Interval */}
+                <div className="space-y-2">
+                  <Label>Chart Label Interval</Label>
+                  <Select
+                    value={labelInterval.toString()}
+                    onValueChange={(value) => setLabelInterval(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-64">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 Minutes</SelectItem>
+                      <SelectItem value="30">30 Minutes</SelectItem>
+                      <SelectItem value="60">1 Hour</SelectItem>
+                      <SelectItem value="120">2 Hours</SelectItem>
+                      <SelectItem value="240">4 Hours</SelectItem>
+                      <SelectItem value="360">6 Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Controls spacing between time labels on the X-axis
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -407,6 +721,7 @@ export default function DataPage() {
                   key={type}
                   data={data.map((d) => ({ time: d.time, [type]: d.value }))}
                   title={`${type}${data[0]?.unit ? ` (${data[0].unit})` : ''}`}
+                  labelInterval={labelInterval}
                 />
               ))}
             </div>
@@ -425,65 +740,15 @@ export default function DataPage() {
           <Card>
             <CardHeader>
               <CardTitle>Sensor Readings</CardTitle>
-              <div className="flex flex-wrap items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 mt-4">
                 {/* Search */}
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search readings..."
-                    value={tableSearch}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-64"
-                  />
-                </div>
-
-                {/* Farmer Filter */}
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm whitespace-nowrap">Farmer:</Label>
-                  <Select
-                    value={selectedFarmer}
-                    onValueChange={handleFarmerChange}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="All Farmers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Farmers</SelectItem>
-                      {farmersData?.items.map((farmer) => (
-                        <SelectItem
-                          key={farmer.id}
-                          value={farmer.id.toString()}
-                        >
-                          {farmer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Farm Filter */}
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm whitespace-nowrap">Farm:</Label>
-                  <Select value={selectedFarm} onValueChange={handleFarmChange}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="All Farms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Farms</SelectItem>
-                      {farmsData?.items
-                        .filter(
-                          (farm) =>
-                            selectedFarmer === 'all' ||
-                            farm.farmer_id === parseInt(selectedFarmer),
-                        )
-                        .map((farm) => (
-                          <SelectItem key={farm.id} value={farm.id.toString()}>
-                            {farm.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search readings..."
+                  value={tableSearch}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-64"
+                />
               </div>
             </CardHeader>
             <CardContent>
