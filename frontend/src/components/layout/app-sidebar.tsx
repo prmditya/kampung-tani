@@ -28,6 +28,7 @@ import Image from 'next/image';
 import { NavUser } from '@/components/layout/nav-user';
 import { useCurrentUser, useLogout } from '@/features/auth/hooks/use-auth';
 import GlobalSearch from '@/features/global-search/components/global-search';
+import { Skeleton } from '../ui/skeleton';
 
 // Menu items.
 const items = [
@@ -68,7 +69,7 @@ const secondaryItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const currentUser = useCurrentUser();
+  const { data: currentUser, isLoading } = useCurrentUser();
   const logoutMutation = useLogout();
 
   return (
@@ -168,13 +169,29 @@ export function AppSidebar() {
       </SidebarContent>
       <Separator />
       <SidebarFooter>
-        <NavUser
-          user={{
-            name: currentUser?.username || 'User',
-            email: currentUser?.email || 'example@example.com',
-          }}
-        />
+        {isLoading ? (
+          <SkeletonNavUser />
+        ) : (
+          <NavUser
+            user={{
+              name: currentUser?.username || 'User',
+              email: currentUser?.email || 'example@example.com',
+            }}
+          />
+        )}
       </SidebarFooter>
     </Sidebar>
   );
 }
+
+const SkeletonNavUser = () => {
+  return (
+    <div className="flex gap-2 w-full py-2">
+      <Skeleton className="w-10 h-8.5 rounded-lg" />
+      <div className="flex flex-col justify-center gap-2 w-full">
+        <Skeleton className="w-20 h-2" />
+        <Skeleton className="w-30 h-2" />
+      </div>
+    </div>
+  );
+};

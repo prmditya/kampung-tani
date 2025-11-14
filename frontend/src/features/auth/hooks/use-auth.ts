@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import axios from 'axios';
@@ -82,21 +82,13 @@ export function useLogout() {
 }
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<LoginResponse['user'] | null>(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } catch {
-        setUser(null);
-      }
-    }
-  }, []);
-
-  return user;
+  return useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      const response = await apiClient.get<UserResponse>('/auth/me');
+      return response.data;
+    },
+  });
 }
 
 export function isSuperAdmin(user: LoginResponse['user'] | null): boolean {
