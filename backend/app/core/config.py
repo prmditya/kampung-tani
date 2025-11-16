@@ -89,13 +89,6 @@ class Settings(BaseSettings):
         return v.upper()
 
     class Config:
-        # Load environment variables from files in order
-        env_file = [
-            Path(__file__).parent.parent.parent.parent
-            / ".env",  # Global config (project root)
-            Path(__file__).parent.parent.parent
-            / ".env.local",  # Backend-specific overrides
-        ]
         env_file_encoding = "utf-8"
         case_sensitive = True
         validate_assignment = True
