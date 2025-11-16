@@ -25,13 +25,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - ./backend/.env.local
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-kampoeng_tani_test}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - JWT_ALGORITHM=HS256
-      - JWT_ACCESS_TOKEN_EXPIRE_HOURS=24
-      - API_PREFIX=/api/v1
-      - ALLOWED_ORIGINS=http://localhost:3001
     volumes:
       - ./backend:/app
     networks:
@@ -58,7 +55,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:15-alpine
+    image: docker.io/library/postgres:15-alpine
     container_name: kampungtani_db
     restart: always
     environment:
