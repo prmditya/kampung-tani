@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = Field(default=None)
 
     # JWT Configuration (SENSITIVE - from .env)
-    JWT_SECRET_KEY: str = Field(..., min_length=32)
+    JWT_SECRET_KEY: str = Field(
+        min_length=32, default="your-secret-key-that-is-very-secure"
+    )
     JWT_ALGORITHM: str = Field(default="HS256")
     JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = Field(default=24)
 
@@ -89,6 +91,10 @@ class Settings(BaseSettings):
         return v.upper()
 
     class Config:
+        env_file = [
+            Path(__file__).parent.parent.parent.parent / ".env",
+            Path(__file__).parent.parent.parent / ".env.local",
+        ]
         env_file_encoding = "utf-8"
         case_sensitive = True
         validate_assignment = True

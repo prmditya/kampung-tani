@@ -88,10 +88,16 @@ export function useCurrentUser() {
       const response = await apiClient.get<UserResponse>('/auth/me');
       return response.data;
     },
+    select: (data) => ({
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      role: data.role,
+    }),
   });
 }
 
-export function isSuperAdmin(user: LoginResponse['user'] | null): boolean {
+export function isSuperAdmin(user: LoginResponse['user'] | undefined): boolean {
   return user?.role === 'super admin';
 }
 

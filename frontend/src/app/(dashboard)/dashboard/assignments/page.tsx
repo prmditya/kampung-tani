@@ -104,7 +104,7 @@ export default function AssignmentsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
           <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
             <Unplug className="h-32 w-32" />

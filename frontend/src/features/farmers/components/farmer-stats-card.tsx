@@ -22,7 +22,7 @@ export default function farmerStatsCard({
       : 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
       <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
         <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
           <Users className="h-32 w-32" />
@@ -61,7 +61,7 @@ export default function farmerStatsCard({
         </div>
       </Card>
 
-      <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 hover:shadow-lg hover:scale-105 transition-all duration-300 col-span-full lg:col-span-1">
         <div className="absolute top-0 right-0 -mt-4 -mr-8 opacity-15">
           <CheckCircle2 className="h-32 w-32" />
         </div>

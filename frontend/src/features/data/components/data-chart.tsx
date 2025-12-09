@@ -186,26 +186,6 @@ export function DataChart({ data, title, labelInterval = 60 }: DataChartProps) {
                 fill="url(#colorQty)"
                 strokeWidth={2}
                 name={type}
-                dot={(props: any) => {
-                  // Don't show dots for null values or non-tick labels
-                  const isTickShown = customTicks.includes(props.payload?.time);
-                  const value = props.payload?.[type];
-
-                  if (!isTickShown || value === null || value === undefined) {
-                    return null;
-                  }
-
-                  return (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={3}
-                      fill="var(--chart-1)"
-                      stroke="var(--chart-1)"
-                      strokeWidth={2}
-                    />
-                  );
-                }}
                 activeDot={{
                   r: 5,
                   fill: 'var(--chart-1)',
