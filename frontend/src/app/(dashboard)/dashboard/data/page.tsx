@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   Clock,
   Calendar as CalendarIcon,
   RotateCw,
+  X,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -47,6 +48,7 @@ export default function DataPage() {
   const [selectedSensor, setSelectedSensor] = useState<string>('none');
   const [selectedFarmer, setSelectedFarmer] = useState<string>('all');
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
+  const [selectedAssignedBy, setSelectedAssignedBy] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [hours, setHours] = useState(12);
@@ -56,6 +58,7 @@ export default function DataPage() {
     string[]
   >([]);
   const [tableSearch, setTableSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [labelInterval, setLabelInterval] = useState<number>(60); // Label interval in minutes
   const [timeMode, setTimeMode] = useState<'quick' | 'custom'>('quick'); // Time selection mode
 
@@ -100,10 +103,27 @@ export default function DataPage() {
     return hours;
   }, [timeMode, dateFrom, dateTo, hours]);
 
-  // Parse farmer_id and farm_id for API
+  // Parse farmer_id, farm_id, and assigned_by_id for API
   const farmerId =
     selectedFarmer !== 'all' ? parseInt(selectedFarmer) : undefined;
   const farmId = selectedFarm !== 'all' ? parseInt(selectedFarm) : undefined;
+  const assignedById =
+    selectedAssignedBy !== 'all' ? parseInt(selectedAssignedBy) : undefined;
+
+  // Get unique assigned_by users from assignments data
+  const assignedByUsers = useMemo(() => {
+    if (!assignmentsData?.items) return [];
+    const uniqueUsers = new Map<number, { id: number; username: string }>();
+    assignmentsData.items.forEach((assignment) => {
+      if (assignment.assigned_by && assignment.assigned_by_user?.username) {
+        uniqueUsers.set(assignment.assigned_by, {
+          id: assignment.assigned_by,
+          username: assignment.assigned_by_user.username,
+        });
+      }
+    });
+    return Array.from(uniqueUsers.values());
+  }, [assignmentsData]);
 
   // Fetch sensor data for table (paginated) with all filters
   const {
@@ -119,6 +139,7 @@ export default function DataPage() {
     search: tableSearch || undefined,
     farmer_id: farmerId,
     farm_id: farmId,
+    assigned_by_id: assignedById,
   });
 
   // Fetch sensor data for chart (non-paginated, using same filters as table but larger size)
@@ -135,6 +156,7 @@ export default function DataPage() {
     search: tableSearch || undefined,
     farmer_id: farmerId,
     farm_id: farmId,
+    assigned_by_id: assignedById,
   });
 
   // Process sensor data for table display
@@ -263,11 +285,15 @@ export default function DataPage() {
     setSelectedSensor('all');
     setSelectedFarmer('all');
     setSelectedFarm('all');
+    setSelectedAssignedBy('all');
     setDateFrom(undefined);
     setDateTo(undefined);
     setHours(12);
     setPage(1);
     setTableSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
     setTimeMode('quick');
   };
 
@@ -306,8 +332,25 @@ export default function DataPage() {
     setPage(1);
   };
 
-  const handleSearchChange = (value: string) => {
-    setTableSearch(value);
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const searchValue = searchInputRef.current?.value || '';
+    setTableSearch(searchValue);
+    setPage(1);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearchSubmit();
+    }
+  };
+
+  const handleClearSearch = () => {
+    setTableSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
     setPage(1);
   };
 
@@ -318,6 +361,11 @@ export default function DataPage() {
 
   const handleFarmChange = (value: string) => {
     setSelectedFarm(value);
+    setPage(1);
+  };
+
+  const handleAssignedByChange = (value: string) => {
+    setSelectedAssignedBy(value);
     setPage(1);
   };
 
@@ -390,7 +438,7 @@ export default function DataPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             {/* Gateway Selector */}
             <div className="space-y-2">
               <Label htmlFor="gateway-filter">Gateway</Label>
@@ -472,6 +520,27 @@ export default function DataPage() {
                         {farm.name}
                       </SelectItem>
                     ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Assigned By Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="assigned-by-filter">Assigned By</Label>
+              <Select
+                value={selectedAssignedBy}
+                onValueChange={handleAssignedByChange}
+              >
+                <SelectTrigger id="assigned-by-filter" className="w-full">
+                  <SelectValue placeholder="All Users" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {assignedByUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.username}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -715,15 +784,19 @@ export default function DataPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : Object.entries(chartDataByType).length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {Object.entries(chartDataByType).map(([type, data]) => (
-                <DataChart
-                  key={type}
-                  data={data.map((d) => ({ time: d.time, [type]: d.value }))}
-                  title={`${type}${data[0]?.unit ? ` (${data[0].unit})` : ''}`}
-                  labelInterval={labelInterval}
-                />
-              ))}
+            <div className="grid gap-4 md:grid-cols-3">
+              {Object.entries(chartDataByType).map(([type, data]) => {
+                // Find unit from any data point that has it
+                const unit = data.find((d) => d.unit)?.unit;
+                return (
+                  <DataChart
+                    key={type}
+                    data={data.map((d) => ({ time: d.time, [type]: d.value }))}
+                    title={`${type}${unit ? ` (${unit})` : ''}`}
+                    labelInterval={labelInterval}
+                  />
+                );
+              })}
             </div>
           ) : (
             <Card>
@@ -740,16 +813,36 @@ export default function DataPage() {
           <Card>
             <CardHeader>
               <CardTitle>Sensor Readings</CardTitle>
-              <div className="flex items-center gap-2 mt-4">
-                {/* Search */}
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search readings..."
-                  value={tableSearch}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-64"
-                />
-              </div>
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex items-center gap-2 mt-4"
+              >
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search readings..."
+                    defaultValue={tableSearch}
+                    onKeyDown={handleSearchKeyDown}
+                    className="pl-9 pr-4"
+                  />
+                </div>
+                <Button type="submit" size="sm" variant="default">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+                {tableSearch && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClearSearch}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </form>
             </CardHeader>
             <CardContent>
               <ReadingsTable
@@ -762,51 +855,111 @@ export default function DataPage() {
               />
 
               {/* Pagination Controls */}
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-sm text-muted-foreground text-center sm:text-left">
                   Showing {(page - 1) * pageSize + 1} to{' '}
                   {Math.min(page * pageSize, sensorDataResponse?.total || 0)} of{' '}
                   {sensorDataResponse?.total || 0} results
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage(1)}
                     disabled={page === 1 || isLoadingData}
+                    title="First page"
                   >
-                    First
+                    <span className="sr-only sm:not-sr-only sm:mr-1">
+                      First
+                    </span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 sm:hidden"
+                    >
+                      <polyline points="11 17 6 12 11 7" />
+                      <polyline points="18 17 13 12 18 7" />
+                    </svg>
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1 || isLoadingData}
+                    title="Previous page"
                   >
-                    Previous
+                    <span className="sr-only sm:not-sr-only">Prev</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 sm:hidden"
+                    >
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
                   </Button>
-                  <div className="text-sm">
-                    Page {page} of {sensorDataResponse?.pages || 1}
+                  <div className="text-sm px-2 min-w-[80px] text-center">
+                    {page} / {sensorDataResponse?.pages || 1}
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage((p) => p + 1)}
                     disabled={
                       page >= (sensorDataResponse?.pages || 1) || isLoadingData
                     }
+                    title="Next page"
                   >
-                    Next
+                    <span className="sr-only sm:not-sr-only">Next</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 sm:hidden"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage(sensorDataResponse?.pages || 1)}
                     disabled={
                       page >= (sensorDataResponse?.pages || 1) || isLoadingData
                     }
+                    title="Last page"
                   >
-                    Last
+                    <span className="sr-only sm:not-sr-only sm:ml-1">Last</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 sm:hidden"
+                    >
+                      <polyline points="13 17 18 12 13 7" />
+                      <polyline points="6 17 11 12 6 7" />
+                    </svg>
                   </Button>
                 </div>
               </div>

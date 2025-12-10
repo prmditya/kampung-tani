@@ -165,6 +165,22 @@ export interface SensorDataResponse extends SensorDataBase {
   sensor_id: number;
   gateway_id: number;
   timestamp: string;
+
+  // Historical assignment snapshot
+  farm_id?: number | null;
+  assigned_by?: number | null;
+
+  // Nested relationships
+  farm?: {
+    id: number;
+    name: string;
+    location?: string | null;
+    farmer_id: number;
+  } | null;
+  assigned_by_user?: {
+    id: number;
+    username: string;
+  } | null;
 }
 
 export interface SensorDataBulkCreate {

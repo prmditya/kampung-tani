@@ -172,6 +172,89 @@ class GatewayRepository(BaseRepository[Gateway]):
         )
         return [{"status": row.status, "count": row.count} for row in result.all()]
 
+    async def get_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        status: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Gateway]:
+        """
+        Get all gateways (company-wide) with filters
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records
+            status: Filter by status
+            search: Search in gateway name or UID
+
+        Returns:
+            List of Gateway instances
+        """
+        query = select(Gateway)
+
+        if status:
+            query = query.where(Gateway.status == status)
+
+        if search:
+            search_filter = f"%{search}%"
+            query = query.where(
+                (Gateway.name.ilike(search_filter)) |
+                (Gateway.gateway_uid.ilike(search_filter))
+            )
+
+        query = query.order_by(Gateway.created_at.desc())
+        query = query.offset(skip).limit(limit)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def count_all(
+        self,
+        status: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> int:
+        """
+        Count all gateways (company-wide) with filters
+
+        Args:
+            status: Filter by status
+            search: Search in gateway name or UID
+
+        Returns:
+            Number of matching gateways
+        """
+        query = select(func.count()).select_from(Gateway)
+
+        if status:
+            query = query.where(Gateway.status == status)
+
+        if search:
+            search_filter = f"%{search}%"
+            query = query.where(
+                (Gateway.name.ilike(search_filter)) |
+                (Gateway.gateway_uid.ilike(search_filter))
+            )
+
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def get_status_distribution_all(self) -> List[dict]:
+        """
+        Get gateway status distribution for all gateways (company-wide)
+
+        Returns:
+            List of status counts
+        """
+        result = await self.db.execute(
+            select(
+                Gateway.status,
+                func.count(Gateway.id).label("count")
+            )
+            .group_by(Gateway.status)
+        )
+        return [{"status": row.status, "count": row.count} for row in result.all()]
+
     async def get_offline_gateways(self, minutes: int = 5) -> List[Gateway]:
         """
         Get gateways that should be marked as offline

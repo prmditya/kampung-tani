@@ -86,6 +86,7 @@ class DataService:
                             "measurement_type": reading.get("sensor_type"),  # Store what type of measurement (temperature, moisture, etc.)
                             "raw_value": reading.get("raw_value"),
                             "tag": reading.get("tag"),
+                            # Historical metadata (also stored as columns now)
                             "farm_id": farm_id,
                             "farmer_id": farmer_id,
                             "assignment_id": getattr(assignment, "id", None),
@@ -99,6 +100,9 @@ class DataService:
                         unit=reading.get("unit"),
                         metadata_=base_meta,
                         timestamp=reading["timestamp"],
+                        # NEW: Historical assignment snapshot
+                        farm_id=farm_id,
+                        assigned_by=getattr(assignment, "assigned_by", None),
                     )
                     db.add(sensor_data)
                     saved_count += 1

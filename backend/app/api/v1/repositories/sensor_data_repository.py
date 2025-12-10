@@ -7,6 +7,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 from sqlalchemy import select, func, and_, desc, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.sensor_data import SensorData
 from app.models.sensor import Sensor
@@ -31,7 +32,8 @@ class SensorDataRepository(BaseRepository[SensorData]):
         end_date: Optional[datetime] = None,
         search: Optional[str] = None,
         farmer_id: Optional[int] = None,
-        farm_id: Optional[int] = None
+        farm_id: Optional[int] = None,
+        assigned_by_id: Optional[int] = None
     ) -> List[SensorData]:
         """
         Get sensor data for a specific sensor
@@ -43,15 +45,16 @@ class SensorDataRepository(BaseRepository[SensorData]):
             start_date: Start date filter
             end_date: End date filter
             search: Search term for measurement type, sensor name, or value
-            farmer_id: Filter by farmer ID
-            farm_id: Filter by farm ID
+            farmer_id: Filter by farmer ID (uses historical snapshot)
+            farm_id: Filter by farm ID (uses historical snapshot)
+            assigned_by_id: Filter by user ID who assigned the gateway (uses historical snapshot)
 
         Returns:
             List of SensorData instances
         """
         # Determine which joins we need
         need_sensor_join = search is not None
-        need_assignment_join = farmer_id is not None or farm_id is not None
+        need_farm_join = farmer_id is not None  # Only need if filtering by farmer
 
         # Build base query
         query = select(SensorData).where(SensorData.sensor_id == sensor_id)
@@ -60,15 +63,9 @@ class SensorDataRepository(BaseRepository[SensorData]):
         if need_sensor_join:
             query = query.join(Sensor, SensorData.sensor_id == Sensor.id)
 
-        # Join with GatewayAssignment and Farm if farmer_id or farm_id filter is needed
-        if need_assignment_join:
-            query = query.join(
-                GatewayAssignment,
-                and_(
-                    SensorData.gateway_id == GatewayAssignment.gateway_id,
-                    GatewayAssignment.is_active == True
-                )
-            ).join(Farm, GatewayAssignment.farm_id == Farm.id)
+        # Join with Farm only if filtering by farmer_id (to access Farm.farmer_id)
+        if need_farm_join:
+            query = query.join(Farm, SensorData.farm_id == Farm.id)
 
         # Apply filters
         if start_date:
@@ -105,14 +102,24 @@ class SensorDataRepository(BaseRepository[SensorData]):
 
             query = query.where(or_(*search_filters))
 
+        # Use historical snapshot columns for filtering
         if farmer_id is not None:
             query = query.where(Farm.farmer_id == farmer_id)
 
         if farm_id is not None:
-            query = query.where(Farm.id == farm_id)
+            query = query.where(SensorData.farm_id == farm_id)
+
+        if assigned_by_id is not None:
+            query = query.where(SensorData.assigned_by == assigned_by_id)
 
         query = query.order_by(desc(SensorData.timestamp))
         query = query.offset(skip).limit(limit)
+        
+        # Eager load farm and assigned_by_user relationships
+        query = query.options(
+            selectinload(SensorData.farm),
+            selectinload(SensorData.assigned_by_user)
+        )
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -159,7 +166,8 @@ class SensorDataRepository(BaseRepository[SensorData]):
         end_date: Optional[datetime] = None,
         search: Optional[str] = None,
         farmer_id: Optional[int] = None,
-        farm_id: Optional[int] = None
+        farm_id: Optional[int] = None,
+        assigned_by_id: Optional[int] = None
     ) -> int:
         """
         Count sensor data for a sensor
@@ -169,15 +177,16 @@ class SensorDataRepository(BaseRepository[SensorData]):
             start_date: Start date filter
             end_date: End date filter
             search: Search term for measurement type, sensor name, or value
-            farmer_id: Filter by farmer ID
-            farm_id: Filter by farm ID
+            farmer_id: Filter by farmer ID (uses historical snapshot)
+            farm_id: Filter by farm ID (uses historical snapshot)
+            assigned_by_id: Filter by user ID who assigned the gateway (uses historical snapshot)
 
         Returns:
             Number of matching records
         """
         # Determine which joins we need
         need_sensor_join = search is not None
-        need_assignment_join = farmer_id is not None or farm_id is not None
+        need_farm_join = farmer_id is not None
 
         # Build base query
         query = select(func.count()).select_from(SensorData).where(SensorData.sensor_id == sensor_id)
@@ -186,15 +195,9 @@ class SensorDataRepository(BaseRepository[SensorData]):
         if need_sensor_join:
             query = query.join(Sensor, SensorData.sensor_id == Sensor.id)
 
-        # Join with GatewayAssignment and Farm if farmer_id or farm_id filter is needed
-        if need_assignment_join:
-            query = query.join(
-                GatewayAssignment,
-                and_(
-                    SensorData.gateway_id == GatewayAssignment.gateway_id,
-                    GatewayAssignment.is_active == True
-                )
-            ).join(Farm, GatewayAssignment.farm_id == Farm.id)
+        # Join with Farm only if filtering by farmer_id
+        if need_farm_join:
+            query = query.join(Farm, SensorData.farm_id == Farm.id)
 
         # Apply filters
         if start_date:
@@ -231,11 +234,15 @@ class SensorDataRepository(BaseRepository[SensorData]):
 
             query = query.where(or_(*search_filters))
 
+        # Use historical snapshot columns for filtering
         if farmer_id is not None:
             query = query.where(Farm.farmer_id == farmer_id)
 
         if farm_id is not None:
-            query = query.where(Farm.id == farm_id)
+            query = query.where(SensorData.farm_id == farm_id)
+
+        if assigned_by_id is not None:
+            query = query.where(SensorData.assigned_by == assigned_by_id)
 
         result = await self.db.execute(query)
         return result.scalar_one()
@@ -357,3 +364,73 @@ class SensorDataRepository(BaseRepository[SensorData]):
         )
         await self.db.flush()
         return result.rowcount
+
+    async def get_farm_summary_statistics(
+        self,
+        farm_id: int,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> dict:
+        """
+        Get summary statistics for all sensor data in a farm
+
+        Args:
+            farm_id: Farm ID
+            start_date: Start date filter
+            end_date: End date filter
+
+        Returns:
+            Dictionary with statistics grouped by measurement type
+        """
+        # Create an expression for measurement_type that can be reused
+        measurement_type_expr = func.coalesce(
+            SensorData.metadata_['measurement_type'].astext,
+            'Unknown'
+        )
+        
+        # Build query using the historical farm_id snapshot in sensor_data
+        # No need to join gateway_assignments anymore!
+        query = (
+            select(
+                measurement_type_expr.label('measurement_type'),
+                SensorData.unit,
+                func.count(SensorData.id).label('count'),
+                func.min(SensorData.value).label('min_value'),
+                func.max(SensorData.value).label('max_value'),
+                func.avg(SensorData.value).label('avg_value'),
+                func.min(SensorData.timestamp).label('first_reading'),
+                func.max(SensorData.timestamp).label('last_reading')
+            )
+            .where(SensorData.farm_id == farm_id)
+        )
+
+        # Apply date filters
+        if start_date:
+            query = query.where(SensorData.timestamp >= start_date)
+        if end_date:
+            query = query.where(SensorData.timestamp <= end_date)
+
+        # Group by measurement type and unit using the same expression
+        query = query.group_by(
+            measurement_type_expr,
+            SensorData.unit
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # Format results
+        summary = {}
+        for row in rows:
+            measurement_type = row.measurement_type or "Unknown"
+            summary[measurement_type] = {
+                "unit": row.unit,
+                "count": row.count,
+                "min_value": float(row.min_value) if row.min_value is not None else None,
+                "max_value": float(row.max_value) if row.max_value is not None else None,
+                "avg_value": float(row.avg_value) if row.avg_value is not None else None,
+                "first_reading": row.first_reading,
+                "last_reading": row.last_reading
+            }
+
+        return summary

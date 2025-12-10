@@ -31,10 +31,10 @@ router = APIRouter()
 @router.get(
     "/",
     response_model=PaginatedResponse[GatewayResponse],
-    summary="Get User Gateways",
-    description="Get paginated list of gateways for current user"
+    summary="Get All Gateways",
+    description="Get paginated list of all gateways (company-wide)"
 )
-async def get_user_gateways(
+async def get_all_gateways(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Items per page"),
     search: Optional[str] = Query(None, description="Search gateways by name or UID"),
@@ -43,7 +43,7 @@ async def get_user_gateways(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get paginated list of gateways for the current user.
+    Get paginated list of all gateways registered in the system.
 
     - **page**: Page number (default: 1)
     - **size**: Items per page (default: 20, max: 100)
@@ -52,10 +52,9 @@ async def get_user_gateways(
     """
     gateway_repo = GatewayRepository(db)
 
-    # Get paginated gateways
+    # Get paginated gateways (company-wide)
     skip = (page - 1) * size
-    gateways = await gateway_repo.get_by_user(
-        user_id=current_user.id,
+    gateways = await gateway_repo.get_all(
         skip=skip,
         limit=size,
         status=status,
@@ -63,8 +62,7 @@ async def get_user_gateways(
     )
 
     # Get total count
-    total = await gateway_repo.count_by_user(
-        user_id=current_user.id,
+    total = await gateway_repo.count_all(
         status=status,
         search=search
     )
@@ -141,7 +139,7 @@ async def create_gateway(
 @router.get(
     "/stats",
     summary="Get Gateway Statistics",
-    description="Get overall gateway statistics for the current user"
+    description="Get overall gateway statistics (company-wide)"
 )
 async def get_gateway_stats(
     current_user: User = Depends(get_current_user),
@@ -155,13 +153,11 @@ async def get_gateway_stats(
     """
     gateway_repo = GatewayRepository(db)
 
-    # Get total gateways count
-    total_gateways = await gateway_repo.count_by_user(user_id=current_user.id)
+    # Get total gateways count (company-wide)
+    total_gateways = await gateway_repo.count_all()
 
-    # Get status distribution
-    status_distribution = await gateway_repo.get_status_distribution_by_user(
-        user_id=current_user.id
-    )
+    # Get status distribution (company-wide)
+    status_distribution = await gateway_repo.get_status_distribution_all()
 
     # Calculate counts from distribution
     online_count = 0
@@ -198,19 +194,23 @@ async def get_gateway(
     """
     Get a specific gateway by ID.
 
-    Gateway must belong to the current user.
+    Gateway must belong to the current user or user must be a super admin.
     """
     gateway_repo = GatewayRepository(db)
 
-    gateway = await gateway_repo.get_with_sensors(
-        gateway_id=gateway_id,
-        user_id=current_user.id
-    )
+    # For super admin, get gateway without user_id filter
+    if current_user.role == "super admin":
+        gateway = await gateway_repo.get_by_id(gateway_id)
+    else:
+        gateway = await gateway_repo.get_with_sensors(
+            gateway_id=gateway_id,
+            user_id=current_user.id
+        )
 
     if not gateway:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway not found"
+            detail=f"Gateway with ID {gateway_id} not found"
         )
 
     return GatewayResponse.model_validate(gateway)
@@ -232,17 +232,24 @@ async def update_gateway(
     Update a gateway's information.
 
     Only provided fields will be updated.
-    Gateway must belong to the current user.
+    Gateway must belong to the current user or user must be a super admin.
     """
     gateway_repo = GatewayRepository(db)
 
-    # Check if gateway exists and belongs to user
+    # Check if gateway exists
     gateway = await gateway_repo.get_by_id(gateway_id)
 
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway not found"
+            detail=f"Gateway with ID {gateway_id} not found"
+        )
+
+    # Check permission: owner or super admin
+    if gateway.user_id != current_user.id and current_user.role != "super admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this gateway"
         )
 
     # Prepare update data
@@ -302,18 +309,25 @@ async def delete_gateway(
     """
     Delete a gateway and all its associated sensors and sensor data.
 
-    Gateway must belong to the current user.
+    Gateway must belong to the current user or user must be a super admin.
     This action cannot be undone.
     """
     gateway_repo = GatewayRepository(db)
 
-    # Check if gateway exists and belongs to user
+    # Check if gateway exists
     gateway = await gateway_repo.get_by_id(gateway_id)
 
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Gateway not found"
+            detail=f"Gateway with ID {gateway_id} not found"
+        )
+
+    # Check permission: owner or super admin
+    if gateway.user_id != current_user.id and current_user.role != "super admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this gateway"
         )
 
     gateway_uid = gateway.gateway_uid

@@ -7,6 +7,7 @@ import {
   Settings,
   LineChart,
   LogOut,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -56,6 +57,11 @@ const items = [
     title: 'Data',
     url: '/dashboard/data',
     icon: LineChart,
+  },
+  {
+    title: 'Summary',
+    url: '/dashboard/summary',
+    icon: FileText,
   },
 ];
 
