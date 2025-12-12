@@ -31,23 +31,34 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
   const [open, setOpen] = useState(false);
   const updateMutation = useUpdateFarmer();
 
+  // Helper to strip +62 prefix from existing contact
+  const stripPhonePrefix = (phone: string | null | undefined): string => {
+    if (!phone) return '';
+    if (phone.startsWith('+62')) return phone.slice(3);
+    if (phone.startsWith('62')) return phone.slice(2);
+    return phone;
+  };
+
   const form = useForm<z.infer<typeof updateFarmerSchema>>({
     resolver: zodResolver(updateFarmerSchema),
     defaultValues: {
       id: farmer.id,
       name: farmer.name,
-      contact: farmer.contact || '',
+      contact: stripPhonePrefix(farmer.contact),
       address: farmer.address || '',
     },
   });
 
   const handleSubmit = (data: z.infer<typeof updateFarmerSchema>) => {
+    // Add +62 prefix to phone number if provided
+    const formattedContact = data.contact ? `+62${data.contact}` : null;
+
     updateMutation.mutate(
       {
         id: farmer.id,
         data: {
           name: data.name,
-          contact: data.contact || null,
+          contact: formattedContact,
           address: data.address || null,
         },
       },
@@ -103,12 +114,25 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
                 render={({ field, fieldState }) => (
                   <Field className="grid gap-2">
                     <Label htmlFor="edit-contact">Phone Number</Label>
-                    <Input
-                      id="edit-contact"
-                      type="tel"
-                      disabled={updateMutation.isPending}
-                      {...field}
-                    />
+                    <div className="flex">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                        +62
+                      </span>
+                      <Input
+                        id="edit-contact"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="8123456789"
+                        className="rounded-l-none"
+                        disabled={updateMutation.isPending}
+                        {...field}
+                        onChange={(e) => {
+                          // Only allow digits
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value);
+                        }}
+                      />
+                    </div>
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}

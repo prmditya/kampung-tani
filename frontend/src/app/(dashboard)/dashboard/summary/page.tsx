@@ -31,6 +31,7 @@ import {
   Waves,
   TestTube,
   Activity,
+  MapPin,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
@@ -49,6 +50,19 @@ const PDFDownloadWrapper = dynamic(
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         Loading...
       </Button>
+    ),
+  },
+);
+
+// Dynamically import MapView (client-only, uses WebGL)
+const MapView = dynamic(
+  () => import('@/components/ui/map-view').then((mod) => mod.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[200px] rounded-md border border-input bg-muted animate-pulse flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     ),
   },
 );
@@ -191,13 +205,6 @@ export default function SummaryPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Summary Report</h1>
-        <p className="text-muted-foreground">
-          Generate and export farm data summary
-        </p>
-      </div>
-
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
@@ -214,7 +221,7 @@ export default function SummaryPage() {
                   setSelectedFarm('');
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select farmer" />
                 </SelectTrigger>
                 <SelectContent>
@@ -233,7 +240,7 @@ export default function SummaryPage() {
                 onValueChange={setSelectedFarm}
                 disabled={!selectedFarmer}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select farm" />
                 </SelectTrigger>
                 <SelectContent>
@@ -296,11 +303,11 @@ export default function SummaryPage() {
               </Popover>
             </div>
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2">
             <Button
               onClick={handleGenerateSummary}
               disabled={!selectedFarm || isLoadingSummary}
-              className="flex-1"
+              className="col-span-1 md:col-span-2"
             >
               {isLoadingSummary ? (
                 <>
@@ -309,7 +316,7 @@ export default function SummaryPage() {
                 </>
               ) : (
                 <>
-                  <FileText className="mr-2 h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                   Generate Report
                 </>
               )}
@@ -340,39 +347,70 @@ export default function SummaryPage() {
                 <CardTitle className="text-base">Farm Information</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Farmer</p>
-                    <p className="font-semibold">
-                      {selectedFarmerData?.name || '-'}
-                    </p>
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Left: Farm Details - Fixed small width */}
+                  <div className="w-full md:w-[300px] shrink-0 space-y-1 text-sm">
+                    <div className="flex items-center justify-between py-2.5 border-b">
+                      <span className="text-muted-foreground">Farmer</span>
+                      <span className="font-medium">
+                        {selectedFarmerData?.name || '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2.5 border-b">
+                      <span className="text-muted-foreground">Farm</span>
+                      <span className="font-medium">
+                        {selectedFarmData?.name || '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2.5 border-b">
+                      <span className="text-muted-foreground">Location</span>
+                      <span className="font-medium">
+                        {selectedFarmData?.location || '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2.5">
+                      <span className="text-muted-foreground">Period</span>
+                      <span className="font-medium">
+                        {dateFrom && dateTo
+                          ? `${format(dateFrom, 'PP')} - ${format(dateTo, 'PP')}`
+                          : 'All Time'}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Farm</p>
-                    <p className="font-semibold">
-                      {selectedFarmData?.name || '-'}
+
+                  {/* Right: Farm Location Map - Takes remaining space */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Farm Location
                     </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="font-semibold">
-                      {selectedFarmData?.location || '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Period</p>
-                    <p className="font-semibold">
-                      {dateFrom && dateTo
-                        ? `${format(dateFrom, 'PP')} - ${format(dateTo, 'PP')}`
-                        : 'All Time'}
-                    </p>
+                    {selectedFarmData?.latitude &&
+                    selectedFarmData?.longitude ? (
+                      <div className="rounded-lg overflow-hidden border h-[180px] md:h-[160px]">
+                        <MapView
+                          latitude={selectedFarmData.latitude}
+                          longitude={selectedFarmData.longitude}
+                          height="100%"
+                          zoom={14}
+                          className="border-0"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border h-[180px] md:h-[160px] flex items-center justify-center bg-muted/30">
+                        <div className="text-center">
+                          <MapPin className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            No location data
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Stats Grid */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {summaryEntries.map(([type, stats]) => {
                 const config = measurementConfig[type] || {
                   icon: Activity,
@@ -382,18 +420,23 @@ export default function SummaryPage() {
                 const Icon = config.icon;
                 return (
                   <Card key={type}>
-                    <CardContent className="pt-4 pb-4">
+                    <CardContent>
                       <div className="flex items-start gap-3">
-                        <div className={cn('rounded-lg p-2', config.bgColor)}>
-                          <Icon className={cn('h-4 w-4', config.color)} />
-                        </div>
                         <div className="flex-1 space-y-2">
-                          <div>
-                            <h3 className="font-semibold text-sm">{type}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              {stats.unit} • {stats.count} readings
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={cn('rounded-lg p-2', config.bgColor)}
+                            >
+                              <Icon className={cn('h-4 w-4', config.color)} />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-sm">{type}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {stats.unit} • {stats.count} readings
+                              </p>
+                            </div>
                           </div>
+
                           <div className="grid grid-cols-3 gap-1.5">
                             <div className="text-center rounded-md bg-muted/50 p-1.5">
                               <p className="text-[10px] text-muted-foreground">

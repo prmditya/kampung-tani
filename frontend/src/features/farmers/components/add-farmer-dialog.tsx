@@ -38,10 +38,13 @@ export function AddFarmerDialog() {
   });
 
   const handleSubmit = (data: z.infer<typeof addFarmerSchema>) => {
+    // Add +62 prefix to phone number if provided
+    const formattedContact = data.contact ? `+62${data.contact}` : null;
+
     createMutation.mutate(
       {
         name: data.name,
-        contact: data.contact || null,
+        contact: formattedContact,
         address: data.address || null,
       } as FarmerCreate,
       {
@@ -101,13 +104,25 @@ export function AddFarmerDialog() {
               render={({ field, fieldState }) => (
                 <Field className="grid gap-2">
                   <Label htmlFor="contact">Phone Number</Label>
-                  <Input
-                    id="contact"
-                    type="tel"
-                    placeholder="+62 812-3456-7890"
-                    disabled={createMutation.isPending}
-                    {...field}
-                  />
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                      +62
+                    </span>
+                    <Input
+                      id="contact"
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="8123456789"
+                      className="rounded-l-none"
+                      disabled={createMutation.isPending}
+                      {...field}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
+                    />
+                  </div>
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

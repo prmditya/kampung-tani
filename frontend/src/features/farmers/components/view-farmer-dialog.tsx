@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, MapPin, Crop } from 'lucide-react';
+import { Eye, MapPin, Crop, MessageCircle } from 'lucide-react';
 import type { FarmerResponse, FarmResponse } from '@/types/api';
 import { AddFarmDialog } from './add-farm-dialog';
 import { EditFarmDialog } from './edit-farm-dialog';
@@ -61,7 +61,26 @@ export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
               <h3 className="font-semibold text-sm text-muted-foreground">
                 Contact
               </h3>
-              <p className="text-base">{farmer.contact || '-'}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-base">{farmer.contact || '-'}</p>
+                {farmer.contact && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                    asChild
+                  >
+                    <a
+                      href={`https://wa.me/${farmer.contact.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Chat via WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="md:col-span-2">
               <h3 className="font-semibold text-sm text-muted-foreground">
