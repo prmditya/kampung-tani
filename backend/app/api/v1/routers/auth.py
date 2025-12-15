@@ -100,11 +100,12 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
     hashed_password = get_password_hash(user_data.password)
 
     try:
+        # First user is always super admin
         user = await user_repo.create(
             username=user_data.username,
             email=user_data.email,
             password_hash=hashed_password,
-            role=user_data.role.value,
+            role="super admin",
         )
 
         logger.info(f"User created successfully: {user.username}")
