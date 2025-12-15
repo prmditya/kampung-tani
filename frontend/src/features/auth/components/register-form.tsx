@@ -4,12 +4,18 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldError, FieldGroup } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from '@/components/ui/input-group';
+import { Users, Lock, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { useRegister } from '@/features/auth/hooks/use-auth';
 import z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react';
 
 const registerSchema = z
   .object({
@@ -36,6 +42,9 @@ export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -82,13 +91,18 @@ export function RegisterForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="username"
-                        type="text"
-                        placeholder="Username"
-                        autoComplete="username"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="username"
+                          type="text"
+                          placeholder="Username"
+                          autoComplete="username"
+                          {...field}
+                        />
+                        <InputGroupAddon>
+                          <Users />
+                        </InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
@@ -101,13 +115,16 @@ export function RegisterForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="email"
-                        type="text"
-                        placeholder="Email"
-                        autoComplete="email"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="email"
+                          type="text"
+                          placeholder="Email"
+                          autoComplete="email"
+                          {...field}
+                        />
+                        <InputGroupAddon>@</InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
@@ -120,13 +137,28 @@ export function RegisterForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Password"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                        <InputGroupAddon>
+                          <Lock />
+                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-end">
+                          <Button
+                            variant="ghost"
+                            className="hover:!bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            type="button"
+                          >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </Button>
+                        </InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
@@ -139,13 +171,30 @@ export function RegisterForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Confirm Password"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="Confirm Password"
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                        <InputGroupAddon>
+                          <Lock />
+                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-end">
+                          <Button
+                            variant="ghost"
+                            className="hover:!bg-transparent"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            type="button"
+                          >
+                            {showConfirmPassword ? <EyeOff /> : <Eye />}
+                          </Button>
+                        </InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}

@@ -114,7 +114,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.url}
-                    className={`h-auto px-2 py-1 ${
+                    className={`h-auto px-2 py-2 md:py-1 rounded-lg ${
                       pathname === item.url ? 'bg-primary/10' : ''
                     }`}
                   >
@@ -143,7 +143,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.url}
-                    className={`h-auto  px-2 py-1 ${
+                    className={`h-auto  px-2 py-2 md:py-1 rounded-lg ${
                       pathname === item.url ? 'bg-primary/10 ' : ''
                     }`}
                   >
@@ -162,7 +162,7 @@ export function AppSidebar() {
               ))}
               <SidebarMenuItem key={'logout'}>
                 <SidebarMenuButton
-                  className="h-auto px-2 py-1 text-red-400 hover:text-red-400 hover:bg-red-400/10 "
+                  className="h-auto px-2 py-2 md:py-1 rounded-lg text-red-400 hover:text-red-400 hover:bg-red-400/10 "
                   onClick={() => logoutMutation.mutate()}
                 >
                   <LogOut />

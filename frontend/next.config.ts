@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     'http://localhost:3001',
     'http://192.168.1.35',
     'http://192.168.1.35:3001',
+    'http://192.168.1.8:3001',
   ],
 };
 
