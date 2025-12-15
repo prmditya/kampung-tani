@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+import ssl
 from app.core.config import settings
 from app.utils.logger import logger
 
@@ -13,6 +14,10 @@ class MQTTClient:
         # Set authentication
         if settings.MQTT_USERNAME and settings.MQTT_PASSWORD:
             self.client.username_pw_set(settings.MQTT_USERNAME, settings.MQTT_PASSWORD)
+
+        # Enable TLS/SSL for HiveMQ Cloud (port 8883)
+        if settings.MQTT_PORT == 8883:
+            self.client.tls_set(tls_version=ssl.PROTOCOL_TLS)
 
         # Set callbacks
         self.client.on_connect = self.on_connect
