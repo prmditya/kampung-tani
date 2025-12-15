@@ -16,7 +16,8 @@ const registerSchema = z
     username: z
       .string()
       .min(3, 'Username must be at least 3 characters long')
-      .max(50),
+      .max(50)
+      .regex(/^\S+$/, 'Username cannot contain spaces'),
     email: z.string().email('Please enter a valid email address'),
     password: z
       .string()
@@ -69,9 +70,9 @@ export function RegisterForm({
                   height={100}
                 />
                 <div>
-                  <h1 className="text-2xl font-bold">Create Admin Account</h1>
+                  <h1 className="text-2xl font-bold">Initial Setup</h1>
                   <p className="text-muted-foreground text-balance text-sm mt-1">
-                    Set up your first admin account to get started
+                    Create your Super Admin account to get started
                   </p>
                 </div>
               </div>
@@ -85,7 +86,6 @@ export function RegisterForm({
                         id="username"
                         type="text"
                         placeholder="Username"
-                        required
                         autoComplete="username"
                         {...field}
                       />
@@ -103,9 +103,8 @@ export function RegisterForm({
                     <Field>
                       <Input
                         id="email"
-                        type="email"
+                        type="text"
                         placeholder="Email"
-                        required
                         autoComplete="email"
                         {...field}
                       />
@@ -125,7 +124,6 @@ export function RegisterForm({
                         id="password"
                         type="password"
                         placeholder="Password"
-                        required
                         autoComplete="new-password"
                         {...field}
                       />
@@ -145,7 +143,6 @@ export function RegisterForm({
                         id="confirmPassword"
                         type="password"
                         placeholder="Confirm Password"
-                        required
                         autoComplete="new-password"
                         {...field}
                       />
