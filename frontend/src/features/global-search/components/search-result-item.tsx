@@ -11,6 +11,7 @@ import {
   UserPlus,
   Link,
   ChevronRight,
+  FileText,
 } from 'lucide-react';
 
 interface SearchResultItemProps {
@@ -29,6 +30,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Plus,
   UserPlus,
   Link,
+  FileText,
 };
 
 export function SearchResultItem({

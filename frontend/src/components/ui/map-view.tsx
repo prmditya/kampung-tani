@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import Map, { Marker, NavigationControl, MapRef } from 'react-map-gl/maplibre';
+import { useTheme } from 'next-themes';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface MapViewProps {
@@ -12,6 +13,14 @@ interface MapViewProps {
   zoom?: number;
 }
 
+// Map style URLs - Using OpenFreeMap built-in styles (Mapbox-like design)
+// positron: Clean light style similar to Mapbox Light
+// liberty: Colorful style that works well for dark mode
+const MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/liberty',
+};
+
 export function MapView({
   latitude,
   longitude,
@@ -20,6 +29,11 @@ export function MapView({
   zoom = 14,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
+  const { resolvedTheme } = useTheme();
+
+  // Select map style based on current theme
+  const mapStyle =
+    resolvedTheme === 'dark' ? MAP_STYLES.dark : MAP_STYLES.light;
 
   return (
     <div
@@ -34,7 +48,8 @@ export function MapView({
           zoom,
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="https://tiles.openfreemap.org/styles/liberty"
+        mapStyle={mapStyle}
+        projection={{ type: 'globe' }}
         interactive={true}
         dragPan={true}
         scrollZoom={true}

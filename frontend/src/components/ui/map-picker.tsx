@@ -7,6 +7,7 @@ import Map, {
   MapRef,
   MapLayerMouseEvent,
 } from 'react-map-gl/maplibre';
+import { useTheme } from 'next-themes';
 import { X, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -26,6 +27,12 @@ const DEFAULT_CENTER = {
 
 const DEFAULT_ZOOM = 10;
 
+// Map style URLs - Using OpenFreeMap built-in styles (Mapbox-like design)
+const MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/liberty',
+};
+
 export function MapPicker({
   value,
   onChange,
@@ -33,6 +40,11 @@ export function MapPicker({
   className = '',
 }: MapPickerProps) {
   const mapRef = useRef<MapRef>(null);
+  const { resolvedTheme } = useTheme();
+
+  // Select map style based on current theme
+  const mapStyle =
+    resolvedTheme === 'dark' ? MAP_STYLES.dark : MAP_STYLES.light;
 
   // Use value directly - fully controlled component
   const marker = value || null;
@@ -70,7 +82,8 @@ export function MapPicker({
           ref={mapRef}
           initialViewState={initialViewState}
           style={{ width: '100%', height: '100%' }}
-          mapStyle="https://tiles.openfreemap.org/styles/liberty"
+          mapStyle={mapStyle}
+          projection={{ type: 'globe' }}
           onClick={handleMapClick}
           dragPan={!disabled}
           scrollZoom={!disabled}
@@ -83,15 +96,6 @@ export function MapPicker({
               latitude={marker.latitude}
               longitude={marker.longitude}
               anchor="center"
-              draggable={!disabled}
-              onDragEnd={(event) => {
-                if (disabled) return;
-                const newCoords = {
-                  latitude: event.lngLat.lat,
-                  longitude: event.lngLat.lng,
-                };
-                onChange?.(newCoords);
-              }}
             >
               {/* Minimalist marker design */}
               <div className="relative">
