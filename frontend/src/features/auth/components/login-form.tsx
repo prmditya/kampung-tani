@@ -3,18 +3,19 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from '@/components/ui/input-group';
+import { Users, Lock, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { useLogin } from '@/features/auth/hooks/use-auth';
 import z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react';
 
 const loginSchema = z.object({
   username: z
@@ -31,6 +32,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -74,14 +76,19 @@ export function LoginForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="username"
-                        type="text"
-                        placeholder="Enter your username"
-                        required
-                        autoComplete="username"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="username"
+                          type="text"
+                          placeholder="Enter your username"
+                          required
+                          autoComplete="username"
+                          {...field}
+                        />
+                        <InputGroupAddon>
+                          <Users />
+                        </InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
@@ -94,14 +101,29 @@ export function LoginForm({
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Field>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Password"
-                        required
-                        autoComplete="current-password"
-                        {...field}
-                      />
+                      <InputGroup>
+                        <InputGroupInput
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Password"
+                          required
+                          autoComplete="current-password"
+                          {...field}
+                        />
+                        <InputGroupAddon>
+                          <Lock />
+                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-end">
+                          <Button
+                            variant="ghost"
+                            className="hover:!bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            type="button"
+                          >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </Button>
+                        </InputGroupAddon>
+                      </InputGroup>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
                       )}
