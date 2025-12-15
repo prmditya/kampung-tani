@@ -33,16 +33,40 @@ router = APIRouter()
 settings = get_settings()
 
 
+@router.get(
+    "/setup-status",
+    summary="Check Setup Status",
+    description="Check if initial setup is needed (no users exist)",
+)
+async def get_setup_status(db: AsyncSession = Depends(get_db)):
+    """
+    Check if the system needs initial setup.
+    
+    Returns:
+    - **needs_setup**: True if no users exist (registration allowed)
+    - **needs_setup**: False if users exist (registration blocked)
+    """
+    user_repo = UserRepository(db)
+    user_count = await user_repo.count()
+    
+    return {
+        "needs_setup": user_count == 0
+    }
+
+
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register New User",
-    description="Create a new user account with username, email and password",
+    description="Create a new user account (only allowed when no users exist)",
 )
 async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Register a new user account.
+    
+    **Note**: Registration is only allowed when no users exist in the system.
+    Once an admin is created, this endpoint will be disabled.
 
     - **username**: Unique username (3-50 characters)
     - **email**: Valid email address
@@ -50,6 +74,14 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
     - **role**: User role (user/admin, defaults to admin)
     """
     user_repo = UserRepository(db)
+
+    # Check if any user exists - if so, block registration
+    user_count = await user_repo.count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled. Please contact an administrator.",
+        )
 
     # Check if username already exists
     if await user_repo.username_exists(user_data.username):

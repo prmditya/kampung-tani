@@ -62,6 +62,46 @@ export function useLogin() {
   });
 }
 
+interface RegisterCredentials {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export function useRegister() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  return useMutation<UserResponse, Error, RegisterCredentials>({
+    mutationFn: async (credentials: RegisterCredentials) => {
+      try {
+        const response = await apiClient.post<UserResponse>(
+          '/auth/register',
+          credentials,
+        );
+        return response.data;
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          const message =
+            error.response?.data?.detail ||
+            'Registration failed. Please try again.';
+          throw new Error(message);
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      // Invalidate setupStatus so /register page knows to redirect
+      queryClient.invalidateQueries({ queryKey: ['setupStatus'] });
+      toast.success('Account created successfully! Please log in.');
+      router.push('/login');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Registration failed. Please try again.');
+    },
+  });
+}
+
 export function useLogout() {
   const router = useRouter();
   const queryClient = useQueryClient();
