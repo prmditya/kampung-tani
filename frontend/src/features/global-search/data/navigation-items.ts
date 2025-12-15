@@ -56,6 +56,17 @@ export const navigationItems: NavigationItem[] = [
     keywords: ['readings', 'analytics', 'charts', 'metrics'],
   },
 
+  // Summary
+  {
+    id: 'summary',
+    title: 'User Summary',
+    description: 'View, export, and recommendation summary for user',
+    href: '/dashboard/summary',
+    icon: 'FileText',
+    category: 'navigation',
+    keywords: ['summary', 'report', 'analytics', 'metrics', 'data', 'user'],
+  },
+
   // Settings
   {
     id: 'settings',

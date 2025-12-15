@@ -5,7 +5,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import type {
   SensorDataResponse,
   SensorResponse,
@@ -13,8 +13,8 @@ import type {
   FarmResponse,
   GatewayAssignmentResponse,
   GatewayResponse,
-} from "@/types/api";
-import { useMemo } from "react";
+} from '@/types/api';
+import { useMemo } from 'react';
 
 interface ReadingsTableProps {
   readings: SensorDataResponse[];
@@ -84,6 +84,7 @@ export function ReadingsTable({
             <TableHead>Farmer</TableHead>
             <TableHead>Farm</TableHead>
             <TableHead>Gateway</TableHead>
+            <TableHead>Assigned By</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,12 +92,18 @@ export function ReadingsTable({
             const sensor = sensorMap.get(reading.sensor_id);
             // Extract measurement type from metadata
             const measurementType =
-              reading.metadata?.measurement_type || sensor?.type || "Unknown";
+              reading.metadata?.measurement_type || sensor?.type || 'Unknown';
 
-            // Get farmer and farm from gateway assignment
-            const assignment = assignmentMap.get(reading.gateway_id);
-            const farm = assignment ? farmMap.get(assignment.farm_id) : null;
+            // Get farm and farmer from historical snapshot in reading
+            // If reading has farm object (from backend), use it directly
+            // Otherwise fallback to assignment lookup (for backward compatibility)
+            const farm =
+              reading.farm ||
+              (reading.farm_id ? farmMap.get(reading.farm_id) : null);
             const farmer = farm ? farmerMap.get(farm.farmer_id) : null;
+
+            // Get assignment info for "Assigned By" column (fallback to reading.assigned_by_user)
+            const assignment = assignmentMap.get(reading.gateway_id);
 
             // Get gateway info
             const gateway = gatewayMap.get(reading.gateway_id);
@@ -104,12 +111,12 @@ export function ReadingsTable({
             return (
               <TableRow key={reading.id}>
                 <TableCell>
-                  {new Date(reading.timestamp).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
+                  {new Date(reading.timestamp).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
                   })}
                 </TableCell>
                 <TableCell className="font-medium">
@@ -121,29 +128,34 @@ export function ReadingsTable({
                   </span>
                 </TableCell>
                 <TableCell className="font-mono">
-                  {typeof reading.value === "number"
+                  {typeof reading.value === 'number'
                     ? reading.value.toFixed(2)
                     : reading.value}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {reading.unit || "-"}
+                  {reading.unit || '-'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {farmer
                     ? farmer.name
-                    : assignment
-                      ? "No farmer found"
-                      : "No assignment"}
+                    : reading.farm_id
+                      ? 'No farmer found'
+                      : 'No assignment'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {farm
                     ? farm.name
-                    : assignment
-                      ? "No farm found"
-                      : "No assignment"}
+                    : reading.farm_id
+                      ? 'No farm found'
+                      : 'No assignment'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {gateway ? gateway.gateway_uid : reading.gateway_id}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {reading.assigned_by_user?.username ||
+                    assignment?.assigned_by_user?.username ||
+                    '-'}
                 </TableCell>
               </TableRow>
             );

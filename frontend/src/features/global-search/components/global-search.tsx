@@ -99,11 +99,11 @@ export default function GlobalSearch({ className = '' }) {
           <span className="text-sm">Search...</span>
         </div>
         <KbdGroup>
-          <Kbd className="h-6 w-6 bg-muted border border-foreground/10 rounded-md">
-            ⌘
+          <Kbd className="bg-muted border border-foreground/10 rounded-md">
+            Ctrl
           </Kbd>
-          <Kbd className="h-6 w-6 bg-muted border border-foreground/10 rounded-md">
-            k
+          <Kbd className="bg-muted border border-foreground/10 rounded-md">
+            K
           </Kbd>
         </KbdGroup>
       </Button>

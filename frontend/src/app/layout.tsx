@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/provider/theme-provider';
@@ -12,11 +12,26 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  applicationName: 'Kampoeng Tani',
   title: 'Kampoeng Tani - Admin Dashboard',
   description: 'IoT Device Management System for Agriculture',
   icons: {
-    icon: '/favicon.webp',
+    icon: '/assets/kt-sm-logo.png',
+    apple: '/assets/kt-sm-logo.png',
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Kampoeng Tani',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#FFFFFF',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -29,7 +44,7 @@ export default function RootLayout({
       <body className={cn(geistSans.className, 'antialiased')}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

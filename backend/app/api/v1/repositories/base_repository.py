@@ -125,20 +125,23 @@ class BaseRepository(Generic[ModelType]):
             logger.error(f"Error creating {self.model.__name__}: {e}")
             raise
 
-    async def update(self, id: int, **data) -> Optional[ModelType]:
+    async def update(self, id: int, exclude_none: bool = True, **data) -> Optional[ModelType]:
         """
         Update a record by ID
 
         Args:
             id: Record ID
+            exclude_none: If True, removes None values from update (default).
+                          Set to False to allow updating fields to null.
             **data: Updated data
 
         Returns:
             Updated model instance or None if not found
         """
         try:
-            # Remove None values
-            data = {k: v for k, v in data.items() if v is not None}
+            # Optionally remove None values (for backward compatibility)
+            if exclude_none:
+                data = {k: v for k, v in data.items() if v is not None}
 
             if not data:
                 return await self.get_by_id(id)

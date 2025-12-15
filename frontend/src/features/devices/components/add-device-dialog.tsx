@@ -23,10 +23,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addGatewaySchema } from '@/features/devices/schemas';
+import { useDialogUrlState } from '@/hooks/use-dialog-url-state';
 
 export function AddDeviceDialog() {
-  const [open, setOpen] = useState(false);
   const createMutation = useCreateGateway();
+
+  const { isOpen, onOpenChange } = useDialogUrlState('action', 'add');
 
   const form = useForm<z.infer<typeof addGatewaySchema>>({
     resolver: zodResolver(addGatewaySchema),
@@ -51,7 +53,7 @@ export function AddDeviceDialog() {
         onSuccess: () => {
           toast.success('Device added successfully');
           form.reset();
-          setOpen(false);
+          onOpenChange(false);
         },
         onError: (error) => {
           toast.error(
@@ -63,7 +65,7 @@ export function AddDeviceDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -165,7 +167,7 @@ export function AddDeviceDialog() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={createMutation.isPending}
             >
               Cancel

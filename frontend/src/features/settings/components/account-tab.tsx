@@ -1,50 +1,63 @@
-"use client";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+'use client';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+} from '@/components/ui/field';
 import {
   useCurrentUser,
   useUpdateOwnProfile,
   useChangePassword,
-} from "@/features/auth/hooks/use-auth";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+} from '@/features/auth/hooks/use-auth';
+import { Loader2 } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z
+      .string()
+      .min(6, 'Password must be at least 6 characters long'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export default function AccountTab() {
-  const currentUser = useCurrentUser();
-  const {
-    mutate: updateProfile,
-    isPending: isUpdating,
-    isSuccess: isProfileSuccess,
-    isError: isProfileError,
-    error: profileError,
-  } = useUpdateOwnProfile();
-  const {
-    mutate: changePassword,
-    isPending: isChangingPassword,
-    isSuccess: isPasswordSuccess,
-    isError: isPasswordError,
-    error: passwordError,
-    reset: resetPasswordMutation,
-  } = useChangePassword();
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+  const { data: currentUser } = useCurrentUser();
+  const { mutate: updateProfile, isPending: isUpdating } =
+    useUpdateOwnProfile();
+  const changePasswordMutation = useChangePassword();
+
+  const passwordForm = useForm<z.infer<typeof changePasswordSchema>>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
   });
 
   const handleUpdateProfile = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+    const email = formData.get('email') as string;
 
     if (!currentUser) return;
 
@@ -52,43 +65,37 @@ export default function AccountTab() {
       { email },
       {
         onSuccess: () => {
+          toast.success('Profile updated successfully!');
           setTimeout(() => {
             window.location.reload();
           }, 1500);
+        },
+        onError: (error) => {
+          toast.error(
+            error?.message || 'Failed to update profile. Please try again.',
+          );
         },
       },
     );
   };
 
-  const handleChangePassword = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    // Validation
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      return; // Error will be shown in the UI
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      return; // Error will be shown in the UI
-    }
-
-    changePassword(
+  const handleChangePassword = (
+    data: z.infer<typeof changePasswordSchema>,
+  ) => {
+    changePasswordMutation.mutate(
       {
-        current_password: passwordForm.currentPassword,
-        new_password: passwordForm.newPassword,
+        current_password: data.currentPassword,
+        new_password: data.newPassword,
       },
       {
         onSuccess: () => {
-          // Reset form
-          setPasswordForm({
-            currentPassword: "",
-            newPassword: "",
-            confirmPassword: "",
-          });
-          // Reset mutation state after showing success message
-          setTimeout(() => {
-            resetPasswordMutation();
-          }, 3000);
+          toast.success('Password changed successfully!');
+          passwordForm.reset();
+        },
+        onError: (error) => {
+          toast.error(
+            error?.message || 'Failed to change password. Please try again.',
+          );
         },
       },
     );
@@ -106,14 +113,6 @@ export default function AccountTab() {
     );
   }
 
-  const passwordsMatch =
-    passwordForm.newPassword === passwordForm.confirmPassword;
-  const isPasswordValid = passwordForm.newPassword.length >= 6;
-  const showPasswordMismatch =
-    passwordForm.confirmPassword.length > 0 && !passwordsMatch;
-  const showPasswordTooShort =
-    passwordForm.newPassword.length > 0 && !isPasswordValid;
-
   return (
     <>
       <Card>
@@ -124,95 +123,79 @@ export default function AccountTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isPasswordSuccess && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              <CheckCircle2 className="h-4 w-4" />
-              Password changed successfully!
-            </div>
-          )}
-          {isPasswordError && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <XCircle className="h-4 w-4" />
-              {passwordError?.message ||
-                "Failed to change password. Please try again."}
-            </div>
-          )}
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    currentPassword: e.target.value,
-                  })
-                }
-                required
-                disabled={isChangingPassword}
+          <form
+            onSubmit={passwordForm.handleSubmit(handleChangePassword)}
+            className="space-y-4"
+          >
+            <FieldGroup>
+              <Controller
+                name="currentPassword"
+                control={passwordForm.control}
+                render={({ field, fieldState }) => (
+                  <Field className="grid gap-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      placeholder="Enter current password"
+                      disabled={changePasswordMutation.isPending}
+                      {...field}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    newPassword: e.target.value,
-                  })
-                }
-                required
-                disabled={isChangingPassword}
-                minLength={6}
+
+              <Controller
+                name="newPassword"
+                control={passwordForm.control}
+                render={({ field, fieldState }) => (
+                  <Field className="grid gap-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Enter new password"
+                      disabled={changePasswordMutation.isPending}
+                      {...field}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-              {showPasswordTooShort && (
-                <p className="text-xs text-red-600">
-                  Password must be at least 6 characters
-                </p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) =>
-                  setPasswordForm({
-                    ...passwordForm,
-                    confirmPassword: e.target.value,
-                  })
-                }
-                required
-                disabled={isChangingPassword}
+
+              <Controller
+                name="confirmPassword"
+                control={passwordForm.control}
+                render={({ field, fieldState }) => (
+                  <Field className="grid gap-2">
+                    <Label htmlFor="confirm-password">
+                      Confirm New Password
+                    </Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm new password"
+                      disabled={changePasswordMutation.isPending}
+                      {...field}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-              {showPasswordMismatch && (
-                <p className="text-xs text-red-600">Passwords do not match</p>
-              )}
-            </div>
+            </FieldGroup>
+
             <Button
               type="submit"
-              disabled={
-                isChangingPassword ||
-                !passwordForm.currentPassword ||
-                !passwordForm.newPassword ||
-                !passwordForm.confirmPassword ||
-                !passwordsMatch ||
-                !isPasswordValid
-              }
+              disabled={changePasswordMutation.isPending}
             >
-              {isChangingPassword ? (
+              {changePasswordMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Changing Password...
                 </>
               ) : (
-                "Update Password"
+                'Update Password'
               )}
             </Button>
           </form>
@@ -227,19 +210,6 @@ export default function AccountTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isProfileSuccess && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              <CheckCircle2 className="h-4 w-4" />
-              Profile updated successfully!
-            </div>
-          )}
-          {isProfileError && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <XCircle className="h-4 w-4" />
-              {profileError?.message ||
-                "Failed to update profile. Please try again."}
-            </div>
-          )}
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="username">Username</Label>
@@ -268,7 +238,7 @@ export default function AccountTab() {
               <div>
                 <Badge
                   variant={
-                    currentUser.role === "super admin" ? "default" : "secondary"
+                    currentUser.role === 'super admin' ? 'default' : 'secondary'
                   }
                 >
                   {currentUser.role}
@@ -283,7 +253,7 @@ export default function AccountTab() {
                     Saving...
                   </>
                 ) : (
-                  "Save Changes"
+                  'Save Changes'
                 )}
               </Button>
               <Button type="button" variant="outline" disabled={isUpdating}>

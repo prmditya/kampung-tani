@@ -7,13 +7,15 @@ from datetime import datetime
 from sqlalchemy import BigInteger, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.sensor import Sensor
     from app.models.gateway import Gateway
+    from app.models.farm import Farm
+    from app.models.user import User
 
 
 class SensorData(Base):
@@ -37,6 +39,22 @@ class SensorData(Base):
         nullable=False,
         index=True
     )
+    
+    # Historical Assignment Snapshot (nullable for backwards compatibility)
+    farm_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger,
+        ForeignKey("farms.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Snapshot of farm assignment at the time data was received"
+    )
+    assigned_by: Mapped[Optional[int]] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Snapshot of user who assigned gateway at the time data was received"
+    )
 
     # Sensor Data
     value: Mapped[float] = mapped_column(Float, nullable=False)
@@ -54,6 +72,8 @@ class SensorData(Base):
     # Relationships
     sensor: Mapped["Sensor"] = relationship("Sensor", back_populates="sensor_data")
     gateway: Mapped["Gateway"] = relationship("Gateway", back_populates="sensor_data")
+    farm: Mapped[Optional["Farm"]] = relationship("Farm", foreign_keys=[farm_id])
+    assigned_by_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_by])
 
     def __repr__(self) -> str:
         return f"<SensorData(id={self.id}, sensor_id={self.sensor_id}, value={self.value}, timestamp={self.timestamp})>"

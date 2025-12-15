@@ -16,6 +16,7 @@ from app.models.user import User
 from app.api.v1.repositories.gateway_repository import GatewayRepository
 from app.api.v1.repositories.sensor_repository import SensorRepository
 from app.api.v1.repositories.sensor_data_repository import SensorDataRepository
+from app.api.v1.repositories.farm_repository import FarmRepository
 from app.api.v1.schemas import (
     SensorCreate,
     SensorUpdate,
@@ -332,6 +333,7 @@ async def get_sensor_data(
     search: Optional[str] = Query(None, description="Search in measurement type, sensor name, or value"),
     farmer_id: Optional[int] = Query(None, description="Filter by farmer ID"),
     farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
+    assigned_by_id: Optional[int] = Query(None, description="Filter by user ID who assigned the gateway"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -347,6 +349,7 @@ async def get_sensor_data(
     - **search**: Search term for measurement type, sensor name, or value (optional)
     - **farmer_id**: Filter by farmer ID (optional)
     - **farm_id**: Filter by farm ID (optional)
+    - **assigned_by_id**: Filter by user ID who assigned the gateway (optional)
 
     Note: If both hours and start_date/end_date are provided, start_date/end_date take precedence.
     """
@@ -393,7 +396,8 @@ async def get_sensor_data(
         end_date=end_date,
         search=search,
         farmer_id=farmer_id,
-        farm_id=farm_id
+        farm_id=farm_id,
+        assigned_by_id=assigned_by_id
     )
 
     total = await sensor_data_repo.count_by_sensor(
@@ -402,7 +406,8 @@ async def get_sensor_data(
         end_date=end_date,
         search=search,
         farmer_id=farmer_id,
-        farm_id=farm_id
+        farm_id=farm_id,
+        assigned_by_id=assigned_by_id
     )
 
     return PaginatedResponse(
@@ -537,4 +542,60 @@ async def get_sensor_stats(
         "sensor_type": sensor.type,
         "period_hours": hours,
         "statistics": stats
+    }
+
+
+@router.get(
+    "/summary/farm/{farm_id}",
+    summary="Get Farm Summary",
+    description="Get aggregated sensor data summary for a farm"
+)
+async def get_farm_summary(
+    farm_id: int,
+    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get summary statistics for all sensor data in a farm.
+
+    - **farm_id**: Farm ID (required)
+    - **start_date**: Start date filter in ISO format (optional)
+    - **end_date**: End date filter in ISO format (optional)
+
+    Returns aggregated statistics (min, max, avg, count) grouped by measurement type.
+    """
+    farm_repo = FarmRepository(db)
+    sensor_data_repo = SensorDataRepository(db)
+
+    # Check if farm exists
+    farm = await farm_repo.get_by_id(farm_id)
+
+    if not farm:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Farm with ID {farm_id} not found"
+        )
+
+    # Strip timezone info to make datetime timezone-naive
+    if start_date and start_date.tzinfo:
+        start_date = start_date.replace(tzinfo=None)
+    if end_date and end_date.tzinfo:
+        end_date = end_date.replace(tzinfo=None)
+
+    # Get summary statistics
+    summary = await sensor_data_repo.get_farm_summary_statistics(
+        farm_id=farm_id,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+    return {
+        "farm_id": farm_id,
+        "farm_name": farm.name,
+        "farmer_id": farm.farmer_id,
+        "start_date": start_date,
+        "end_date": end_date,
+        "summary": summary
     }

@@ -211,7 +211,8 @@ async def update_farm(
             )
 
     try:
-        updated_farm = await farm_repo.update(farm_id, **update_data)
+        # Use exclude_none=False to allow updating fields to null (e.g., remove location)
+        updated_farm = await farm_repo.update(farm_id, exclude_none=False, **update_data)
 
         await db.commit()
 

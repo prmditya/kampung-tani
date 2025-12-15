@@ -13,7 +13,7 @@ import { useCurrentUser, isSuperAdmin } from '@/features/auth/hooks/use-auth';
 import { ShieldAlert } from 'lucide-react';
 
 export default function SettingsPage() {
-  const currentUser = useCurrentUser();
+  const { data: currentUser } = useCurrentUser();
   const isUserSuperAdmin = isSuperAdmin(currentUser);
 
   return (

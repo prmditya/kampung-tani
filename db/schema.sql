@@ -104,4 +104,4 @@ CREATE INDEX idx_sensor_data_gateway_id_timestamp ON sensor_data(gateway_id, tim
 
 -- Insert sample admin user (password: admin123 for admin)
 INSERT INTO users (username, email, password_hash, role) VALUES 
-('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'admin');
+('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'super admin');

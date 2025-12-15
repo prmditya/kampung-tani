@@ -34,10 +34,13 @@ export function DeleteDeviceButton({
       onSuccess: () => {
         toast.success(`${deviceName} deleted successfully`);
       },
-      onError: (error) => {
-        toast.error(
-          error?.message || `Failed to delete ${deviceName}. Please try again.`,
-        );
+      onError: (error: any) => {
+        // Extract error message from backend response
+        const errorMessage =
+          error?.response?.data?.detail ||
+          error?.message ||
+          `Failed to delete ${deviceName}. Please try again.`;
+        toast.error(errorMessage);
       },
     });
   };

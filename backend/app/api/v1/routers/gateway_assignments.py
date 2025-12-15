@@ -122,7 +122,7 @@ async def create_assignment(
     gateway_repo = GatewayRepository(db)
     farm_repo = FarmRepository(db)
 
-    # Verify gateway exists and belongs to user
+    # Verify gateway exists
     gateway = await gateway_repo.get_by_id(assignment_data.gateway_id)
     if not gateway:
         raise HTTPException(
@@ -130,11 +130,8 @@ async def create_assignment(
             detail=f"Gateway with ID {assignment_data.gateway_id} not found",
         )
 
-    if gateway.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only assign your own gateways",
-        )
+    # Note: Any authenticated user can assign any gateway (company-wide access)
+    # Only the user who made the assignment (or super admin) can unassign it
 
     # Verify farm exists
     farm = await farm_repo.get_by_id(assignment_data.farm_id)
@@ -258,22 +255,17 @@ async def update_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
-    # Verify user owns the gateway
-    gateway_repo = GatewayRepository(db)
-    gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    # Allow update if:
-    # 1. User owns the gateway, OR
-    # 2. User created the assignment, OR
-    # 3. User is a super admin
+    # Allow update only if:
+    # 1. User created the assignment, OR
+    # 2. User is a super admin
     if (
-        gateway.user_id != current_user.id
-        and assignment.assigned_by != current_user.id
+        assignment.assigned_by != current_user.id
         and current_user.role != "super admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update assignments for your own gateways or assignments you created",
+            detail="You can only update assignments that you created",
         )
 
     # Prepare update data
@@ -353,22 +345,17 @@ async def delete_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
-    # Verify user owns the gateway
-    gateway_repo = GatewayRepository(db)
-    gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    # Allow deletion if:
-    # 1. User owns the gateway, OR
-    # 2. User created the assignment, OR
-    # 3. User is a super admin
+    # Allow deletion only if:
+    # 1. User created the assignment, OR
+    # 2. User is a super admin
     if (
-        gateway.user_id != current_user.id
-        and assignment.assigned_by != current_user.id
+        assignment.assigned_by != current_user.id
         and current_user.role != "super admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete assignments for your own gateways or assignments you created",
+            detail="You can only delete assignments that you created",
         )
 
     try:
@@ -415,22 +402,17 @@ async def deactivate_assignment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Gateway assignment not found"
         )
 
-    # Verify user owns the gateway
-    gateway_repo = GatewayRepository(db)
-    gateway = await gateway_repo.get_by_id(assignment.gateway_id)
 
-    # Allow deactivation if:
-    # 1. User owns the gateway, OR
-    # 2. User created the assignment, OR
-    # 3. User is a super admin
+    # Allow deactivation only if:
+    # 1. User created the assignment, OR
+    # 2. User is a super admin
     if (
-        gateway.user_id != current_user.id
-        and assignment.assigned_by != current_user.id
+        assignment.assigned_by != current_user.id
         and current_user.role != "super admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only deactivate assignments for your own gateways or assignments you created",
+            detail="You can only deactivate assignments that you created",
         )
 
     if not assignment.is_active:

@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { addFarmSchema, FarmFormData } from '@/features/farmers/schemas';
+import { MapPicker } from '@/components/ui/map-picker';
 
 interface AddFarmDialogProps {
   farmerId: number;
@@ -123,61 +124,30 @@ export function AddFarmDialog({ farmerId }: AddFarmDialogProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <Controller
-                name="latitude"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field className="grid gap-2">
-                    <Label htmlFor="latitude">Latitude</Label>
-                    <Input
-                      id="latitude"
-                      type="number"
-                      step="any"
-                      placeholder="-6.917464"
-                      disabled={createMutation.isPending}
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value
-                            ? parseFloat(e.target.value)
-                            : undefined,
-                        )
+            {/* Map Location Picker */}
+            <Field className="grid gap-2">
+              <Label>Farm Location</Label>
+              <MapPicker
+                value={
+                  form.watch('latitude') && form.watch('longitude')
+                    ? {
+                        latitude: form.watch('latitude')!,
+                        longitude: form.watch('longitude')!,
                       }
-                    />
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
+                    : null
+                }
+                onChange={(coords) => {
+                  if (coords) {
+                    form.setValue('latitude', coords.latitude);
+                    form.setValue('longitude', coords.longitude);
+                  } else {
+                    form.setValue('latitude', undefined);
+                    form.setValue('longitude', undefined);
+                  }
+                }}
+                disabled={createMutation.isPending}
               />
-
-              <Controller
-                name="longitude"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field className="grid gap-2">
-                    <Label htmlFor="longitude">Longitude</Label>
-                    <Input
-                      id="longitude"
-                      type="number"
-                      step="any"
-                      placeholder="107.619123"
-                      disabled={createMutation.isPending}
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value
-                            ? parseFloat(e.target.value)
-                            : undefined,
-                        )
-                      }
-                    />
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-            </div>
+            </Field>
 
             <Controller
               name="area_size"

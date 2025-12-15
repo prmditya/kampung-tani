@@ -23,16 +23,16 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False)
     LOG_LEVEL: str = Field(default="INFO")
 
-    # Database Configuration (from .env)
-    POSTGRES_HOST: str = Field(default="db")
-    POSTGRES_PORT: int = Field(default=5432)
-    POSTGRES_DB: str = Field(default="kampoeng_tani_test")
-    POSTGRES_USER: str = Field(default="admin")
-    POSTGRES_PASSWORD: str = Field(default="admin123")
-    DATABASE_URL: Optional[str] = Field(default=None)
+    # Database Configuration - use DATABASE_URL directly
+    DATABASE_URL: str = Field(
+        default="postgresql://admin:admin123@localhost:5432/kampoeng_tani_test",
+        description="PostgreSQL connection URL"
+    )
 
     # JWT Configuration (SENSITIVE - from .env)
-    JWT_SECRET_KEY: str = Field(..., min_length=32)
+    JWT_SECRET_KEY: str = Field(
+        min_length=32, default="your-secret-key-that-is-very-secure"
+    )
     JWT_ALGORITHM: str = Field(default="HS256")
     JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = Field(default=24)
 
@@ -46,13 +46,8 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Construct database URL from components"""
-        if self.DATABASE_URL:
-            return self.DATABASE_URL
-        return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        """Return database URL (for backward compatibility)"""
+        return self.DATABASE_URL
 
     @property
     def cors_origins_list(self) -> List[str]:
@@ -62,11 +57,6 @@ class Settings(BaseSettings):
             for origin in self.ALLOWED_ORIGINS.split(",")
             if origin.strip()
         ]
-
-    @property
-    def mqtt_topics_list(self) -> List[str]:
-        """Get MQTT topics as a list"""
-        return [topic.strip() for topic in self.MQTT_TOPICS.split(",") if topic.strip()]
 
     @field_validator("JWT_SECRET_KEY")
     @classmethod
@@ -89,6 +79,10 @@ class Settings(BaseSettings):
         return v.upper()
 
     class Config:
+        env_file = [
+            Path(__file__).parent.parent.parent.parent / ".env",
+            Path(__file__).parent.parent.parent / ".env.local",
+        ]
         env_file_encoding = "utf-8"
         case_sensitive = True
         validate_assignment = True

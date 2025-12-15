@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import apiClient from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/api-client';
 import type {
   SensorResponse,
   SensorCreate,
@@ -8,22 +8,22 @@ import type {
   PaginatedResponse,
   SensorDataResponse,
   SensorDataCreate,
-} from "@/types/api";
+} from '@/types/api';
 
 // Query Keys
 export const sensorKeys = {
-  all: ["sensors"] as const,
-  lists: () => [...sensorKeys.all, "list"] as const,
+  all: ['sensors'] as const,
+  lists: () => [...sensorKeys.all, 'list'] as const,
   list: (filters?: Record<string, unknown>) =>
     [...sensorKeys.lists(), filters] as const,
-  details: () => [...sensorKeys.all, "detail"] as const,
+  details: () => [...sensorKeys.all, 'detail'] as const,
   detail: (id: number) => [...sensorKeys.details(), id] as const,
   byGateway: (gatewayId: number) =>
-    [...sensorKeys.all, "gateway", gatewayId] as const,
+    [...sensorKeys.all, 'gateway', gatewayId] as const,
   data: (sensorId: number, filters?: Record<string, unknown>) =>
-    [...sensorKeys.all, "data", sensorId, filters] as const,
+    [...sensorKeys.all, 'data', sensorId, filters] as const,
   stats: (sensorId: number, hours?: number) =>
-    [...sensorKeys.all, "stats", sensorId, hours] as const,
+    [...sensorKeys.all, 'stats', sensorId, hours] as const,
 };
 
 // ==================== GET ALL SENSORS ====================
@@ -32,8 +32,8 @@ export function useSensors(filters?: { skip?: number; limit?: number }) {
     queryKey: sensorKeys.list(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters?.skip) params.append("skip", filters.skip.toString());
-      if (filters?.limit) params.append("limit", filters.limit.toString());
+      if (filters?.skip) params.append('skip', filters.skip.toString());
+      if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const response = await apiClient.get<SensorResponse[]>(
         `/sensors?${params}`,
@@ -71,11 +71,11 @@ export function useSensorsByGateway(
     queryKey: sensorKeys.byGateway(gatewayId),
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.append("gateway_id", gatewayId.toString());
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.size) params.append("size", filters.size.toString());
+      params.append('gateway_id', gatewayId.toString());
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.size) params.append('size', filters.size.toString());
       if (filters?.sensor_type)
-        params.append("sensor_type", filters.sensor_type);
+        params.append('sensor_type', filters.sensor_type);
 
       const response = await apiClient.get<PaginatedResponse<SensorResponse>>(
         `/sensors?${params}`,
@@ -92,7 +92,7 @@ export function useCreateSensor() {
 
   return useMutation({
     mutationFn: async (data: SensorCreate) => {
-      const response = await apiClient.post<SensorResponse>("/sensors", data);
+      const response = await apiClient.post<SensorResponse>('/sensors', data);
       return response.data;
     },
     onSuccess: (data) => {
@@ -158,23 +158,25 @@ export function useSensorData(
     search?: string;
     farmer_id?: number;
     farm_id?: number;
+    assigned_by_id?: number;
   },
 ) {
   return useQuery({
     queryKey: sensorKeys.data(sensorId, filters),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.size) params.append("size", filters.size.toString());
-      if (filters?.hours) params.append("hours", filters.hours.toString());
-      if (filters?.start_date)
-        params.append("start_date", filters.start_date);
-      if (filters?.end_date) params.append("end_date", filters.end_date);
-      if (filters?.search) params.append("search", filters.search);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.size) params.append('size', filters.size.toString());
+      if (filters?.hours) params.append('hours', filters.hours.toString());
+      if (filters?.start_date) params.append('start_date', filters.start_date);
+      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.search) params.append('search', filters.search);
       if (filters?.farmer_id)
-        params.append("farmer_id", filters.farmer_id.toString());
+        params.append('farmer_id', filters.farmer_id.toString());
       if (filters?.farm_id)
-        params.append("farm_id", filters.farm_id.toString());
+        params.append('farm_id', filters.farm_id.toString());
+      if (filters?.assigned_by_id)
+        params.append('assigned_by_id', filters.assigned_by_id.toString());
 
       const response = await apiClient.get<
         PaginatedResponse<SensorDataResponse>

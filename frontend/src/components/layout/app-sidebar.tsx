@@ -7,6 +7,7 @@ import {
   Settings,
   LineChart,
   LogOut,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -57,6 +58,11 @@ const items = [
     url: '/dashboard/data',
     icon: LineChart,
   },
+  {
+    title: 'Summary',
+    url: '/dashboard/summary',
+    icon: FileText,
+  },
 ];
 
 const secondaryItems = [
@@ -74,7 +80,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader className="border-b px-6 py-4">
+      <SidebarHeader className="px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="bg-gradient-to-br from-emerald-300 to-emerald-500 p-2 rounded-xl shadow-sm">
             <Image
@@ -167,7 +173,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <Separator />
       <SidebarFooter>
         {isLoading ? (
           <SkeletonNavUser />

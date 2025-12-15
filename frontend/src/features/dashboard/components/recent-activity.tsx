@@ -16,16 +16,20 @@ interface DeviceStatusChange {
 }
 
 interface RecentActivityProps {
+  className?: string;
   statusChanges: DeviceStatusChange[];
 }
 
-export function RecentActivity({ statusChanges }: RecentActivityProps) {
+export function RecentActivity({
+  className,
+  statusChanges,
+}: RecentActivityProps) {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'online':
         return 'default';
       case 'offline':
-        return 'secondary';
+        return 'destructive';
       case 'maintenance':
         return 'outline';
       default:
@@ -36,9 +40,9 @@ export function RecentActivity({ statusChanges }: RecentActivityProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
-        return 'text-green-500';
+        return 'text-primary';
       case 'offline':
-        return 'text-gray-500';
+        return 'text-destructive';
       case 'maintenance':
         return 'text-yellow-500';
       default:
@@ -110,14 +114,14 @@ export function RecentActivity({ statusChanges }: RecentActivityProps) {
   const latestStatuses = getLatestStatusPerGateway();
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <Activity className="h-4 w-4" />
           Device Status
         </CardTitle>
       </CardHeader>
-      <CardContent className="overflow-y-auto h-[220px] scrollbar-hide">
+      <CardContent className="overflow-y-auto min-h-[300px] scrollbar-hide">
         <div className="space-y-4">
           {latestStatuses.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
@@ -132,14 +136,14 @@ export function RecentActivity({ statusChanges }: RecentActivityProps) {
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0 ${getStatusColor(change.status)}`}
                 >
-                  <Circle className="h-3 w-3 fill-current" />
+                  <Circle className="h-3 w-3 fill-current " />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">
-                    {change.gateway.name || change.gateway.gateway_uid}
+                    {change.gateway.gateway_uid}
                   </p>
                   <p className="text-xs text-muted-foreground truncate capitalize">
-                    {change.status} {getStatusDuration(change)}
+                    {getStatusDuration(change)}
                   </p>
                 </div>
                 <Badge

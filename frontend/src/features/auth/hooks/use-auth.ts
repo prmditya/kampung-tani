@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import axios from 'axios';
@@ -65,6 +64,7 @@ export function useLogin() {
 
 export function useLogout() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
@@ -74,6 +74,9 @@ export function useLogout() {
     onSuccess: () => {
       // Remove token, expiration, and user data from localStorage
       Cookies.remove('token');
+
+      // Clear all cached queries to ensure fresh data on next login
+      queryClient.clear();
 
       // Redirect to login page
       router.push('/login');
@@ -88,10 +91,16 @@ export function useCurrentUser() {
       const response = await apiClient.get<UserResponse>('/auth/me');
       return response.data;
     },
+    select: (data) => ({
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      role: data.role,
+    }),
   });
 }
 
-export function isSuperAdmin(user: LoginResponse['user'] | null): boolean {
+export function isSuperAdmin(user: LoginResponse['user'] | undefined): boolean {
   return user?.role === 'super admin';
 }
 

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Pencil } from 'lucide-react';
 import { useUpdateFarm } from '@/features/farmers/hooks/use-farms';
 import type { FarmResponse, FarmUpdate } from '@/types/api';
+import { MapPicker } from '@/components/ui/map-picker';
 
 interface EditFarmDialogProps {
   farm: FarmResponse;
@@ -24,6 +25,16 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
   const [open, setOpen] = useState(false);
   const updateMutation = useUpdateFarm();
 
+  // State for map coordinates
+  const [coordinates, setCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(
+    farm.latitude && farm.longitude
+      ? { latitude: farm.latitude, longitude: farm.longitude }
+      : null,
+  );
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -31,12 +42,8 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
     const data: FarmUpdate = {
       name: formData.get('name') as string,
       location: (formData.get('location') as string) || null,
-      latitude: formData.get('latitude')
-        ? parseFloat(formData.get('latitude') as string)
-        : null,
-      longitude: formData.get('longitude')
-        ? parseFloat(formData.get('longitude') as string)
-        : null,
+      latitude: coordinates?.latitude ?? null,
+      longitude: coordinates?.longitude ?? null,
       area_size: formData.get('area_size')
         ? parseFloat(formData.get('area_size') as string)
         : null,
@@ -88,29 +95,14 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
                   disabled={updateMutation.isPending}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-latitude">Latitude</Label>
-                  <Input
-                    id="edit-latitude"
-                    name="latitude"
-                    type="number"
-                    step="any"
-                    defaultValue={farm.latitude || ''}
-                    disabled={updateMutation.isPending}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-longitude">Longitude</Label>
-                  <Input
-                    id="edit-longitude"
-                    name="longitude"
-                    type="number"
-                    step="any"
-                    defaultValue={farm.longitude || ''}
-                    disabled={updateMutation.isPending}
-                  />
-                </div>
+              {/* Map Location Picker */}
+              <div className="grid gap-2">
+                <Label>Farm Location</Label>
+                <MapPicker
+                  value={coordinates}
+                  onChange={setCoordinates}
+                  disabled={updateMutation.isPending}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-area_size">Area Size (hectares)</Label>
