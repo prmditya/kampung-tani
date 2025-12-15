@@ -20,9 +20,11 @@ export default function RegisterPage() {
   // Show loading while checking setup status
   if (isLoading) {
     return (
-      <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-6 md:p-10">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Checking system status...</p>
+        <p className="text-sm text-muted-foreground mt-4">
+          Checking system status...
+        </p>
       </div>
     );
   }
@@ -30,15 +32,15 @@ export default function RegisterPage() {
   // If error or users already exist, show message
   if (error || (setupStatus && !setupStatus.needs_setup)) {
     return (
-      <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-6 md:p-10">
         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-6 md:p-10">
+      <div className="w-full max-w-sm md:max-w-md">
         <RegisterForm />
       </div>
     </div>

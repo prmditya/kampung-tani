@@ -110,9 +110,12 @@ export default function AdminTab() {
   };
 
   const isPasswordValid = formData.password.length >= 6;
-  const isUsernameValid = formData.username.length >= 3;
+  const isUsernameValid =
+    formData.username.length >= 3 && !/\s/.test(formData.username);
   const showPasswordError = formData.password.length > 0 && !isPasswordValid;
-  const showUsernameError = formData.username.length > 0 && !isUsernameValid;
+  const hasSpaces = /\s/.test(formData.username);
+  const showUsernameError =
+    formData.username.length > 0 && (formData.username.length < 3 || hasSpaces);
 
   return (
     <Card>
@@ -154,7 +157,9 @@ export default function AdminTab() {
                   />
                   {showUsernameError && (
                     <p className="text-xs text-red-600">
-                      Username must be at least 3 characters
+                      {hasSpaces
+                        ? 'Username cannot contain spaces'
+                        : 'Username must be at least 3 characters'}
                     </p>
                   )}
                 </div>
