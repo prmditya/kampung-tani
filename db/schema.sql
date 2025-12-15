@@ -56,6 +56,7 @@ CREATE TABLE sensors (
     sensor_uid VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(100),
     type VARCHAR(50) NOT NULL,
+    unit VARCHAR(20),
     status VARCHAR(20) DEFAULT 'inactive',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -80,7 +81,9 @@ CREATE TABLE sensor_data (
     value DOUBLE PRECISION NOT NULL,
     unit VARCHAR(20),
     metadata JSONB,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    farm_id BIGINT REFERENCES farms(id) ON DELETE SET NULL,
+    assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- GATEWAY STATUS HISTORY TABLE
@@ -100,8 +103,5 @@ CREATE INDEX idx_gateways_status ON gateways(status);
 CREATE INDEX idx_sensors_gateway_id ON sensors(gateway_id);
 CREATE INDEX idx_sensor_data_sensor_id_timestamp ON sensor_data(sensor_id, timestamp DESC);
 CREATE INDEX idx_sensor_data_gateway_id_timestamp ON sensor_data(gateway_id, timestamp DESC);
-
-
--- Insert sample admin user (password: admin123 for admin)
-INSERT INTO users (username, email, password_hash, role) VALUES 
-('admin', 'admin@kampungtani.com', '$2b$12$M99Sm1H.pamxjBZ36d0efuGeZ5EbjqNFSDlf34meSgG9HwD0i1rcO', 'super admin');
+CREATE INDEX idx_sensor_data_farm_id ON sensor_data(farm_id);
+CREATE INDEX idx_sensor_data_assigned_by ON sensor_data(assigned_by);
