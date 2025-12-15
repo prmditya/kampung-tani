@@ -30,6 +30,24 @@ def get_async_engine() -> AsyncEngine:
         AsyncEngine: Configured async database engine
     """
     database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
+    
+    # Check if SSL is required (Neon, Supabase, etc.)
+    ssl_required = "sslmode=require" in database_url or "ssl=true" in database_url.lower()
+    
+    # Remove sslmode and channel_binding from URL (asyncpg doesn't support these as query params)
+    import re
+    database_url = re.sub(r'[?&](sslmode|channel_binding)=[^&]*', '', database_url)
+    # Clean up URL if it ends with ? or has && 
+    database_url = database_url.rstrip('?').replace('?&', '?').replace('&&', '&').rstrip('&')
+    
+    # Configure SSL for asyncpg
+    connect_args = {}
+    if ssl_required:
+        import ssl
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        connect_args["ssl"] = ssl_context
 
     engine = create_async_engine(
         database_url,
@@ -38,6 +56,7 @@ def get_async_engine() -> AsyncEngine:
         max_overflow=20,
         pool_pre_ping=True,
         pool_recycle=3600,
+        connect_args=connect_args,
     )
 
     return engine
@@ -59,6 +78,12 @@ AsyncSessionLocal = async_sessionmaker(
 def get_sync_engine():
     """Create synchronous database engine for background jobs"""
     database_url = settings.database_url.replace("postgresql://", "postgresql+psycopg2://")
+    
+    # Remove channel_binding from URL (psycopg2 doesn't support this)
+    import re
+    database_url = re.sub(r'[?&]channel_binding=[^&]*', '', database_url)
+    # Clean up URL
+    database_url = database_url.rstrip('?').replace('?&', '?').replace('&&', '&').rstrip('&')
 
     sync_engine = create_engine(
         database_url,

@@ -8,6 +8,7 @@ asyncpg==0.29.0  # For async database operations
 
 # ORM
 sqlalchemy==2.0.23
+alembic==1.13.1
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
