@@ -88,14 +88,18 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-9 space-y-6">
+            <QuickActions className="block md:hidden" />
             <StatsCards stats={stats} />
             <ActivityChart data={activityData} />
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="lg:col-span-3 space-y-6 grid">
-            <RecentActivity statusChanges={statusChanges || []} />
-            <QuickActions />
+          <div className="lg:col-span-3 space-y-6 flex flex-col">
+            <RecentActivity
+              className="h-[300px]"
+              statusChanges={statusChanges || []}
+            />
+            <QuickActions className="hidden md:block h-full" />
           </div>
         </div>
       )}

@@ -1,48 +1,56 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HardDrive, Users, TrendingUp } from 'lucide-react';
+import { HardDrive, Users, TrendingUp, Unplug } from 'lucide-react';
 import Link from 'next/link';
 
-export function QuickActions() {
+const actions = [
+  {
+    id: 'add-device',
+    label: 'Add New Device',
+    href: '/dashboard/devices?action=add',
+    icon: HardDrive,
+  },
+  {
+    id: 'add-farmer',
+    label: 'Add New Farmer',
+    href: '/dashboard/farmers?action=add',
+    icon: Users,
+  },
+  {
+    id: 'assign-device',
+    label: 'Assign to Farm',
+    href: '/dashboard/assignments',
+    icon: Unplug,
+  },
+  {
+    id: 'view-analytics',
+    label: 'View Analytics',
+    href: '/dashboard/data',
+    icon: TrendingUp,
+  },
+];
+
+export function QuickActions({ className }: { className?: string }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          size="sm"
-          asChild
-        >
-          <Link href="/dashboard/devices">
-            <HardDrive className="mr-2 h-4 w-4" />
-            Add New Device
-          </Link>
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          size="sm"
-          asChild
-        >
-          <Link href="/dashboard/assignments">
-            <Users className="mr-2 h-4 w-4" />
-            Assign to Farm
-          </Link>
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          size="sm"
-          asChild
-        >
-          <Link href="/dashboard/data">
-            <TrendingUp className="mr-2 h-4 w-4" />
-            View Analytics
-          </Link>
-        </Button>
+        {actions.map((action) => (
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            size="sm"
+            key={action.id}
+            asChild
+          >
+            <Link href={action.href}>
+              <action.icon className="mr-2 h-4 w-4" />
+              {action.label}
+            </Link>
+          </Button>
+        ))}
       </CardContent>
     </Card>
   );
