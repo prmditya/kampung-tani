@@ -139,7 +139,7 @@ export default function GlobalSearch({
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-xl p-0 gap-0 [&>button]:hidden">
+        <DialogContent className="w-full sm:max-w-xl h-[85vh] overflow-hidden flex flex-col p-0 gap-0 [&>button]:hidden">
           <DialogHeader className="px-4 py-4">
             <DialogTitle className="sr-only">Global Search</DialogTitle>
             <div className="relative">
@@ -156,7 +156,7 @@ export default function GlobalSearch({
 
           <Separator />
 
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="flex-1 min-h-0 max-h-[calc(85vh-130px)]">
             <div className="p-2">
               {isLoading && (
                 <div className="flex items-center justify-center py-12">

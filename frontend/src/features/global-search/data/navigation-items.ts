@@ -5,7 +5,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'dashboard-home',
     title: 'Dashboard',
-    description: 'View overview and statistics',
+    description: 'Overview and statistics',
     href: '/dashboard',
     icon: 'LayoutDashboard',
     category: 'navigation',
@@ -16,7 +16,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'devices',
     title: 'Devices',
-    description: 'Manage gateways and sensors',
+    description: 'Gateways and sensors',
     href: '/dashboard/devices',
     icon: 'HardDrive',
     category: 'navigation',
@@ -27,7 +27,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'farmers',
     title: 'Farmers',
-    description: 'Manage farmers and their information',
+    description: 'Farmer management',
     href: '/dashboard/farmers',
     icon: 'Users',
     category: 'navigation',
@@ -38,7 +38,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'assignments',
     title: 'Assignments',
-    description: 'Manage gateway-to-farm assignments',
+    description: 'Gateway-to-farm mapping',
     href: '/dashboard/assignments',
     icon: 'Unplug',
     category: 'navigation',
@@ -49,7 +49,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'data',
     title: 'Sensor Data',
-    description: 'View sensor readings and analytics',
+    description: 'Readings and analytics',
     href: '/dashboard/data',
     icon: 'LineChart',
     category: 'navigation',
@@ -60,7 +60,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'summary',
     title: 'User Summary',
-    description: 'View, export, and recommendation summary for user',
+    description: 'Reports and recommendations',
     href: '/dashboard/summary',
     icon: 'FileText',
     category: 'navigation',
@@ -71,7 +71,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'settings',
     title: 'Settings',
-    description: 'Configure application settings',
+    description: 'App settings',
     href: '/dashboard/settings',
     icon: 'Settings',
     category: 'navigation',
@@ -82,7 +82,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'add-gateway',
     title: 'Add New Gateway',
-    description: 'Register a new gateway device',
+    description: 'Register new gateway',
     href: '/dashboard/devices?action=add',
     icon: 'Plus',
     category: 'action',
@@ -91,7 +91,7 @@ export const navigationItems: NavigationItem[] = [
   {
     id: 'add-farmer',
     title: 'Add New Farmer',
-    description: 'Register a new farmer',
+    description: 'Register new farmer',
     href: '/dashboard/farmers?action=add',
     icon: 'UserPlus',
     category: 'action',
