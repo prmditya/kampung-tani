@@ -17,6 +17,9 @@ class SensorData(Base):
     # on the DB as the column name but use a different Python attribute.
     metadata_ = Column("metadata", JSONB)  # Store extra info
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    # Historical assignment snapshot columns
+    farm_id = Column(BigInteger, ForeignKey("farms.id", ondelete="SET NULL"), nullable=True)
+    assigned_by = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     sensor = relationship("Sensor", back_populates="sensor_data")

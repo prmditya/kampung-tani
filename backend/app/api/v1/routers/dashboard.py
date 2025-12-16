@@ -49,22 +49,22 @@ async def get_dashboard_data(
     - Activity chart data for last 7 days
     """
 
-    # Get gateway stats
+    # Get gateway stats (system-wide)
     gateway_query = select(
         func.count(Gateway.id).label('total'),
         func.count().filter(Gateway.status == 'online').label('active'),
         func.count().filter(Gateway.status == 'offline').label('offline'),
         func.count().filter(Gateway.status == 'maintenance').label('maintenance'),
-    ).where(Gateway.user_id == current_user.id)
+    )
 
     gateway_result = await db.execute(gateway_query)
     gateway_stats = gateway_result.first()
 
-    # Get sensor stats
+    # Get sensor stats (system-wide)
     sensor_query = select(
         func.count(Sensor.id).label('total'),
         func.count().filter(Sensor.status == 'active').label('active'),
-    ).join(Gateway).where(Gateway.user_id == current_user.id)
+    )
 
     sensor_result = await db.execute(sensor_query)
     sensor_stats = sensor_result.first()
@@ -78,40 +78,25 @@ async def get_dashboard_data(
     farmer_result = await db.execute(farmer_query)
     total_farmers = farmer_result.scalar() or 0
 
-    # Get active assignments count
+    # Get active assignments count (system-wide)
     assignment_query = select(func.count(GatewayAssignment.id)).where(
-        and_(
-            GatewayAssignment.is_active == True,
-            GatewayAssignment.gateway_id.in_(
-                select(Gateway.id).where(Gateway.user_id == current_user.id)
-            )
-        )
+        GatewayAssignment.is_active == True
     )
     assignment_result = await db.execute(assignment_query)
     active_assignments = assignment_result.scalar() or 0
 
-    # Get today's readings count
+    # Get today's readings count (system-wide)
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_query = select(func.count(SensorData.id)).where(
-        and_(
-            SensorData.timestamp >= today_start,
-            SensorData.gateway_id.in_(
-                select(Gateway.id).where(Gateway.user_id == current_user.id)
-            )
-        )
+        SensorData.timestamp >= today_start
     )
     today_result = await db.execute(today_query)
     today_readings = today_result.scalar() or 0
 
-    # Get this week's readings count
+    # Get this week's readings count (system-wide)
     week_start = datetime.utcnow() - timedelta(days=7)
     week_query = select(func.count(SensorData.id)).where(
-        and_(
-            SensorData.timestamp >= week_start,
-            SensorData.gateway_id.in_(
-                select(Gateway.id).where(Gateway.user_id == current_user.id)
-            )
-        )
+        SensorData.timestamp >= week_start
     )
     week_result = await db.execute(week_query)
     week_readings = week_result.scalar() or 0
@@ -127,9 +112,6 @@ async def get_dashboard_data(
             and_(
                 SensorData.timestamp >= date_start,
                 SensorData.timestamp < date_end,
-                SensorData.gateway_id.in_(
-                    select(Gateway.id).where(Gateway.user_id == current_user.id)
-                )
             )
         )
         daily_result = await db.execute(daily_query)

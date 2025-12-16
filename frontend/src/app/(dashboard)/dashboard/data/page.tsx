@@ -22,6 +22,7 @@ import {
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
+import { useGetUsers } from '@/features/settings/hooks/use-users';
 import type { SensorDataResponse } from '@/types/api';
 import {
   Loader2,
@@ -110,20 +111,15 @@ export default function DataPage() {
   const assignedById =
     selectedAssignedBy !== 'all' ? parseInt(selectedAssignedBy) : undefined;
 
-  // Get unique assigned_by users from assignments data
+  // Get all users for Assigned By dropdown
+  const { data: usersData } = useGetUsers();
   const assignedByUsers = useMemo(() => {
-    if (!assignmentsData?.items) return [];
-    const uniqueUsers = new Map<number, { id: number; username: string }>();
-    assignmentsData.items.forEach((assignment) => {
-      if (assignment.assigned_by && assignment.assigned_by_user?.username) {
-        uniqueUsers.set(assignment.assigned_by, {
-          id: assignment.assigned_by,
-          username: assignment.assigned_by_user.username,
-        });
-      }
-    });
-    return Array.from(uniqueUsers.values());
-  }, [assignmentsData]);
+    if (!usersData) return [];
+    return usersData.map((user) => ({
+      id: user.id,
+      username: user.username,
+    }));
+  }, [usersData]);
 
   // Fetch sensor data for table (paginated) with all filters
   const {

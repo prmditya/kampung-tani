@@ -5,6 +5,7 @@ CRUD operations for sensors and sensor data with async SQLAlchemy
 
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional
 from datetime import datetime, timedelta
 import math
@@ -13,6 +14,8 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
+from app.models.gateway import Gateway
+from app.models.gateway_assignment import GatewayAssignment
 from app.api.v1.repositories.gateway_repository import GatewayRepository
 from app.api.v1.repositories.sensor_repository import SensorRepository
 from app.api.v1.repositories.sensor_data_repository import SensorDataRepository
@@ -29,6 +32,35 @@ from app.api.v1.schemas import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+async def user_has_gateway_access(
+    db: AsyncSession,
+    gateway: Gateway,
+    current_user: User
+) -> bool:
+    """
+    Check if user has permission to access the gateway's sensors/data.
+
+    Access is granted if:
+    - User is a super admin
+    - User owns the gateway (gateway.user_id == current_user.id)
+    - User has assigned this gateway to a farm (assigned_by check)
+    """
+    # Super admin can access everything
+    if current_user.role == "super admin":
+        return True
+    # Gateway owner has access
+    if gateway.user_id == current_user.id:
+        return True
+    # Check if user has ever assigned this gateway to any farm (past or present)
+    result = await db.execute(
+        select(GatewayAssignment).where(
+            GatewayAssignment.gateway_id == gateway.id,
+            GatewayAssignment.assigned_by == current_user.id
+        )
+    )
+    return result.first() is not None
 
 
 @router.get(
@@ -56,10 +88,10 @@ async def get_sensors(
     gateway_repo = GatewayRepository(db)
     sensor_repo = SensorRepository(db)
 
-    # If gateway_id is provided, verify it belongs to the user
+    # If gateway_id is provided, verify user has access to the gateway
     if gateway_id:
         gateway = await gateway_repo.get_by_id(gateway_id)
-        if not gateway or gateway.user_id != current_user.id:
+        if not gateway or not await user_has_gateway_access(db, gateway, current_user):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Gateway not found"
@@ -182,9 +214,9 @@ async def get_sensor(
             detail="Sensor not found"
         )
 
-    # Verify gateway belongs to user
+    # Verify user has access to gateway
     gateway = await gateway_repo.get_by_id(sensor.gateway_id)
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sensor not found"
@@ -223,9 +255,9 @@ async def update_sensor(
             detail="Sensor not found"
         )
 
-    # Verify gateway belongs to user
+    # Verify user has access to gateway
     gateway = await gateway_repo.get_by_id(sensor.gateway_id)
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sensor not found"
@@ -287,9 +319,9 @@ async def delete_sensor(
             detail="Sensor not found"
         )
 
-    # Verify gateway belongs to user
+    # Verify user has access to gateway
     gateway = await gateway_repo.get_by_id(sensor.gateway_id)
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sensor not found"
@@ -366,9 +398,9 @@ async def get_sensor_data(
             detail="Sensor not found"
         )
 
-    # Verify gateway belongs to user
+    # Verify user has access to gateway
     gateway = await gateway_repo.get_by_id(sensor.gateway_id)
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sensor not found"
@@ -522,9 +554,9 @@ async def get_sensor_stats(
             detail="Sensor not found"
         )
 
-    # Verify gateway belongs to user
+    # Verify user has access to gateway
     gateway = await gateway_repo.get_by_id(sensor.gateway_id)
-    if not gateway or gateway.user_id != current_user.id:
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sensor not found"
