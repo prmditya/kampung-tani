@@ -75,8 +75,7 @@ export default function AssignmentsPage() {
                   {assignmentsError.message}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Make sure the backend server is running on
-                  http://localhost:5000
+                  Make sure the backend server is running
                 </p>
               </div>
             </div>

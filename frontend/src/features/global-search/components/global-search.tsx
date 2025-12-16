@@ -18,7 +18,15 @@ import { useSearchFilter } from '../hooks/use-search-filter';
 import { SearchResultItem } from './search-result-item';
 import { useRouter } from 'next/navigation';
 
-export default function GlobalSearch({ className = '' }) {
+interface GlobalSearchProps {
+  className?: string;
+  variant?: 'default' | 'mobile';
+}
+
+export default function GlobalSearch({
+  className = '',
+  variant = 'default',
+}: GlobalSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -30,6 +38,18 @@ export default function GlobalSearch({ className = '' }) {
       query,
       results: searchData || [],
     });
+
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Scroll to selected item
+  useEffect(() => {
+    if (itemRefs.current[selectedIndex]) {
+      itemRefs.current[selectedIndex].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [selectedIndex]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -90,24 +110,34 @@ export default function GlobalSearch({ className = '' }) {
 
   return (
     <>
-      <Button
-        onClick={() => setOpen(true)}
-        className={`flex justify-between bg-accent text-muted-foreground shadow-sm border border-foreground/10 hover:bg-accent/80 w-full ${className}`}
-      >
-        <div className="flex items-center gap-2">
+      {variant === 'mobile' && (
+        <Button
+          variant="ghost"
+          onClick={() => setOpen(true)}
+          className={`justify-between text-muted-foreground block md:hidden ${className}`}
+        >
           <Search className="h-4 w-4" />
-          <span className="text-sm">Search...</span>
-        </div>
-        <KbdGroup>
-          <Kbd className="bg-muted border border-foreground/10 rounded-md">
-            Ctrl
-          </Kbd>
-          <Kbd className="bg-muted border border-foreground/10 rounded-md">
-            K
-          </Kbd>
-        </KbdGroup>
-      </Button>
-
+        </Button>
+      )}
+      {variant === 'default' && (
+        <Button
+          onClick={() => setOpen(true)}
+          className={`hidden md:flex justify-between bg-accent text-muted-foreground shadow-sm border border-foreground/10 hover:bg-accent/80 ${className}`}
+        >
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            <span className="text-sm">Search...</span>
+          </div>
+          <KbdGroup>
+            <Kbd className="bg-muted border border-foreground/10 rounded-md">
+              Ctrl
+            </Kbd>
+            <Kbd className="bg-muted border border-foreground/10 rounded-md">
+              K
+            </Kbd>
+          </KbdGroup>
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-fit sm:max-w-xl p-0 gap-0 [&>button]:hidden">
           <DialogHeader className="px-4 py-4">
@@ -191,6 +221,9 @@ export default function GlobalSearch({ className = '' }) {
                           return (
                             <SearchResultItem
                               key={result.id}
+                              ref={(el) => {
+                                itemRefs.current[globalIndex] = el;
+                              }}
                               result={result}
                               onSelect={handleResultSelect}
                               isSelected={globalIndex === selectedIndex}
@@ -214,6 +247,9 @@ export default function GlobalSearch({ className = '' }) {
                           return (
                             <SearchResultItem
                               key={result.id}
+                              ref={(el) => {
+                                itemRefs.current[globalIndex] = el;
+                              }}
                               result={result}
                               onSelect={handleResultSelect}
                               isSelected={globalIndex === selectedIndex}

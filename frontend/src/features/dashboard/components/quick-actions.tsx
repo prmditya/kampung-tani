@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HardDrive, Users, TrendingUp, Unplug } from 'lucide-react';
+import { HardDrive, Users, TrendingUp, Unplug, Zap } from 'lucide-react';
 import Link from 'next/link';
 
 const actions = [
@@ -34,7 +34,11 @@ export function QuickActions({ className }: { className?: string }) {
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          {' '}
+          <Zap className="h-4 w-4" />
+          Quick Actions
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {actions.map((action) => (

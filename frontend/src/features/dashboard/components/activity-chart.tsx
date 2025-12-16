@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   AreaChart,
 } from 'recharts';
+import { TrendingUp } from 'lucide-react';
 
 interface ActivityData {
   date: string;
@@ -22,7 +23,8 @@ export function ActivityChart({ data }: ActivityChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
           Sensor Activity Trends
         </CardTitle>
       </CardHeader>
@@ -30,7 +32,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart
             data={data}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            margin={{ top: 10, right: 30, left: -20, bottom: 0 }}
           >
             <defs>
               <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">

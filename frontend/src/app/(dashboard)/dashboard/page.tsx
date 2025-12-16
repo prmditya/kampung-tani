@@ -88,7 +88,7 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-9 space-y-6">
-            <QuickActions className="block md:hidden" />
+            <QuickActions className="block lg:hidden" />
             <StatsCards stats={stats} />
             <ActivityChart data={activityData} />
           </div>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
               className="h-[300px]"
               statusChanges={statusChanges || []}
             />
-            <QuickActions className="hidden md:block h-full" />
+            <QuickActions className="hidden lg:block h-full" />
           </div>
         </div>
       )}

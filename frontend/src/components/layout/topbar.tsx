@@ -2,20 +2,24 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import ThemeToggler from '@/components/layout/theme-toggler';
 import NavBreadcrumbs from '@/components/layout/nav-breadcrumbs';
 import { Separator } from '@/components/ui/separator';
+import { GlobalSearch } from '@/features/global-search';
 
 export function Topbar() {
   return (
-    <header className="sticky top-0 z-10 flex h-14 sm:h-18 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 md:px-6 ">
-      <SidebarTrigger className="-ml-1" />
+    <header className="sticky top-0 z-10 flex h-14 sm:h-18 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 md:px-6 justify-between">
+      <div className="flex items-center gap-2">
+        <SidebarTrigger />
 
-      <Separator
-        orientation="vertical"
-        className="data-[orientation=vertical]:h-4"
-      />
+        <Separator
+          orientation="vertical"
+          className="data-[orientation=vertical]:h-4 mr-[7px]"
+        />
 
-      <NavBreadcrumbs />
+        <NavBreadcrumbs />
+      </div>
 
-      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <GlobalSearch variant="mobile" className="rounded-xl px-2" />
         <ThemeToggler />
       </div>
     </header>

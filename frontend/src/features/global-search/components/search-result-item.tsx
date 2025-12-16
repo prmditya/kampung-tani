@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation';
+import { forwardRef } from 'react';
 import type { NavigationItem } from '../types/search-result';
 import {
   LayoutDashboard,
@@ -33,11 +34,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
 };
 
-export function SearchResultItem({
-  result,
-  onSelect,
-  isSelected = false,
-}: SearchResultItemProps) {
+export const SearchResultItem = forwardRef<
+  HTMLButtonElement,
+  SearchResultItemProps
+>(({ result, onSelect, isSelected = false }, ref) => {
   const router = useRouter();
   const Icon = result.icon ? ICON_MAP[result.icon] : ChevronRight;
 
@@ -48,6 +48,7 @@ export function SearchResultItem({
 
   return (
     <button
+      ref={ref}
       onClick={handleClick}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left group ${
         isSelected ? 'bg-accent' : 'hover:bg-accent'
@@ -77,4 +78,4 @@ export function SearchResultItem({
       />
     </button>
   );
-}
+});

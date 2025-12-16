@@ -225,11 +225,17 @@ export default function SummaryPage() {
                   <SelectValue placeholder="Select farmer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(farmersData?.items || []).map((farmer) => (
-                    <SelectItem key={farmer.id} value={farmer.id.toString()}>
-                      {farmer.name}
-                    </SelectItem>
-                  ))}
+                  {(farmersData?.items || []).length === 0 ? (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      There are no farmers yet
+                    </div>
+                  ) : (
+                    (farmersData?.items || []).map((farmer) => (
+                      <SelectItem key={farmer.id} value={farmer.id.toString()}>
+                        {farmer.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
