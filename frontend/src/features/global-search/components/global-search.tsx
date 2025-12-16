@@ -139,7 +139,7 @@ export default function GlobalSearch({
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-fit sm:max-w-xl p-0 gap-0 [&>button]:hidden">
+        <DialogContent className="w-full sm:max-w-xl p-0 gap-0 [&>button]:hidden">
           <DialogHeader className="px-4 py-4">
             <DialogTitle className="sr-only">Global Search</DialogTitle>
             <div className="relative">
