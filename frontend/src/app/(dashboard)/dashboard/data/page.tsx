@@ -567,11 +567,7 @@ export default function DataPage() {
               <RefreshCw className="mr-2 h-4 w-4" />
               Reset Filters
             </Button>
-            <Button
-              onClick={handleExport}
-              variant="secondary"
-              className="flex-auto"
-            >
+            <Button onClick={handleExport} variant="ghost">
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>

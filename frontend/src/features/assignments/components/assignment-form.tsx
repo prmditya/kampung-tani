@@ -133,7 +133,7 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {availableGateways.length === 0 ? (
-                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
                           No available gateways. All gateways are currently
                           assigned.
                         </div>
@@ -172,11 +172,17 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
                       <SelectValue placeholder="Select a farm" />
                     </SelectTrigger>
                     <SelectContent>
-                      {farms.map((farm) => (
-                        <SelectItem key={farm.id} value={farm.id.toString()}>
-                          {farm.name}
-                        </SelectItem>
-                      ))}
+                      {farms.length === 0 ? (
+                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                          No available farms. Add a farm first.
+                        </div>
+                      ) : (
+                        farms.map((farm) => (
+                          <SelectItem key={farm.id} value={farm.id.toString()}>
+                            {farm.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FieldError errors={[fieldState.error]} />

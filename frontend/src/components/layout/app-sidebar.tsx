@@ -100,7 +100,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="mb-[-20px]">
+        <SidebarGroup className="mb-[-20px] hidden md:flex">
           <GlobalSearch className="rounded-xl px-2" />
         </SidebarGroup>
         <SidebarGroup>

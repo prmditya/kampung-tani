@@ -60,8 +60,7 @@ export default function FarmersPage() {
                   {error.message}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Make sure the backend server is running on
-                  http://localhost:5000
+                  Make sure the backend server is running
                 </p>
               </div>
             </div>

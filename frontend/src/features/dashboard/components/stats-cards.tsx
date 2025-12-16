@@ -55,7 +55,7 @@ const STATS_CONFIG: StatConfig[] = [
 
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
-    <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
       {STATS_CONFIG.map(({ key, title, icon: Icon, gradient, description }) => {
         return (
           <Card
