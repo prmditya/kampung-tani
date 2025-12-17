@@ -32,6 +32,7 @@ export function useSearchFilter({ query, results }: UseSearchFilterOptions) {
     return {
       navigation: filteredResults.filter((r) => r.category === 'navigation'),
       actions: filteredResults.filter((r) => r.category === 'action'),
+      farmers: filteredResults.filter((r) => r.category === 'farmer'),
     };
   }, [filteredResults]);
 

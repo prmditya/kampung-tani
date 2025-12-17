@@ -13,6 +13,8 @@ import {
   Link,
   ChevronRight,
   FileText,
+  Eye,
+  Pencil,
 } from 'lucide-react';
 
 interface SearchResultItemProps {
@@ -32,6 +34,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   UserPlus,
   Link,
   FileText,
+  Eye,
+  Pencil,
 };
 
 export const SearchResultItem = forwardRef<
@@ -39,7 +43,7 @@ export const SearchResultItem = forwardRef<
   SearchResultItemProps
 >(({ result, onSelect, isSelected = false }, ref) => {
   const router = useRouter();
-  const Icon = result.icon ? ICON_MAP[result.icon] : ChevronRight;
+  const Icon = (result.icon && ICON_MAP[result.icon]) || ChevronRight;
 
   const handleClick = () => {
     router.push(result.href);

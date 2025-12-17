@@ -25,11 +25,25 @@ import { updateFarmerSchema } from '@/features/farmers/schemas';
 
 interface EditFarmerDialogProps {
   farmer: FarmerResponse;
+  // For URL-controlled mode
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
-export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EditFarmerDialog({
+  farmer,
+  externalOpen,
+  onExternalOpenChange,
+  hideTrigger = false,
+}: EditFarmerDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const updateMutation = useUpdateFarmer();
+
+  // Use external state if provided, otherwise use internal state
+  const isControlled = externalOpen !== undefined;
+  const open = isControlled ? externalOpen : internalOpen;
+  const setOpen = isControlled ? onExternalOpenChange! : setInternalOpen;
 
   // Helper to strip +62 prefix from existing contact
   const stripPhonePrefix = (phone: string | null | undefined): string => {
@@ -78,9 +92,11 @@ export function EditFarmerDialog({ farmer }: EditFarmerDialogProps) {
 
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
-        <Pencil className="h-4 w-4" />
-      </Button>
+      {!hideTrigger && (
+        <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[500px]">

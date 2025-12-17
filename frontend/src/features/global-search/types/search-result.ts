@@ -4,7 +4,7 @@ export interface NavigationItem {
   description?: string;
   href: string;
   icon?: string;
-  category: 'navigation' | 'action';
+  category: 'navigation' | 'action' | 'farmer';
   keywords?: string[];
 }
 

@@ -16,6 +16,7 @@ import { Pencil } from 'lucide-react';
 import { useUpdateFarm } from '@/features/farmers/hooks/use-farms';
 import type { FarmResponse, FarmUpdate } from '@/types/api';
 import { MapPicker } from '@/components/ui/map-picker';
+import { toast } from 'sonner';
 
 interface EditFarmDialogProps {
   farm: FarmResponse;
@@ -54,7 +55,13 @@ export function EditFarmDialog({ farm }: EditFarmDialogProps) {
       { id: farm.id, data },
       {
         onSuccess: () => {
+          toast.success('Farm updated successfully');
           setOpen(false);
+        },
+        onError: (error) => {
+          toast.error(
+            error?.message || 'Failed to update farm. Please try again.',
+          );
         },
       },
     );
