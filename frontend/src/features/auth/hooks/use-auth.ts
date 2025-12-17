@@ -115,6 +115,9 @@ export function useLogout() {
       // Remove token, expiration, and user data from localStorage
       Cookies.remove('token');
 
+      // Clear saved page URLs from localStorage
+      localStorage.removeItem('dataPageLastUrl');
+
       // Clear all cached queries to ensure fresh data on next login
       queryClient.clear();
 

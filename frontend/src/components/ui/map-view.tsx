@@ -54,8 +54,26 @@ export function MapView({
         dragPan={true}
         scrollZoom={true}
         doubleClickZoom={true}
+        dragRotate={true}
+        touchPitch={true}
+        pitchWithRotate={true}
+        onLoad={(e) => {
+          const map = e.target;
+          const style = map.getStyle();
+          if (style && style.layers) {
+            style.layers.forEach((layer) => {
+              if (layer.type === 'fill-extrusion') {
+                map.setLayoutProperty(layer.id, 'visibility', 'none');
+              }
+            });
+          }
+        }}
       >
-        <NavigationControl position="top-right" />
+        <NavigationControl
+          position="top-right"
+          showCompass={true}
+          visualizePitch={true}
+        />
 
         <Marker latitude={latitude} longitude={longitude} anchor="center">
           {/* Minimalist marker design */}

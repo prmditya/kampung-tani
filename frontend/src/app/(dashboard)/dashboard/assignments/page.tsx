@@ -14,6 +14,7 @@ import {
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGateways } from '@/hooks/use-gateways';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
+import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import {
   Unplug,
   HardDrive,
@@ -33,13 +34,18 @@ export default function AssignmentsPage() {
     size: 100,
   });
   const { data: farmsData, isLoading: farmsLoading } = useFarms({ size: 100 });
+  const { data: farmersData, isLoading: farmersLoading } = useFarmers({
+    size: 100,
+  });
 
   // Handle data - provide empty arrays as fallback
   const assignments = assignmentsData?.items || [];
   const gateways = gatewaysData?.items || [];
   const farms = farmsData?.items || [];
+  const farmers = farmersData?.items || [];
 
-  const isLoading = assignmentsLoading || gatewaysLoading || farmsLoading;
+  const isLoading =
+    assignmentsLoading || gatewaysLoading || farmsLoading || farmersLoading;
 
   if (isLoading) {
     return (
@@ -192,7 +198,7 @@ export default function AssignmentsPage() {
         </Card>
       </div>
 
-      <AssignmentForm gateways={gateways} farms={farms} />
+      <AssignmentForm gateways={gateways} farms={farms} farmers={farmers} />
 
       <Card>
         <CardHeader>

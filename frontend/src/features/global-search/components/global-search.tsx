@@ -259,6 +259,32 @@ export default function GlobalSearch({
                       </div>
                     </div>
                   )}
+
+                  {groupedResults.farmers.length > 0 && (
+                    <div>
+                      <h3 className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Farmers
+                      </h3>
+                      <div className="space-y-0.5">
+                        {groupedResults.farmers.map((result, index) => {
+                          const globalIndex = filteredResults.findIndex(
+                            (r) => r.id === result.id,
+                          );
+                          return (
+                            <SearchResultItem
+                              key={result.id}
+                              ref={(el) => {
+                                itemRefs.current[globalIndex] = el;
+                              }}
+                              result={result}
+                              onSelect={handleResultSelect}
+                              isSelected={globalIndex === selectedIndex}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

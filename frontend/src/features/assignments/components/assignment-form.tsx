@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,18 +14,20 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Plus } from 'lucide-react';
 import { useCreateAssignment } from '@/features/assignments/hooks/use-assignment';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import type {
   GatewayResponse,
   FarmResponse,
+  FarmerResponse,
   GatewayAssignmentCreate,
 } from '@/types/api';
 import { formatDateTimeToISO } from '@/lib/utils';
@@ -41,10 +43,17 @@ import {
 interface AssignmentFormProps {
   gateways: GatewayResponse[];
   farms: FarmResponse[];
+  farmers: FarmerResponse[];
 }
 
-export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
+export function AssignmentForm({
+  gateways,
+  farms,
+  farmers,
+}: AssignmentFormProps) {
   const createMutation = useCreateAssignment();
+  const [gatewayComboboxOpen, setGatewayComboboxOpen] = useState(false);
+  const [farmComboboxOpen, setFarmComboboxOpen] = useState(false);
   const {
     data: assignmentsData,
     isLoading: assignmentsLoading,
@@ -118,76 +127,196 @@ export function AssignmentForm({ gateways, farms }: AssignmentFormProps) {
             <Controller
               name="gateway_id"
               control={form.control}
-              render={({ field, fieldState }) => (
-                <Field className="grid gap-2">
-                  <Label htmlFor="gateway">
-                    Gateway<span className="text-red-500 ml-[-5px]">*</span>
-                  </Label>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={createMutation.isPending}
-                  >
-                    <SelectTrigger id="gateway">
-                      <SelectValue placeholder="Select a gateway" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableGateways.length === 0 ? (
-                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                          No available gateways. All gateways are currently
-                          assigned.
-                        </div>
-                      ) : (
-                        availableGateways.map((gateway) => (
-                          <SelectItem
-                            key={gateway.id}
-                            value={gateway.id.toString()}
-                          >
-                            {gateway.name || gateway.gateway_uid} (
-                            {gateway.gateway_uid})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )}
+              render={({ field, fieldState }) => {
+                const selectedGateway = availableGateways.find(
+                  (g) => g.id.toString() === field.value,
+                );
+
+                return (
+                  <Field className="grid gap-2">
+                    <Label htmlFor="gateway">
+                      Gateway<span className="text-red-500 ml-[-5px]">*</span>
+                    </Label>
+                    <Popover
+                      open={gatewayComboboxOpen}
+                      onOpenChange={setGatewayComboboxOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="gateway"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={gatewayComboboxOpen}
+                          className="w-full justify-between font-normal"
+                          disabled={createMutation.isPending}
+                        >
+                          {selectedGateway ? (
+                            <span className="truncate">
+                              {selectedGateway.name ||
+                                selectedGateway.gateway_uid}
+                              <span className="text-muted-foreground ml-1">
+                                ({selectedGateway.gateway_uid})
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Search gateways...
+                            </span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start"
+                        sideOffset={4}
+                      >
+                        <Command className="border rounded-md">
+                          <CommandInput placeholder="Search gateway..." />
+                          <CommandList>
+                            {availableGateways.length === 0 ? (
+                              <CommandEmpty>
+                                No available gateways. All are assigned.
+                              </CommandEmpty>
+                            ) : (
+                              <>
+                                <CommandEmpty>No gateway found.</CommandEmpty>
+                                <CommandGroup>
+                                  {availableGateways.map((gateway) => (
+                                    <CommandItem
+                                      key={gateway.id}
+                                      value={`${gateway.name || ''} ${gateway.gateway_uid}`}
+                                      onSelect={() => {
+                                        field.onChange(gateway.id.toString());
+                                        setGatewayComboboxOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === gateway.id.toString()
+                                            ? 'opacity-100'
+                                            : 'opacity-0',
+                                        )}
+                                      />
+                                      <span>
+                                        {gateway.name || gateway.gateway_uid}
+                                        <span className="text-muted-foreground ml-1">
+                                          ({gateway.gateway_uid})
+                                        </span>
+                                      </span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                );
+              }}
             />
 
             <Controller
               name="farm_id"
               control={form.control}
-              render={({ field, fieldState }) => (
-                <Field className="grid gap-2">
-                  <Label htmlFor="farm">
-                    Farm<span className="text-red-500 ml-[-5px]">*</span>
-                  </Label>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={createMutation.isPending}
-                  >
-                    <SelectTrigger id="farm">
-                      <SelectValue placeholder="Select a farm" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {farms.length === 0 ? (
-                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                          No available farms. Add a farm first.
-                        </div>
-                      ) : (
-                        farms.map((farm) => (
-                          <SelectItem key={farm.id} value={farm.id.toString()}>
-                            {farm.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )}
+              render={({ field, fieldState }) => {
+                // Get selected farm info for display
+                const selectedFarm = farms.find(
+                  (f) => f.id.toString() === field.value,
+                );
+                const selectedFarmer = selectedFarm
+                  ? farmers.find((f) => f.id === selectedFarm.farmer_id)
+                  : null;
+
+                return (
+                  <Field className="grid gap-2">
+                    <Label htmlFor="farm">
+                      Farm<span className="text-red-500 ml-[-5px]">*</span>
+                    </Label>
+                    <Popover
+                      open={farmComboboxOpen}
+                      onOpenChange={setFarmComboboxOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="farm"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={farmComboboxOpen}
+                          className="w-full justify-between font-normal"
+                          disabled={createMutation.isPending}
+                        >
+                          {selectedFarm ? (
+                            <span className="truncate">
+                              {selectedFarm.name}
+                              {selectedFarmer && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({selectedFarmer.name})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Search farms...
+                            </span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start"
+                        sideOffset={4}
+                      >
+                        <Command className="border rounded-md">
+                          <CommandInput placeholder="Search farm or farmer..." />
+                          <CommandList>
+                            <CommandEmpty>No farm found.</CommandEmpty>
+                            {farmers.map((farmer) => {
+                              const farmerFarms = farms.filter(
+                                (farm) => farm.farmer_id === farmer.id,
+                              );
+                              if (farmerFarms.length === 0) return null;
+                              return (
+                                <CommandGroup
+                                  key={farmer.id}
+                                  heading={farmer.name}
+                                >
+                                  {farmerFarms.map((farm) => (
+                                    <CommandItem
+                                      key={farm.id}
+                                      value={`${farm.name} ${farmer.name}`}
+                                      onSelect={() => {
+                                        field.onChange(farm.id.toString());
+                                        setFarmComboboxOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === farm.id.toString()
+                                            ? 'opacity-100'
+                                            : 'opacity-0',
+                                        )}
+                                      />
+                                      {farm.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              );
+                            })}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                );
+              }}
             />
 
             <Controller

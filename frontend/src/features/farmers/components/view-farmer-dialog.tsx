@@ -26,18 +26,35 @@ import { DeleteFarmButton } from './delete-farm-button';
 interface ViewFarmerDialogProps {
   farmer: FarmerResponse;
   farms: FarmResponse[];
+  // For URL-controlled mode
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
-export function ViewFarmerDialog({ farmer, farms }: ViewFarmerDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ViewFarmerDialog({
+  farmer,
+  farms,
+  externalOpen,
+  onExternalOpenChange,
+  hideTrigger = false,
+}: ViewFarmerDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use external state if provided, otherwise use internal state
+  const isControlled = externalOpen !== undefined;
+  const open = isControlled ? externalOpen : internalOpen;
+  const setOpen = isControlled ? onExternalOpenChange! : setInternalOpen;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Eye className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <Eye className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[700px] max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Farmer Details</DialogTitle>

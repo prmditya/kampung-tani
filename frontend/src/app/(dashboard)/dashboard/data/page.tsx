@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataChart, ReadingsTable } from '@/features/data';
 import { useGateways } from '@/hooks/use-gateways';
@@ -23,6 +31,7 @@ import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGetUsers } from '@/features/settings/hooks/use-users';
+import { useCurrentUser, isSuperAdmin } from '@/features/auth/hooks/use-auth';
 import type { SensorDataResponse } from '@/types/api';
 import {
   Loader2,
@@ -34,6 +43,8 @@ import {
   Calendar as CalendarIcon,
   RotateCw,
   X,
+  Check,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -43,16 +54,39 @@ import {
 } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 export default function DataPage() {
-  const [selectedGateway, setSelectedGateway] = useState<string>('none');
-  const [selectedSensor, setSelectedSensor] = useState<string>('none');
-  const [selectedFarmer, setSelectedFarmer] = useState<string>('all');
-  const [selectedFarm, setSelectedFarm] = useState<string>('all');
-  const [selectedAssignedBy, setSelectedAssignedBy] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
-  const [hours, setHours] = useState(12);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read initial values from URL params
+  const initialGateway = searchParams.get('gateway') || 'none';
+  const initialSensor = searchParams.get('sensor') || 'none';
+  const initialFarmer = searchParams.get('farmer') || 'all';
+  const initialFarm = searchParams.get('farm') || 'all';
+  const initialAssignedBy = searchParams.get('assignedBy') || 'all';
+  const initialHours = parseInt(searchParams.get('hours') || '12');
+  const initialTimeMode =
+    (searchParams.get('timeMode') as 'quick' | 'custom') || 'quick';
+  const initialDateFrom = searchParams.get('dateFrom')
+    ? new Date(searchParams.get('dateFrom')!)
+    : undefined;
+  const initialDateTo = searchParams.get('dateTo')
+    ? new Date(searchParams.get('dateTo')!)
+    : undefined;
+
+  const [selectedGateway, setSelectedGateway] =
+    useState<string>(initialGateway);
+  const [selectedSensor, setSelectedSensor] = useState<string>(initialSensor);
+  const [selectedFarmer, setSelectedFarmer] = useState<string>(initialFarmer);
+  const [selectedFarm, setSelectedFarm] = useState<string>(initialFarm);
+  const [selectedAssignedBy, setSelectedAssignedBy] =
+    useState<string>(initialAssignedBy);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(initialDateFrom);
+  const [dateTo, setDateTo] = useState<Date | undefined>(initialDateTo);
+  const [hours, setHours] = useState(initialHours);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedMeasurementTypes, setSelectedMeasurementTypes] = useState<
@@ -61,7 +95,53 @@ export default function DataPage() {
   const [tableSearch, setTableSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [labelInterval, setLabelInterval] = useState<number>(60); // Label interval in minutes
-  const [timeMode, setTimeMode] = useState<'quick' | 'custom'>('quick'); // Time selection mode
+  const [timeMode, setTimeMode] = useState<'quick' | 'custom'>(initialTimeMode); // Time selection mode
+
+  // Combobox open state
+  const [gatewayComboboxOpen, setGatewayComboboxOpen] = useState(false);
+  const [sensorComboboxOpen, setSensorComboboxOpen] = useState(false);
+  const [farmerComboboxOpen, setFarmerComboboxOpen] = useState(false);
+  const [farmComboboxOpen, setFarmComboboxOpen] = useState(false);
+  const [assignedByComboboxOpen, setAssignedByComboboxOpen] = useState(false);
+
+  // Sync filter state to URL params
+  const updateUrlParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (
+          value === null ||
+          value === '' ||
+          value === 'none' ||
+          value === 'all'
+        ) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+
+      const newUrl = params.toString()
+        ? `${pathname}?${params.toString()}`
+        : pathname;
+      router.replace(newUrl, { scroll: false });
+
+      // Immediately save to localStorage
+      localStorage.setItem('dataPageLastUrl', newUrl);
+    },
+    [pathname, router, searchParams],
+  );
+
+  // Save URL to localStorage on every searchParams change
+  // Only save if searchParams is not empty (to avoid overwriting saved URL on page load)
+  useEffect(() => {
+    const searchParamsStr = searchParams.toString();
+    if (searchParamsStr && pathname === '/dashboard/data') {
+      const currentUrl = `${pathname}?${searchParamsStr}`;
+      localStorage.setItem('dataPageLastUrl', currentUrl);
+    }
+  }, [pathname, searchParams]);
 
   // Fetch gateways
   const { data: gatewaysData, isLoading: isLoadingGateways } = useGateways();
@@ -77,6 +157,10 @@ export default function DataPage() {
   const { data: farmersData } = useFarmers({ size: 100 });
   const { data: farmsData } = useFarms({ size: 100 });
   const { data: assignmentsData } = useAssignments({ size: 100 });
+
+  // Get current user and check if super admin
+  const { data: currentUser } = useCurrentUser();
+  const isUserSuperAdmin = isSuperAdmin(currentUser);
 
   // Parse selected sensor ID
   const sensorId = selectedSensor !== 'all' ? parseInt(selectedSensor) : 0;
@@ -108,8 +192,15 @@ export default function DataPage() {
   const farmerId =
     selectedFarmer !== 'all' ? parseInt(selectedFarmer) : undefined;
   const farmId = selectedFarm !== 'all' ? parseInt(selectedFarm) : undefined;
-  const assignedById =
-    selectedAssignedBy !== 'all' ? parseInt(selectedAssignedBy) : undefined;
+  // For regular admin, always filter by their own user ID
+  const assignedById = useMemo(() => {
+    if (!isUserSuperAdmin && currentUser?.id) {
+      return currentUser.id; // Regular admin only sees their own assigned data
+    }
+    return selectedAssignedBy !== 'all'
+      ? parseInt(selectedAssignedBy)
+      : undefined;
+  }, [isUserSuperAdmin, currentUser?.id, selectedAssignedBy]);
 
   // Get all users for Assigned By dropdown
   const { data: usersData } = useGetUsers();
@@ -125,6 +216,7 @@ export default function DataPage() {
   const {
     data: sensorDataResponse,
     isLoading: isLoadingData,
+    isFetching: isFetchingTable,
     refetch: refetchTable,
   } = useSensorData(sensorId, {
     page,
@@ -142,6 +234,7 @@ export default function DataPage() {
   const {
     data: chartDataResponse,
     isLoading: isLoadingChartData,
+    isFetching: isFetchingChart,
     refetch: refetchChart,
   } = useSensorData(sensorId, {
     page: 1,
@@ -276,23 +369,6 @@ export default function DataPage() {
     return dataByType;
   }, [chartSensorReadings, selectedMeasurementTypes]);
 
-  const handleReset = () => {
-    setSelectedGateway('all');
-    setSelectedSensor('all');
-    setSelectedFarmer('all');
-    setSelectedFarm('all');
-    setSelectedAssignedBy('all');
-    setDateFrom(undefined);
-    setDateTo(undefined);
-    setHours(12);
-    setPage(1);
-    setTableSearch('');
-    if (searchInputRef.current) {
-      searchInputRef.current.value = '';
-    }
-    setTimeMode('quick');
-  };
-
   const handleRefresh = async () => {
     await Promise.all([refetchTable(), refetchChart()]);
   };
@@ -303,29 +379,36 @@ export default function DataPage() {
     if (mode === 'quick') {
       setDateFrom(undefined);
       setDateTo(undefined);
+      updateUrlParams({ timeMode: mode, dateFrom: null, dateTo: null });
+    } else {
+      updateUrlParams({ timeMode: mode });
     }
   };
 
   // Reset page when filters change
   const handleGatewayChange = (value: string) => {
     setSelectedGateway(value);
-    setSelectedSensor('all');
+    setSelectedSensor('none');
     setPage(1);
+    updateUrlParams({ gateway: value, sensor: null });
   };
 
   const handleSensorChange = (value: string) => {
     setSelectedSensor(value);
     setPage(1);
+    updateUrlParams({ sensor: value });
   };
 
   const handleDateFromChange = (date: Date | undefined) => {
     setDateFrom(date);
     setPage(1);
+    updateUrlParams({ dateFrom: date ? date.toISOString() : null });
   };
 
   const handleDateToChange = (date: Date | undefined) => {
     setDateTo(date);
     setPage(1);
+    updateUrlParams({ dateTo: date ? date.toISOString() : null });
   };
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -353,16 +436,45 @@ export default function DataPage() {
   const handleFarmerChange = (value: string) => {
     setSelectedFarmer(value);
     setPage(1);
+    updateUrlParams({ farmer: value });
   };
 
   const handleFarmChange = (value: string) => {
     setSelectedFarm(value);
     setPage(1);
+    updateUrlParams({ farm: value });
   };
 
   const handleAssignedByChange = (value: string) => {
     setSelectedAssignedBy(value);
     setPage(1);
+    updateUrlParams({ assignedBy: value });
+  };
+
+  const handleHoursChange = (value: number) => {
+    setHours(value);
+    setPage(1);
+    updateUrlParams({ hours: value.toString() });
+  };
+
+  const handleReset = () => {
+    setSelectedGateway('none');
+    setSelectedSensor('none');
+    setSelectedFarmer('all');
+    setSelectedFarm('all');
+    setSelectedAssignedBy('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setHours(12);
+    setPage(1);
+    setTableSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
+    setTimeMode('quick');
+    // Clear all URL params and localStorage
+    router.replace(pathname, { scroll: false });
+    localStorage.removeItem('dataPageLastUrl');
   };
 
   const handleExport = () => {
@@ -421,7 +533,7 @@ export default function DataPage() {
 
   const isLoading = isLoadingGateways || isLoadingSensors || isLoadingData;
   const isChartLoading = isLoadingChartData;
-  const isRefreshing = isLoadingData || isLoadingChartData;
+  const isRefreshing = isFetchingTable || isFetchingChart;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -434,112 +546,396 @@ export default function DataPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-5">
+          <div
+            className={`grid gap-4 ${isUserSuperAdmin ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}
+          >
             {/* Gateway Selector */}
             <div className="space-y-2">
-              <Label htmlFor="gateway-filter">Gateway</Label>
-              <Select
-                value={selectedGateway}
-                onValueChange={handleGatewayChange}
+              <Label>Gateway</Label>
+              <Popover
+                open={gatewayComboboxOpen}
+                onOpenChange={setGatewayComboboxOpen}
               >
-                <SelectTrigger id="gateway-filter" className="w-full">
-                  <SelectValue placeholder="Select Gateway" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select Gateway</SelectItem>
-                  {(gatewaysData?.items || []).map((gateway) => (
-                    <SelectItem key={gateway.id} value={gateway.id.toString()}>
-                      {gateway.name || gateway.gateway_uid}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={gatewayComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedGateway !== 'none'
+                        ? gatewaysData?.items?.find(
+                            (g) => g.id.toString() === selectedGateway,
+                          )?.name ||
+                          gatewaysData?.items?.find(
+                            (g) => g.id.toString() === selectedGateway,
+                          )?.gateway_uid ||
+                          'Select Gateway'
+                        : 'Select Gateway'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search gateway..." />
+                    <CommandList>
+                      <CommandEmpty>No gateway found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            handleGatewayChange('none');
+                            setGatewayComboboxOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedGateway === 'none'
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                          Select Gateway
+                        </CommandItem>
+                        {(gatewaysData?.items || []).map((gateway) => (
+                          <CommandItem
+                            key={gateway.id}
+                            value={gateway.name || gateway.gateway_uid}
+                            onSelect={() => {
+                              handleGatewayChange(gateway.id.toString());
+                              setGatewayComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedGateway === gateway.id.toString()
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            {gateway.name || gateway.gateway_uid}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Sensor Selector */}
             <div className="space-y-2">
-              <Label htmlFor="sensor-filter">Sensor</Label>
-              <Select
-                value={selectedSensor}
-                onValueChange={handleSensorChange}
-                disabled={selectedGateway === 'none'}
+              <Label>Sensor</Label>
+              <Popover
+                open={sensorComboboxOpen}
+                onOpenChange={setSensorComboboxOpen}
               >
-                <SelectTrigger id="sensor-filter" className="w-full">
-                  <SelectValue placeholder="Select Sensor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select Sensor</SelectItem>
-                  {(sensorsData?.items || []).map((sensor) => (
-                    <SelectItem key={sensor.id} value={sensor.id.toString()}>
-                      {sensor.name || sensor.sensor_uid} ({sensor.type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={sensorComboboxOpen}
+                    className="w-full justify-between font-normal"
+                    disabled={selectedGateway === 'none'}
+                  >
+                    <span className="truncate">
+                      {selectedSensor !== 'none'
+                        ? (() => {
+                            const sensor = sensorsData?.items?.find(
+                              (s) => s.id.toString() === selectedSensor,
+                            );
+                            return sensor
+                              ? `${sensor.name || sensor.sensor_uid} (${sensor.type})`
+                              : 'Select Sensor';
+                          })()
+                        : 'Select Sensor'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search sensor..." />
+                    <CommandList>
+                      <CommandEmpty>No sensor found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            handleSensorChange('none');
+                            setSensorComboboxOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedSensor === 'none'
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                          Select Sensor
+                        </CommandItem>
+                        {(sensorsData?.items || []).map((sensor) => (
+                          <CommandItem
+                            key={sensor.id}
+                            value={`${sensor.name || sensor.sensor_uid} ${sensor.type}`}
+                            onSelect={() => {
+                              handleSensorChange(sensor.id.toString());
+                              setSensorComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedSensor === sensor.id.toString()
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            {sensor.name || sensor.sensor_uid} ({sensor.type})
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Farmer Selector */}
             <div className="space-y-2">
-              <Label htmlFor="farmer-filter">Farmer</Label>
-              <Select value={selectedFarmer} onValueChange={handleFarmerChange}>
-                <SelectTrigger id="farmer-filter" className="w-full">
-                  <SelectValue placeholder="All Farmers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Farmers</SelectItem>
-                  {(farmersData?.items || []).map((farmer) => (
-                    <SelectItem key={farmer.id} value={farmer.id.toString()}>
-                      {farmer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Farmer</Label>
+              <Popover
+                open={farmerComboboxOpen}
+                onOpenChange={setFarmerComboboxOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={farmerComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedFarmer !== 'all'
+                        ? farmersData?.items?.find(
+                            (f) => f.id.toString() === selectedFarmer,
+                          )?.name || 'All Farmers'
+                        : 'All Farmers'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search farmer..." />
+                    <CommandList>
+                      <CommandEmpty>No farmer found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            handleFarmerChange('all');
+                            setFarmerComboboxOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedFarmer === 'all'
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                          All Farmers
+                        </CommandItem>
+                        {(farmersData?.items || []).map((farmer) => (
+                          <CommandItem
+                            key={farmer.id}
+                            value={farmer.name}
+                            onSelect={() => {
+                              handleFarmerChange(farmer.id.toString());
+                              setFarmerComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedFarmer === farmer.id.toString()
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            {farmer.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Farm Selector */}
             <div className="space-y-2">
-              <Label htmlFor="farm-filter">Farm</Label>
-              <Select value={selectedFarm} onValueChange={handleFarmChange}>
-                <SelectTrigger id="farm-filter" className="w-full">
-                  <SelectValue placeholder="All Farms" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Farms</SelectItem>
-                  {(farmsData?.items || [])
-                    .filter(
-                      (farm) =>
-                        selectedFarmer === 'all' ||
-                        farm.farmer_id === parseInt(selectedFarmer),
-                    )
-                    .map((farm) => (
-                      <SelectItem key={farm.id} value={farm.id.toString()}>
-                        {farm.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Label>Farm</Label>
+              <Popover
+                open={farmComboboxOpen}
+                onOpenChange={setFarmComboboxOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={farmComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedFarm !== 'all'
+                        ? farmsData?.items?.find(
+                            (f) => f.id.toString() === selectedFarm,
+                          )?.name || 'All Farms'
+                        : 'All Farms'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search farm..." />
+                    <CommandList>
+                      <CommandEmpty>No farm found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            handleFarmChange('all');
+                            setFarmComboboxOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedFarm === 'all'
+                                ? 'opacity-100'
+                                : 'opacity-0',
+                            )}
+                          />
+                          All Farms
+                        </CommandItem>
+                        {(farmsData?.items || [])
+                          .filter(
+                            (farm) =>
+                              selectedFarmer === 'all' ||
+                              farm.farmer_id === parseInt(selectedFarmer),
+                          )
+                          .map((farm) => (
+                            <CommandItem
+                              key={farm.id}
+                              value={farm.name}
+                              onSelect={() => {
+                                handleFarmChange(farm.id.toString());
+                                setFarmComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedFarm === farm.id.toString()
+                                    ? 'opacity-100'
+                                    : 'opacity-0',
+                                )}
+                              />
+                              {farm.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* Assigned By Selector */}
-            <div className="space-y-2">
-              <Label htmlFor="assigned-by-filter">Assigned By</Label>
-              <Select
-                value={selectedAssignedBy}
-                onValueChange={handleAssignedByChange}
-              >
-                <SelectTrigger id="assigned-by-filter" className="w-full">
-                  <SelectValue placeholder="All Users" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
-                  {assignedByUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Assigned By Selector - Only for Super Admin */}
+            {isUserSuperAdmin && (
+              <div className="space-y-2">
+                <Label>Assigned By</Label>
+                <Popover
+                  open={assignedByComboboxOpen}
+                  onOpenChange={setAssignedByComboboxOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={assignedByComboboxOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="truncate">
+                        {selectedAssignedBy !== 'all'
+                          ? assignedByUsers.find(
+                              (u) => u.id.toString() === selectedAssignedBy,
+                            )?.username || 'All Users'
+                          : 'All Users'}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search user..." />
+                      <CommandList>
+                        <CommandEmpty>No user found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="all"
+                            onSelect={() => {
+                              handleAssignedByChange('all');
+                              setAssignedByComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedAssignedBy === 'all'
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            All Users
+                          </CommandItem>
+                          {assignedByUsers.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.username}
+                              onSelect={() => {
+                                handleAssignedByChange(user.id.toString());
+                                setAssignedByComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedAssignedBy === user.id.toString()
+                                    ? 'opacity-100'
+                                    : 'opacity-0',
+                                )}
+                              />
+                              {user.username}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
@@ -32,6 +40,12 @@ import {
   TestTube,
   Activity,
   MapPin,
+  Check,
+  ChevronsUpDown,
+  Share2,
+  Copy,
+  ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
@@ -39,6 +53,18 @@ import { useFarms } from '@/features/farmers/hooks/use-farms';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import dynamic from 'next/dynamic';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 // Dynamically import PDF Download wrapper (client-only)
 const PDFDownloadWrapper = dynamic(
@@ -122,11 +148,112 @@ const measurementConfig: Record<
 };
 
 export default function SummaryPage() {
-  const [selectedFarmer, setSelectedFarmer] = useState<string>('');
-  const [selectedFarm, setSelectedFarm] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<Date | undefined>();
-  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read initial values from URL params
+  const initialFarmer = searchParams.get('farmer') || '';
+  const initialFarm = searchParams.get('farm') || '';
+  const initialDateFrom = searchParams.get('dateFrom')
+    ? new Date(searchParams.get('dateFrom')!)
+    : undefined;
+  const initialDateTo = searchParams.get('dateTo')
+    ? new Date(searchParams.get('dateTo')!)
+    : undefined;
+
+  const [selectedFarmer, setSelectedFarmer] = useState<string>(initialFarmer);
+  const [selectedFarm, setSelectedFarm] = useState<string>(initialFarm);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(initialDateFrom);
+  const [dateTo, setDateTo] = useState<Date | undefined>(initialDateTo);
   const [summaryGenerated, setSummaryGenerated] = useState(false);
+
+  // Combobox open state
+  const [farmerComboboxOpen, setFarmerComboboxOpen] = useState(false);
+  const [farmComboboxOpen, setFarmComboboxOpen] = useState(false);
+
+  // Share dialog state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+
+  // Create share mutation
+  const createShareMutation = useMutation({
+    mutationFn: async () => {
+      const params = new URLSearchParams();
+      params.append('farm_id', selectedFarm);
+      if (dateFrom) params.append('start_date', dateFrom.toISOString());
+      if (dateTo) params.append('end_date', dateTo.toISOString());
+
+      const response = await apiClient.post(
+        `/sensors/summary/share?${params.toString()}`,
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const baseUrl = window.location.origin;
+      setShareLink(`${baseUrl}/share/summary/${data.token}`);
+      setShareDialogOpen(true);
+    },
+    onError: () => {
+      toast.error('Failed to create share link');
+    },
+  });
+
+  const handleShare = () => {
+    createShareMutation.mutate();
+  };
+
+  const handleCopyLink = async () => {
+    if (shareLink) {
+      await navigator.clipboard.writeText(shareLink);
+      toast.success('Link copied to clipboard');
+    }
+  };
+
+  // Fetch my shares
+  const { data: sharesData, refetch: refetchShares } = useQuery({
+    queryKey: ['my-shares'],
+    queryFn: async () => {
+      const response = await apiClient.get('/sensors/summary/shares?size=50');
+      return response.data;
+    },
+    enabled: shareDialogOpen, // Only fetch when dialog is open
+  });
+
+  // Delete share mutation
+  const deleteShareMutation = useMutation({
+    mutationFn: async (token: string) => {
+      await apiClient.delete(`/sensors/summary/share/${token}`);
+    },
+    onSuccess: () => {
+      toast.success('Link deleted successfully');
+      refetchShares();
+    },
+    onError: () => {
+      toast.error('Failed to delete link');
+    },
+  });
+
+  // Sync filter state to URL params
+  const updateUrlParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === '') {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+
+      const newUrl = params.toString()
+        ? `${pathname}?${params.toString()}`
+        : pathname;
+      router.replace(newUrl, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const { data: farmersData } = useFarmers({ size: 100 });
   const { data: farmsData } = useFarms({ size: 100 });
@@ -166,6 +293,35 @@ export default function SummaryPage() {
     enabled: false,
   });
 
+  // Auto-generate summary if farm is in URL on initial load
+  useEffect(() => {
+    if (initialFarm && !summaryGenerated) {
+      setSummaryGenerated(true);
+      refetchSummary();
+    }
+  }, [initialFarm, summaryGenerated, refetchSummary]);
+
+  const handleFarmerChange = (value: string) => {
+    setSelectedFarmer(value);
+    setSelectedFarm('');
+    updateUrlParams({ farmer: value, farm: null });
+  };
+
+  const handleFarmChange = (value: string) => {
+    setSelectedFarm(value);
+    updateUrlParams({ farm: value });
+  };
+
+  const handleDateFromChange = (date: Date | undefined) => {
+    setDateFrom(date);
+    updateUrlParams({ dateFrom: date ? date.toISOString() : null });
+  };
+
+  const handleDateToChange = (date: Date | undefined) => {
+    setDateTo(date);
+    updateUrlParams({ dateTo: date ? date.toISOString() : null });
+  };
+
   const handleGenerateSummary = () => {
     if (!selectedFarm) return;
     setSummaryGenerated(true);
@@ -178,6 +334,7 @@ export default function SummaryPage() {
     setDateFrom(undefined);
     setDateTo(undefined);
     setSummaryGenerated(false);
+    router.replace(pathname, { scroll: false });
   };
 
   const selectedFarmerData = farmersData?.items?.find(
@@ -214,49 +371,114 @@ export default function SummaryPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label className="text-xs">Farmer</Label>
-              <Select
-                value={selectedFarmer}
-                onValueChange={(v) => {
-                  setSelectedFarmer(v);
-                  setSelectedFarm('');
-                }}
+              <Popover
+                open={farmerComboboxOpen}
+                onOpenChange={setFarmerComboboxOpen}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select farmer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(farmersData?.items || []).length === 0 ? (
-                    <div className="py-4 text-center text-sm text-muted-foreground">
-                      There are no farmers yet
-                    </div>
-                  ) : (
-                    (farmersData?.items || []).map((farmer) => (
-                      <SelectItem key={farmer.id} value={farmer.id.toString()}>
-                        {farmer.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={farmerComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedFarmer
+                        ? farmersData?.items?.find(
+                            (f) => f.id.toString() === selectedFarmer,
+                          )?.name || 'Select farmer'
+                        : 'Select farmer'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search farmer..." />
+                    <CommandList>
+                      <CommandEmpty>No farmer found.</CommandEmpty>
+                      <CommandGroup>
+                        {(farmersData?.items || []).map((farmer) => (
+                          <CommandItem
+                            key={farmer.id}
+                            value={farmer.name}
+                            onSelect={() => {
+                              handleFarmerChange(farmer.id.toString());
+                              setFarmerComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedFarmer === farmer.id.toString()
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            {farmer.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Farm</Label>
-              <Select
-                value={selectedFarm}
-                onValueChange={setSelectedFarm}
-                disabled={!selectedFarmer}
+              <Popover
+                open={farmComboboxOpen}
+                onOpenChange={setFarmComboboxOpen}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select farm" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredFarms.map((farm) => (
-                    <SelectItem key={farm.id} value={farm.id.toString()}>
-                      {farm.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={farmComboboxOpen}
+                    className="w-full justify-between font-normal"
+                    disabled={!selectedFarmer}
+                  >
+                    <span className="truncate">
+                      {selectedFarm
+                        ? filteredFarms.find(
+                            (f) => f.id.toString() === selectedFarm,
+                          )?.name || 'Select farm'
+                        : 'Select farm'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search farm..." />
+                    <CommandList>
+                      <CommandEmpty>No farm found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredFarms.map((farm) => (
+                          <CommandItem
+                            key={farm.id}
+                            value={farm.name}
+                            onSelect={() => {
+                              handleFarmChange(farm.id.toString());
+                              setFarmComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedFarm === farm.id.toString()
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
+                              )}
+                            />
+                            {farm.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">From Date</Label>
@@ -277,7 +499,7 @@ export default function SummaryPage() {
                   <Calendar
                     mode="single"
                     selected={dateFrom}
-                    onSelect={setDateFrom}
+                    onSelect={handleDateFromChange}
                     initialFocus
                   />
                 </PopoverContent>
@@ -302,7 +524,7 @@ export default function SummaryPage() {
                   <Calendar
                     mode="single"
                     selected={dateTo}
-                    onSelect={setDateTo}
+                    onSelect={handleDateToChange}
                     initialFocus
                   />
                 </PopoverContent>
@@ -337,8 +559,21 @@ export default function SummaryPage() {
       {/* Report Preview */}
       {summaryGenerated && summaryData && summaryEntries.length > 0 && (
         <>
-          {/* Download Button */}
-          <div className="flex justify-end">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button
+              onClick={handleShare}
+              variant="outline"
+              size="lg"
+              disabled={createShareMutation.isPending}
+            >
+              {createShareMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Share2 className="mr-2 h-4 w-4" />
+              )}
+              Share
+            </Button>
             <PDFDownloadWrapper
               {...pdfProps}
               fileName={`summary-report-${selectedFarmData?.name || 'farm'}-${format(new Date(), 'yyyy-MM-dd')}.pdf`}
@@ -511,6 +746,142 @@ export default function SummaryPage() {
             </CardContent>
           </Card>
         )}
+
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Share Summary Report</DialogTitle>
+            <DialogDescription>
+              Manage shareable links for farm summary reports.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs
+            defaultValue={shareLink ? 'create' : 'history'}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Current Link</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="create" className="space-y-4 pt-4">
+              {shareLink ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={shareLink}
+                      readOnly
+                      className="flex-1 text-sm bg-muted"
+                    />
+                    <Button
+                      onClick={handleCopyLink}
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => window.open(shareLink, '_blank')}
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-700 dark:text-blue-300">
+                    <p>
+                      Link generated successfully! This link will expire in 30
+                      days. Anyone with this link can view the summary without
+                      logging in.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p>No link generated in this session.</p>
+                  <p className="text-xs mt-1">
+                    Click "Share" button to generate a new link.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-4 pt-4">
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                {sharesData?.items?.length > 0 ? (
+                  sharesData.items.map((share: any) => (
+                    <div
+                      key={share.id}
+                      className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                    >
+                      <div className="grid gap-1">
+                        <div className="font-medium flex items-center gap-2">
+                          {share.farm_name}
+                          {!share.is_active &&
+                            (share.is_expired ? (
+                              <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] text-orange-500">
+                                Expired
+                              </span>
+                            ) : (
+                              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-500">
+                                Active
+                              </span>
+                            ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Created: {format(new Date(share.created_at), 'PP')} •
+                          Expires: {format(new Date(share.expires_at), 'PP')}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            if (!share.is_expired) {
+                              navigator.clipboard.writeText(
+                                `${window.location.origin}/share/summary/${share.token}`,
+                              );
+                              toast.success('Link copied');
+                            }
+                          }}
+                          disabled={share.is_expired}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            deleteShareMutation.mutate(share.token)
+                          }
+                          disabled={deleteShareMutation.isPending}
+                        >
+                          {deleteShareMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p>No share history found.</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
