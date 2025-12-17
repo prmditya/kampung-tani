@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import {
   Unplug,
   LayoutDashboard,
@@ -57,6 +58,7 @@ const items = [
     title: 'Data',
     url: '/dashboard/data',
     icon: LineChart,
+    persistUrl: true, // Flag to indicate this item should use saved URL
   },
   {
     title: 'Summary',
@@ -77,6 +79,37 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: currentUser, isLoading } = useCurrentUser();
   const logoutMutation = useLogout();
+
+  // Read saved Data page URL from localStorage
+  const [dataPageUrl, setDataPageUrl] = useState('/dashboard/data');
+
+  // Re-read localStorage whenever pathname changes (e.g., navigating between pages)
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('dataPageLastUrl');
+    if (savedUrl) {
+      setDataPageUrl(savedUrl);
+    }
+  }, [pathname]);
+
+  // Helper to get the correct URL for each menu item
+  const getItemUrl = (item: (typeof items)[0]) => {
+    if (
+      'persistUrl' in item &&
+      item.persistUrl &&
+      item.url === '/dashboard/data'
+    ) {
+      return dataPageUrl;
+    }
+    return item.url;
+  };
+
+  // Helper to check if item is active
+  const isItemActive = (item: (typeof items)[0]) => {
+    if (item.url === '/dashboard/data') {
+      return pathname.startsWith('/dashboard/data');
+    }
+    return pathname === item.url;
+  };
 
   return (
     <Sidebar variant="inset">
@@ -113,17 +146,20 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.url}
+                    isActive={isItemActive(item)}
                     className={`h-auto px-2 py-2 md:py-1 rounded-lg ${
-                      pathname === item.url ? 'bg-primary/10' : ''
+                      isItemActive(item) ? 'bg-primary/10' : ''
                     }`}
                   >
-                    <Link href={item.url} className="flex flex-row gap-1 ">
+                    <Link
+                      href={getItemUrl(item)}
+                      className="flex flex-row gap-1 "
+                    >
                       <item.icon
-                        className={`h-5 w-5 ${pathname === item.url ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`h-5 w-5 ${isItemActive(item) ? 'text-primary' : 'text-muted-foreground'}`}
                       />
                       <span
-                        className={`font-medium ${pathname === item.url ? 'text-primary' : ''}`}
+                        className={`font-medium ${isItemActive(item) ? 'text-primary' : ''}`}
                       >
                         {item.title}
                       </span>
