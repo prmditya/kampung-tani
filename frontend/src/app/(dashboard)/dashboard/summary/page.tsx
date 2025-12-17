@@ -45,6 +45,7 @@ import {
   Share2,
   Copy,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
@@ -61,6 +62,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -207,6 +209,30 @@ export default function SummaryPage() {
       toast.success('Link copied to clipboard');
     }
   };
+
+  // Fetch my shares
+  const { data: sharesData, refetch: refetchShares } = useQuery({
+    queryKey: ['my-shares'],
+    queryFn: async () => {
+      const response = await apiClient.get('/sensors/summary/shares?size=50');
+      return response.data;
+    },
+    enabled: shareDialogOpen, // Only fetch when dialog is open
+  });
+
+  // Delete share mutation
+  const deleteShareMutation = useMutation({
+    mutationFn: async (token: string) => {
+      await apiClient.delete(`/sensors/summary/share/${token}`);
+    },
+    onSuccess: () => {
+      toast.success('Link deleted successfully');
+      refetchShares();
+    },
+    onError: () => {
+      toast.error('Failed to delete link');
+    },
+  });
 
   // Sync filter state to URL params
   const updateUrlParams = useCallback(
@@ -723,42 +749,137 @@ export default function SummaryPage() {
 
       {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Share Summary Report</DialogTitle>
             <DialogDescription>
-              Share this link with farmers to view the summary report. The link
-              will expire in 30 days.
+              Manage shareable links for farm summary reports.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-2">
-              <Input
-                value={shareLink || ''}
-                readOnly
-                className="flex-1 text-sm"
-              />
-              <Button
-                onClick={handleCopyLink}
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => window.open(shareLink || '', '_blank')}
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This link allows anyone to view this summary without logging in.
-            </p>
-          </div>
+
+          <Tabs
+            defaultValue={shareLink ? 'create' : 'history'}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Current Link</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="create" className="space-y-4 pt-4">
+              {shareLink ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={shareLink}
+                      readOnly
+                      className="flex-1 text-sm bg-muted"
+                    />
+                    <Button
+                      onClick={handleCopyLink}
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => window.open(shareLink, '_blank')}
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-blue-700 dark:text-blue-300">
+                    <p>
+                      Link generated successfully! This link will expire in 30
+                      days. Anyone with this link can view the summary without
+                      logging in.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p>No link generated in this session.</p>
+                  <p className="text-xs mt-1">
+                    Click "Share" button to generate a new link.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-4 pt-4">
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                {sharesData?.items?.length > 0 ? (
+                  sharesData.items.map((share: any) => (
+                    <div
+                      key={share.id}
+                      className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                    >
+                      <div className="grid gap-1">
+                        <div className="font-medium flex items-center gap-2">
+                          {share.farm_name}
+                          {!share.is_active &&
+                            (share.is_expired ? (
+                              <span className="rounded bg-orange-500/10 px-1.5 py-0.5 text-[10px] text-orange-500">
+                                Expired
+                              </span>
+                            ) : (
+                              <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-500">
+                                Active
+                              </span>
+                            ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Created: {format(new Date(share.created_at), 'PP')} •
+                          Expires: {format(new Date(share.expires_at), 'PP')}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            if (!share.is_expired) {
+                              navigator.clipboard.writeText(
+                                `${window.location.origin}/share/summary/${share.token}`,
+                              );
+                              toast.success('Link copied');
+                            }
+                          }}
+                          disabled={share.is_expired}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            deleteShareMutation.mutate(share.token)
+                          }
+                          disabled={deleteShareMutation.isPending}
+                        >
+                          {deleteShareMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p>No share history found.</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>
