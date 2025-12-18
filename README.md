@@ -1,4 +1,6 @@
-![Kampoeng Tani Logo](frontend/public/assets/kt-logo.webp)
+<div align="center">
+  <img src="frontend/public/assets/kt-logo.webp" width=300 alt="Kampoeng Tani Logo">
+</div>
 
 ## Showcase
 
