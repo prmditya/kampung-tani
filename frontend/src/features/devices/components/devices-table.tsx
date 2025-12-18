@@ -5,27 +5,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import type { GatewayResponse } from "@/types/api";
-import { EditDeviceDialog } from "./edit-device-dialog";
-import { DeleteDeviceButton } from "./delete-device-button";
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import type { GatewayResponse } from '@/types/api';
+import { EditDeviceDialog } from './edit-device-dialog';
+import { DeleteDeviceButton } from './delete-device-button';
+import { formatDateTimeToWIB } from '@/lib/date-utils';
 
 interface DevicesTableProps {
   devices: GatewayResponse[];
 }
 
 export function DevicesTable({ devices }: DevicesTableProps) {
-  const getStatusColor = (status: GatewayResponse["status"]) => {
+  const getStatusColor = (status: GatewayResponse['status']) => {
     switch (status) {
-      case "online":
-        return "default";
-      case "offline":
-        return "secondary";
-      case "maintenance":
-        return "outline";
+      case 'online':
+        return 'default';
+      case 'offline':
+        return 'secondary';
+      case 'maintenance':
+        return 'outline';
       default:
-        return "secondary";
+        return 'secondary';
     }
   };
 
@@ -74,12 +75,7 @@ export function DevicesTable({ devices }: DevicesTableProps) {
               </TableCell>
               <TableCell>
                 {device.last_seen ? (
-                  new Date(device.last_seen).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  formatDateTimeToWIB(device.last_seen)
                 ) : (
                   <span className="text-muted-foreground">Never</span>
                 )}

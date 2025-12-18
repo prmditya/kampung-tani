@@ -28,6 +28,7 @@ import {
   useSensorData,
 } from '@/features/data/hooks/use-sensors';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
+import { parseUTCTimestamp, formatTimeToWIB } from '@/lib/date-utils';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGetUsers } from '@/features/settings/hooks/use-users';
@@ -94,7 +95,6 @@ export default function DataPage() {
   >([]);
   const [tableSearch, setTableSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [labelInterval, setLabelInterval] = useState<number>(60); // Label interval in minutes
   const [timeMode, setTimeMode] = useState<'quick' | 'custom'>(initialTimeMode); // Time selection mode
 
   // Combobox open state
@@ -165,28 +165,56 @@ export default function DataPage() {
   // Parse selected sensor ID
   const sensorId = selectedSensor !== 'all' ? parseInt(selectedSensor) : 0;
 
-  // Prepare start_date and end_date for API
-  const startDate = useMemo(() => {
+  // Prepare start_date and end_date for API based on time mode
+  const { startDate, endDate, calculatedHours } = useMemo(() => {
+    const now = new Date();
+
+    if (timeMode === 'quick') {
+      // Quick Select: from (now - hours) to now
+      const hoursValue = hours || 24;
+      const startTime = new Date(now.getTime() - hoursValue * 60 * 60 * 1000);
+      return {
+        startDate: startTime.toISOString(),
+        endDate: now.toISOString(),
+        calculatedHours: hoursValue,
+      };
+    }
+
+    // Custom Range mode
     if (dateFrom) {
-      return dateFrom.toISOString();
-    }
-    return undefined;
-  }, [dateFrom]);
+      // Set start to beginning of the selected day (00:00:00)
+      const startOfDay = new Date(dateFrom);
+      startOfDay.setHours(0, 0, 0, 0);
 
-  const endDate = useMemo(() => {
-    if (dateTo) {
-      return dateTo.toISOString();
-    }
-    return undefined;
-  }, [dateTo]);
+      // If dateTo is specified, set end to beginning of that day (00:00:00)
+      // If not specified, use current time
+      let endTime: Date;
+      if (dateTo) {
+        endTime = new Date(dateTo);
+        endTime.setHours(0, 0, 0, 0);
+      } else {
+        endTime = now;
+      }
 
-  // Calculate hours based on time mode
-  const calculatedHours = useMemo(() => {
-    if (timeMode === 'custom' && (dateFrom || dateTo)) {
-      return undefined; // Use date range instead of hours
+      // Calculate hours for chart display
+      const diffHours =
+        (endTime.getTime() - startOfDay.getTime()) / (1000 * 60 * 60);
+
+      return {
+        startDate: startOfDay.toISOString(),
+        endDate: endTime.toISOString(),
+        calculatedHours: diffHours > 0 ? diffHours : 24,
+      };
     }
-    return hours;
-  }, [timeMode, dateFrom, dateTo, hours]);
+
+    // Default: last 24 hours
+    const startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return {
+      startDate: startTime.toISOString(),
+      endDate: now.toISOString(),
+      calculatedHours: 24,
+    };
+  }, [timeMode, hours, dateFrom, dateTo]);
 
   // Parse farmer_id, farm_id, and assigned_by_id for API
   const farmerId =
@@ -280,33 +308,25 @@ export default function DataPage() {
 
   // No need for client-side filtering anymore - all filtering is done by API
 
-  // Prepare separate chart data for each measurement type (to avoid scale issues)
-  const chartDataByType = useMemo(() => {
-    if (!chartSensorReadings.length) return {};
+  // Create unified chart data with proper gap filling
+  // This generates a continuous timeline with null values where data is missing
+  const unifiedChartData = useMemo(() => {
+    if (!chartSensorReadings.length || !selectedMeasurementTypes.length)
+      return [];
 
-    const dataByType: Record<
-      string,
-      Array<{ time: string; value: number | null; unit?: string }>
-    > = {};
-
-    // Filter by selected measurement types only (time filtering is done by API)
-    const filteredReadings = chartSensorReadings.filter((reading) => {
-      const measurementType = reading.metadata?.measurement_type || 'Unknown';
-      return selectedMeasurementTypes.includes(measurementType);
-    });
-
-    // First pass: collect all data points
-    const rawDataByType: Record<
-      string,
-      Map<number, { value: number; unit?: string }>
-    > = {};
+    // Collect all data points with timestamps, grouped by measurement type
+    const rawDataByType: Record<string, Map<number, number>> = {};
     let minTimestamp = Infinity;
     let maxTimestamp = -Infinity;
 
-    filteredReadings.forEach((reading) => {
-      const date = new Date(reading.timestamp);
+    chartSensorReadings.forEach((reading) => {
+      const type = reading.metadata?.measurement_type || 'Unknown';
+      if (!selectedMeasurementTypes.includes(type)) return;
 
-      // Round down to nearest 10-second interval
+      // Parse timestamp as UTC
+      const date = parseUTCTimestamp(reading.timestamp);
+
+      // Round down to nearest 10-second interval for consistency
       const seconds = date.getSeconds();
       const roundedSeconds = Math.floor(seconds / 10) * 10;
       date.setSeconds(roundedSeconds, 0);
@@ -315,59 +335,88 @@ export default function DataPage() {
       minTimestamp = Math.min(minTimestamp, timestamp);
       maxTimestamp = Math.max(maxTimestamp, timestamp);
 
-      const measurementType = reading.metadata?.measurement_type || 'Unknown';
-
-      if (!rawDataByType[measurementType]) {
-        rawDataByType[measurementType] = new Map();
-      }
-
-      // Store by timestamp for easy lookup
-      rawDataByType[measurementType].set(timestamp, {
-        value: reading.value,
-        unit: reading.unit || undefined,
-      });
+      if (!rawDataByType[type]) rawDataByType[type] = new Map();
+      rawDataByType[type].set(timestamp, reading.value);
     });
 
-    // Second pass: fill gaps with null for each measurement type
-    Object.keys(rawDataByType).forEach((type) => {
-      const typeData: Array<{
-        time: string;
-        value: number | null;
-        unit?: string;
-      }> = [];
-      const dataMap = rawDataByType[type];
+    if (minTimestamp === Infinity) return [];
 
-      // Generate complete timeline with 10-second intervals
-      for (let ts = minTimestamp; ts <= maxTimestamp; ts += 10000) {
-        const date = new Date(ts);
-        const time = date.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
+    // Calculate a smart interval based on time range to avoid too many points
+    const timeRangeMs = maxTimestamp - minTimestamp;
+    const maxPoints = 1000; // Performance limit
+    const minIntervalMs = Math.max(10000, Math.ceil(timeRangeMs / maxPoints)); // At least 10 seconds
 
-        const dataPoint = dataMap.get(ts);
-        if (dataPoint) {
-          typeData.push({
-            time,
-            value: dataPoint.value,
-            unit: dataPoint.unit,
-          });
-        } else {
-          // Fill gap with null
-          typeData.push({
-            time,
-            value: null,
-            unit: undefined,
-          });
+    // Round interval to a nice value (10s, 30s, 1m, 5m, 15m, 30m, 1h)
+    let intervalMs = 10000;
+    const niceIntervals = [
+      10000, 30000, 60000, 300000, 900000, 1800000, 3600000,
+    ];
+    for (const nice of niceIntervals) {
+      if (nice >= minIntervalMs) {
+        intervalMs = nice;
+        break;
+      }
+    }
+    // If even 1 hour isn't enough, just use the calculated interval
+    if (minIntervalMs > 3600000) {
+      intervalMs = minIntervalMs;
+    }
+
+    // Generate continuous timeline with gaps
+    const result: Array<{
+      time: string;
+      [key: string]: string | number | null;
+    }> = [];
+
+    for (let ts = minTimestamp; ts <= maxTimestamp; ts += intervalMs) {
+      const date = new Date(ts);
+      const time = formatTimeToWIB(date);
+      const point: { time: string; [key: string]: string | number | null } = {
+        time,
+      };
+
+      // For each selected type, find closest data point within interval or set null
+      selectedMeasurementTypes.forEach((type) => {
+        const typeMap = rawDataByType[type];
+        if (!typeMap) {
+          point[type] = null;
+          return;
         }
-      }
 
-      dataByType[type] = typeData;
-    });
+        // Look for data within this interval bucket
+        let found = false;
+        let sum = 0;
+        let count = 0;
+        for (let lookupTs = ts; lookupTs < ts + intervalMs; lookupTs += 10000) {
+          if (typeMap.has(lookupTs)) {
+            sum += typeMap.get(lookupTs)!;
+            count++;
+            found = true;
+          }
+        }
 
-    return dataByType;
+        if (found && count > 0) {
+          point[type] = Math.round((sum / count) * 100) / 100; // Average if multiple points
+        } else {
+          point[type] = null; // Gap - Recharts will break the line here
+        }
+      });
+
+      result.push(point);
+    }
+
+    return result;
   }, [chartSensorReadings, selectedMeasurementTypes]);
+
+  // Extract units from readings for display
+  const chartUnits = useMemo(() => {
+    const units: Record<string, string> = {};
+    chartSensorReadings.forEach((r) => {
+      const type = r.metadata?.measurement_type || 'Unknown';
+      if (r.unit) units[type] = r.unit;
+    });
+    return units;
+  }, [chartSensorReadings]);
 
   const handleRefresh = async () => {
     await Promise.all([refetchTable(), refetchChart()]);
@@ -1069,10 +1118,15 @@ export default function DataPage() {
                   </Popover>
                 </div>
               </div>
-              {dateFrom && dateTo && (
+              {dateFrom && (
                 <p className="text-sm text-muted-foreground">
-                  Showing data from {format(dateFrom, 'PPP')} to{' '}
-                  {format(dateTo, 'PPP')}
+                  Showing data from {format(dateFrom, 'PPP')} 00:00 to{' '}
+                  {dateTo ? `${format(dateTo, 'PPP')} 00:00` : 'now'}
+                </p>
+              )}
+              {!dateFrom && (
+                <p className="text-sm text-muted-foreground">
+                  Select a start date to filter data
                 </p>
               )}
             </TabsContent>
@@ -1108,7 +1162,7 @@ export default function DataPage() {
               <CardHeader>
                 <CardTitle>Chart Display Settings</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 {/* Measurement Type Filter */}
                 <div className="space-y-2">
                   <Label>Select Measurement Types</Label>
@@ -1138,53 +1192,22 @@ export default function DataPage() {
                     Select which measurement types to display in charts
                   </p>
                 </div>
-
-                {/* Chart Label Interval */}
-                <div className="space-y-2">
-                  <Label>Chart Label Interval</Label>
-                  <Select
-                    value={labelInterval.toString()}
-                    onValueChange={(value) => setLabelInterval(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-64">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15">15 Minutes</SelectItem>
-                      <SelectItem value="30">30 Minutes</SelectItem>
-                      <SelectItem value="60">1 Hour</SelectItem>
-                      <SelectItem value="120">2 Hours</SelectItem>
-                      <SelectItem value="240">4 Hours</SelectItem>
-                      <SelectItem value="360">6 Hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Controls spacing between time labels on the X-axis
-                  </p>
-                </div>
               </CardContent>
             </Card>
           )}
-
-          {/* Separate Charts for Each Measurement Type */}
+          {/* Unified Sensor Chart */}
           {isChartLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : Object.entries(chartDataByType).length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-3">
-              {Object.entries(chartDataByType).map(([type, data]) => {
-                // Find unit from any data point that has it
-                const unit = data.find((d) => d.unit)?.unit;
-                return (
-                  <DataChart
-                    key={type}
-                    data={data.map((d) => ({ time: d.time, [type]: d.value }))}
-                    title={`${type}${unit ? ` (${unit})` : ''}`}
-                    labelInterval={labelInterval}
-                  />
-                );
-              })}
+          ) : unifiedChartData.length > 0 ? (
+            <div className="grid gap-4 grid-cols-1">
+              <DataChart
+                data={unifiedChartData}
+                units={chartUnits}
+                title="Unified Sensor Overview"
+                durationHours={calculatedHours}
+              />
             </div>
           ) : (
             <Card>

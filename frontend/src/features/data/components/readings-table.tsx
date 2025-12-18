@@ -15,6 +15,7 @@ import type {
   GatewayResponse,
 } from '@/types/api';
 import { useMemo } from 'react';
+import { formatDateTimeToWIB } from '@/lib/date-utils';
 
 interface ReadingsTableProps {
   readings: SensorDataResponse[];
@@ -110,15 +111,7 @@ export function ReadingsTable({
 
             return (
               <TableRow key={reading.id}>
-                <TableCell>
-                  {new Date(reading.timestamp).toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })}
-                </TableCell>
+                <TableCell>{formatDateTimeToWIB(reading.timestamp)}</TableCell>
                 <TableCell className="font-medium">
                   {sensor?.name || sensor?.uid || reading.sensor_id}
                 </TableCell>
