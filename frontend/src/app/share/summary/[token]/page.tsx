@@ -127,7 +127,7 @@ export default function SharedSummaryPage() {
     async function fetchData() {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/sensors/summary/share/${token}`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/sensors/summary/share/${token}`,
         );
 
         if (!response.ok) {

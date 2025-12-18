@@ -1,4 +1,4 @@
 """
 API Package
-Contains all API versions
+Kampung Tani IoT API
 """

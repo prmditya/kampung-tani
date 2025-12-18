@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_HOURS: int = Field(default=24)
 
     # API Configuration
-    API_PREFIX: str = Field(default="/api/v1")
-    DOCS_URL: str = Field(default="/api/v1/docs")
-    REDOC_URL: str = Field(default="/api/v1/redoc")
+    API_PREFIX: str = Field(default="/api")
+    DOCS_URL: str = Field(default="/api/docs")
+    REDOC_URL: str = Field(default="/api/redoc")
 
     # CORS Configuration (from .env)
     ALLOWED_ORIGINS: str = Field(default="*")
