@@ -151,8 +151,8 @@ const measurementConfig: Record<
 // Form validation schema
 const summaryFormSchema = z.object({
   farmId: z.string().min(1, 'Farm is required'),
-  dateFrom: z.date({ required_error: 'Start date is required' }),
-  dateTo: z.date({ required_error: 'End date is required' }),
+  dateFrom: z.date({ message: 'Start date is required' }),
+  dateTo: z.date({ message: 'End date is required' }),
 });
 
 export default function SummaryPage() {
