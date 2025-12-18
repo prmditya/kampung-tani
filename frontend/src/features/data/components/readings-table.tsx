@@ -6,63 +6,160 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type {
-  SensorDataResponse,
-  SensorResponse,
-  FarmerResponse,
-  FarmResponse,
-  GatewayAssignmentResponse,
-  GatewayResponse,
-} from '@/types/api';
-import { useMemo } from 'react';
+import type { PivotedSensorDataResponse } from '@/types/api';
+import { useMemo, useState } from 'react';
 import { formatDateTimeToWIB } from '@/lib/date-utils';
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper,
+  getSortedRowModel,
+  SortingState,
+} from '@tanstack/react-table';
+import { ArrowUpDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ReadingsTableProps {
-  readings: SensorDataResponse[];
-  sensors: SensorResponse[];
-  farmers: FarmerResponse[];
-  farms: FarmResponse[];
-  assignments: GatewayAssignmentResponse[];
-  gateways: GatewayResponse[];
+  readings: PivotedSensorDataResponse[];
 }
 
-export function ReadingsTable({
-  readings,
-  sensors,
-  farmers,
-  farms,
-  assignments,
-  gateways,
-}: ReadingsTableProps) {
-  // Create a map of sensor IDs to sensor info
-  const sensorMap = useMemo(() => {
-    return new Map(
-      sensors.map((s) => [
-        s.id,
-        { type: s.type, name: s.name, uid: s.sensor_uid },
-      ]),
+// Transform backend data to have measurements as a Record for easier column access
+interface TableRow {
+  id: string;
+  timestamp: string;
+  sensor_name: string;
+  gateway_uid: string;
+  farmer_name: string;
+  farm_name: string;
+  assigned_by: string;
+  // Dynamic measurements keyed by type
+  measurements: Record<string, { value: number; unit: string }>;
+}
+
+export function ReadingsTable({ readings }: ReadingsTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Transform pivoted data and collect measurement types
+  const { tableData, measurementTypes } = useMemo(() => {
+    const types = new Set<string>();
+
+    const data: TableRow[] = readings.map((reading, index) => {
+      const measurementsRecord: Record<
+        string,
+        { value: number; unit: string }
+      > = {};
+
+      reading.measurements.forEach((m) => {
+        types.add(m.measurement_type);
+        measurementsRecord[m.measurement_type] = {
+          value: m.value,
+          unit: m.unit || '',
+        };
+      });
+
+      return {
+        id: `${reading.sensor_id}-${reading.timestamp}-${index}`,
+        timestamp: reading.timestamp,
+        sensor_name:
+          reading.sensor_name || reading.sensor_uid || `${reading.sensor_id}`,
+        gateway_uid: reading.gateway_uid || `${reading.gateway_id}`,
+        farmer_name: reading.farmer_name || '-',
+        farm_name: reading.farm_name || '-',
+        assigned_by: reading.assigned_by_username || '-',
+        measurements: measurementsRecord,
+      };
+    });
+
+    return {
+      tableData: data,
+      measurementTypes: Array.from(types).sort(),
+    };
+  }, [readings]);
+
+  const columnHelper = createColumnHelper<TableRow>();
+
+  const columns = useMemo(() => {
+    const baseColumns = [
+      columnHelper.accessor('timestamp', {
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4 h-8"
+          >
+            Time
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: (info) => formatDateTimeToWIB(info.getValue()),
+      }),
+      columnHelper.accessor('sensor_name', {
+        header: 'Sensor',
+        cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+      }),
+    ];
+
+    // Dynamic measurement columns
+    const dynamicColumns = measurementTypes.map((type) =>
+      columnHelper.accessor((row) => row.measurements[type], {
+        id: `measure_${type}`,
+        header: type,
+        cell: (info) => {
+          const m = info.getValue();
+          if (!m) return <span className="text-muted-foreground">-</span>;
+          return (
+            <div className="flex items-baseline gap-1 font-mono">
+              <span>{m.value.toFixed(2)}</span>
+              <span className="text-[10px] text-muted-foreground uppercase">
+                {m.unit}
+              </span>
+            </div>
+          );
+        },
+      }),
     );
-  }, [sensors]);
 
-  // Create maps for farmers and farms
-  const farmerMap = useMemo(() => {
-    return new Map(farmers.map((f) => [f.id, f]));
-  }, [farmers]);
+    const trailingColumns = [
+      columnHelper.accessor('farmer_name', {
+        header: 'Farmer',
+        cell: (info) => (
+          <span className="text-muted-foreground">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('farm_name', {
+        header: 'Farm',
+        cell: (info) => (
+          <span className="text-muted-foreground">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('gateway_uid', {
+        header: 'Gateway',
+        cell: (info) => (
+          <span className="text-muted-foreground">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('assigned_by', {
+        header: 'Assigned By',
+        cell: (info) => (
+          <span className="text-muted-foreground">{info.getValue()}</span>
+        ),
+      }),
+    ];
 
-  const farmMap = useMemo(() => {
-    return new Map(farms.map((f) => [f.id, f]));
-  }, [farms]);
+    return [...baseColumns, ...dynamicColumns, ...trailingColumns];
+  }, [measurementTypes, columnHelper]);
 
-  // Create a map of gateway IDs to gateway info
-  const gatewayMap = useMemo(() => {
-    return new Map(gateways.map((g) => [g.id, g]));
-  }, [gateways]);
-
-  // Create a map of gateway IDs to active assignments
-  const assignmentMap = useMemo(() => {
-    const activeAssignments = assignments.filter((a) => a.is_active);
-    return new Map(activeAssignments.map((a) => [a.gateway_id, a]));
-  }, [assignments]);
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   if (!readings.length) {
     return (
@@ -73,88 +170,55 @@ export function ReadingsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Time</TableHead>
-            <TableHead>Sensor</TableHead>
-            <TableHead>Measurement Type</TableHead>
-            <TableHead>Value</TableHead>
-            <TableHead>Unit</TableHead>
-            <TableHead>Farmer</TableHead>
-            <TableHead>Farm</TableHead>
-            <TableHead>Gateway</TableHead>
-            <TableHead>Assigned By</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {readings.map((reading) => {
-            const sensor = sensorMap.get(reading.sensor_id);
-            // Extract measurement type from metadata
-            const measurementType =
-              reading.metadata?.measurement_type || sensor?.type || 'Unknown';
-
-            // Get farm and farmer from historical snapshot in reading
-            // If reading has farm object (from backend), use it directly
-            // Otherwise fallback to assignment lookup (for backward compatibility)
-            const farm =
-              reading.farm ||
-              (reading.farm_id ? farmMap.get(reading.farm_id) : null);
-            const farmer = farm ? farmerMap.get(farm.farmer_id) : null;
-
-            // Get assignment info for "Assigned By" column (fallback to reading.assigned_by_user)
-            const assignment = assignmentMap.get(reading.gateway_id);
-
-            // Get gateway info
-            const gateway = gatewayMap.get(reading.gateway_id);
-
-            return (
-              <TableRow key={reading.id}>
-                <TableCell>{formatDateTimeToWIB(reading.timestamp)}</TableCell>
-                <TableCell className="font-medium">
-                  {sensor?.name || sensor?.uid || reading.sensor_id}
-                </TableCell>
-                <TableCell>
-                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                    {measurementType}
-                  </span>
-                </TableCell>
-                <TableCell className="font-mono">
-                  {typeof reading.value === 'number'
-                    ? reading.value.toFixed(2)
-                    : reading.value}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {reading.unit || '-'}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {farmer
-                    ? farmer.name
-                    : reading.farm_id
-                      ? 'No farmer found'
-                      : 'No assignment'}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {farm
-                    ? farm.name
-                    : reading.farm_id
-                      ? 'No farm found'
-                      : 'No assignment'}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {gateway ? gateway.gateway_uid : reading.gateway_id}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {reading.assigned_by_user?.username ||
-                    assignment?.assigned_by_user?.username ||
-                    '-'}
+    <div className="rounded-md border">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="whitespace-nowrap">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="whitespace-nowrap">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  No results.
                 </TableCell>
               </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

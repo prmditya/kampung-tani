@@ -30,6 +30,8 @@ from app.api.schemas import (
     SensorDataResponse,
     PaginatedResponse,
     MessageResponse,
+    PivotedMeasurement,
+    PivotedSensorDataResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -463,6 +465,134 @@ async def get_sensor_data(
         page=page,
         size=size,
         pages=math.ceil(total / size) if total > 0 else 0
+    )
+
+
+@router.get(
+    "/{sensor_id}/data/pivoted",
+    response_model=PaginatedResponse[PivotedSensorDataResponse],
+    summary="Get Pivoted Sensor Data",
+    description="Get sensor readings grouped by timestamp for wide table display"
+)
+async def get_sensor_data_pivoted(
+    sensor_id: int,
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page (grouped rows)"),
+    hours: Optional[int] = Query(None, ge=1, le=8760, description="Last N hours of data"),
+    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
+    search: Optional[str] = Query(None, description="Search in measurement type, sensor name, or value"),
+    farmer_id: Optional[int] = Query(None, description="Filter by farmer ID"),
+    farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
+    assigned_by_id: Optional[int] = Query(None, description="Filter by user ID who assigned the gateway"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get sensor data grouped by timestamp for wide table display.
+    
+    Each row represents a unique timestamp with all measurements from that time.
+    Pagination is per grouped row, not per individual reading.
+    """
+    gateway_repo = GatewayRepository(db)
+    sensor_repo = SensorRepository(db)
+    sensor_data_repo = SensorDataRepository(db)
+
+    # Check if sensor exists
+    sensor = await sensor_repo.get_by_id(sensor_id)
+    if not sensor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sensor not found"
+        )
+
+    # Verify user has access to gateway
+    gateway = await gateway_repo.get_by_id(sensor.gateway_id)
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sensor not found"
+        )
+
+    # Calculate date filters
+    if start_date is None and end_date is None and hours:
+        start_date = datetime.utcnow() - timedelta(hours=hours)
+
+    if start_date and start_date.tzinfo:
+        start_date = start_date.replace(tzinfo=None)
+    if end_date and end_date.tzinfo:
+        end_date = end_date.replace(tzinfo=None)
+
+    # Fetch ALL readings matching filters (we need to group in Python)
+    all_readings = await sensor_data_repo.get_by_sensor(
+        sensor_id=sensor_id,
+        skip=0,
+        limit=10000,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        farmer_id=farmer_id,
+        farm_id=farm_id,
+        assigned_by_id=assigned_by_id
+    )
+
+    # Group readings by timestamp
+    grouped: dict[datetime, dict] = {}
+    for reading in all_readings:
+        ts = reading.timestamp
+        if ts not in grouped:
+            farm = reading.farm
+            farmer_name = None
+            if farm:
+                from app.api.repositories.farmer_repository import FarmerRepository
+                farmer_repo = FarmerRepository(db)
+                farmer = await farmer_repo.get_by_id(farm.farmer_id)
+                farmer_name = farmer.name if farmer else None
+
+            grouped[ts] = {
+                "timestamp": ts,
+                "sensor_id": reading.sensor_id,
+                "sensor_name": sensor.name,
+                "sensor_uid": sensor.sensor_uid,
+                "gateway_id": reading.gateway_id,
+                "gateway_uid": gateway.gateway_uid,
+                "farm_id": reading.farm_id,
+                "farm_name": farm.name if farm else None,
+                "farmer_id": farm.farmer_id if farm else None,
+                "farmer_name": farmer_name,
+                "assigned_by": reading.assigned_by,
+                "assigned_by_username": reading.assigned_by_user.username if reading.assigned_by_user else None,
+                "measurements": []
+            }
+
+        measurement_type = "Unknown"
+        if hasattr(reading, 'metadata_') and reading.metadata_:
+            measurement_type = reading.metadata_.get('measurement_type', 'Unknown')
+        elif reading.metadata:
+            measurement_type = reading.metadata.get('measurement_type', 'Unknown')
+
+        grouped[ts]["measurements"].append(
+            PivotedMeasurement(
+                measurement_type=measurement_type,
+                value=reading.value,
+                unit=reading.unit
+            )
+        )
+
+    # Sort by timestamp descending and paginate
+    sorted_groups = sorted(grouped.values(), key=lambda x: x["timestamp"], reverse=True)
+    total_groups = len(sorted_groups)
+    
+    skip = (page - 1) * size
+    paginated_groups = sorted_groups[skip:skip + size]
+    items = [PivotedSensorDataResponse(**g) for g in paginated_groups]
+
+    return PaginatedResponse(
+        items=items,
+        total=total_groups,
+        page=page,
+        size=size,
+        pages=math.ceil(total_groups / size) if total_groups > 0 else 0
     )
 
 

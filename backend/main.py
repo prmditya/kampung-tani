@@ -115,7 +115,7 @@ app = FastAPI(
         "email": "t.paramaditya@gmail.com",
     },
     license_info={
-        "name": "Private",
+        "name": "Private License",
     },
     lifespan=lifespan,
     docs_url=settings.DOCS_URL,

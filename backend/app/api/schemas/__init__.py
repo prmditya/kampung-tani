@@ -29,6 +29,8 @@ from app.api.schemas.sensor_data import (
     SensorDataCreate,
     SensorDataResponse,
     SensorDataBulkCreate,
+    PivotedMeasurement,
+    PivotedSensorDataResponse,
 )
 from app.api.schemas.farmer import (
     FarmerCreate,
@@ -85,6 +87,8 @@ __all__ = [
     "SensorDataCreate",
     "SensorDataResponse",
     "SensorDataBulkCreate",
+    "PivotedMeasurement",
+    "PivotedSensorDataResponse",
     # Farmer schemas
     "FarmerCreate",
     "FarmerUpdate",
