@@ -8,6 +8,7 @@ import type {
   PaginatedResponse,
   SensorDataResponse,
   SensorDataCreate,
+  PivotedSensorDataResponse,
 } from '@/types/api';
 
 // Query Keys
@@ -22,6 +23,8 @@ export const sensorKeys = {
     [...sensorKeys.all, 'gateway', gatewayId] as const,
   data: (sensorId: number, filters?: Record<string, unknown>) =>
     [...sensorKeys.all, 'data', sensorId, filters] as const,
+  dataPivoted: (sensorId: number, filters?: Record<string, unknown>) =>
+    [...sensorKeys.all, 'data-pivoted', sensorId, filters] as const,
   stats: (sensorId: number, hours?: number) =>
     [...sensorKeys.all, 'stats', sensorId, hours] as const,
 };
@@ -181,6 +184,47 @@ export function useSensorData(
       const response = await apiClient.get<
         PaginatedResponse<SensorDataResponse>
       >(`/sensors/${sensorId}/data?${params}`);
+      return response.data;
+    },
+    enabled: !!sensorId,
+  });
+}
+
+// ==================== GET PIVOTED SENSOR DATA ====================
+export function usePivotedSensorData(
+  sensorId: number,
+  filters?: {
+    page?: number;
+    size?: number;
+    hours?: number;
+    start_date?: string;
+    end_date?: string;
+    search?: string;
+    farmer_id?: number;
+    farm_id?: number;
+    assigned_by_id?: number;
+  },
+) {
+  return useQuery({
+    queryKey: sensorKeys.dataPivoted(sensorId, filters),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.size) params.append('size', filters.size.toString());
+      if (filters?.hours) params.append('hours', filters.hours.toString());
+      if (filters?.start_date) params.append('start_date', filters.start_date);
+      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.farmer_id)
+        params.append('farmer_id', filters.farmer_id.toString());
+      if (filters?.farm_id)
+        params.append('farm_id', filters.farm_id.toString());
+      if (filters?.assigned_by_id)
+        params.append('assigned_by_id', filters.assigned_by_id.toString());
+
+      const response = await apiClient.get<
+        PaginatedResponse<PivotedSensorDataResponse>
+      >(`/sensors/${sensorId}/data/pivoted?${params}`);
       return response.data;
     },
     enabled: !!sensorId,

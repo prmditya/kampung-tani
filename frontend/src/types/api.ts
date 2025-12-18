@@ -188,6 +188,29 @@ export interface SensorDataBulkCreate {
   readings: Record<string, unknown>[];
 }
 
+// Pivoted sensor data types (for wide table display)
+export interface PivotedMeasurement {
+  measurement_type: string;
+  value: number;
+  unit?: string | null;
+}
+
+export interface PivotedSensorDataResponse {
+  timestamp: string;
+  sensor_id: number;
+  sensor_name?: string | null;
+  sensor_uid?: string | null;
+  gateway_id: number;
+  gateway_uid?: string | null;
+  farm_id?: number | null;
+  farm_name?: string | null;
+  farmer_id?: number | null;
+  farmer_name?: string | null;
+  assigned_by?: number | null;
+  assigned_by_username?: string | null;
+  measurements: PivotedMeasurement[];
+}
+
 // ==================== FARMER TYPES ====================
 
 export interface FarmerBase {

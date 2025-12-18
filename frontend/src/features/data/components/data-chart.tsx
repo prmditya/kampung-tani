@@ -25,6 +25,10 @@ interface DataChartProps {
   title?: string;
   units?: Record<string, string>;
   durationHours?: number;
+  /** Optional chart group identifier for grouped charts */
+  groupId?: string;
+  /** Optional accent color for the chart group */
+  groupColor?: string;
 }
 
 // Minimalist color palette - softer, professional colors
@@ -39,7 +43,13 @@ const COLORS = [
   '#84cc16', // Lime
 ];
 
-export function DataChart({ data, title, units = {} }: DataChartProps) {
+export function DataChart({
+  data,
+  title,
+  units = {},
+  groupId,
+  groupColor,
+}: DataChartProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
 
@@ -146,12 +156,25 @@ export function DataChart({ data, title, units = {} }: DataChartProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">{title || 'Sensor Overview'}</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="w-full h-[450px]">
+      <CardContent className="pt-0 overflow-x-auto">
+        {/* Scrollable container for mobile - minimum width ensures chart is readable */}
+        <div
+          className="h-[400px]"
+          style={{
+            minWidth: `${Math.max(600, 600 + sensorTypes.length * 20)}px`,
+            width: '100%',
+          }}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={displayData}
-              margin={{ top: 20, right: 20, left: 10, bottom: 60 }}
+              margin={{
+                top: 16,
+                // Dynamic margin: base 50px + extra 40px for each additional axis on that side
+                right: 50 + Math.floor((sensorTypes.length - 1) / 2) * 40,
+                left: 0 + Math.floor(sensorTypes.length / 2) * 40,
+                bottom: 50,
+              }}
             >
               <CartesianGrid
                 strokeDasharray="4 4"
@@ -161,26 +184,94 @@ export function DataChart({ data, title, units = {} }: DataChartProps) {
               <XAxis
                 dataKey="time"
                 stroke={textColor}
-                tick={{ fontSize: 9, fill: textColor }}
+                tick={{
+                  fontSize: 10,
+                  fill: textColor,
+                  fontFamily: 'Inter, sans-serif',
+                }}
                 angle={-45}
                 textAnchor="end"
                 height={40}
                 interval="preserveStartEnd"
                 axisLine={false}
                 tickLine={false}
+                tickFormatter={(value: string) => {
+                  // Extract HH:mm from time string (e.g., "14:15:30" -> "14:15")
+                  const parts = value.split(':');
+                  if (parts.length >= 2) {
+                    return `${parts[0]}:${parts[1]}`;
+                  }
+                  return value;
+                }}
               />
-              <YAxis
-                stroke={gridColor}
-                tick={false}
-                axisLine={{ stroke: gridColor }}
-                tickLine={false}
-                width={1}
-              />
+
+              {/* Y-Axis for each sensor type - alternating left/right with offset */}
+              {sensorTypes.map((type, index) => {
+                const isLeft = index % 2 === 0;
+                // Calculate which position this axis is on its side (0, 1, 2...)
+                const sideIndex = Math.floor(index / 2);
+                // Offset each additional axis on same side - more compact
+                const offset = sideIndex * 40;
+
+                return (
+                  <YAxis
+                    key={type}
+                    yAxisId={type}
+                    orientation={isLeft ? 'left' : 'right'}
+                    stroke={COLORS[index % COLORS.length]}
+                    tick={{
+                      fontSize: 9,
+                      fill: COLORS[index % COLORS.length],
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                    tickLine={false}
+                    axisLine={{
+                      stroke: COLORS[index % COLORS.length],
+                      strokeWidth: 1.5,
+                    }}
+                    width={35}
+                    // Move additional axes outward
+                    {...(sideIndex > 0 && {
+                      tickMargin: 4,
+                    })}
+                    style={{
+                      transform: isLeft
+                        ? `translateX(-${offset}px)`
+                        : `translateX(${offset}px)`,
+                    }}
+                    label={{
+                      value: units[type] ? `${type} (${units[type]})` : type,
+                      angle: isLeft ? -90 : 90,
+                      position: isLeft ? 'insideLeft' : 'insideRight',
+                      style: {
+                        fontSize: 9,
+                        fill: COLORS[index % COLORS.length],
+                        textAnchor: 'middle',
+                        fontFamily: 'Inter, sans-serif',
+                      },
+                      offset: isLeft ? -offset - 8 : -offset - 8,
+                    }}
+                    tickFormatter={(value: number) => value.toFixed(1)}
+                  />
+                );
+              })}
+
               <Tooltip content={<CustomTooltip />} />
               <Legend
-                wrapperStyle={{ paddingTop: '8px', fontSize: '12px' }}
+                wrapperStyle={{
+                  paddingTop: '8px',
+                  fontSize: '12px',
+                  fontFamily: 'Inter, sans-serif',
+                }}
                 formatter={(value: string) => (
-                  <span style={{ color: textColor }}>{value}</span>
+                  <span
+                    style={{
+                      color: textColor,
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                  >
+                    {value}
+                  </span>
                 )}
               />
 
@@ -190,6 +281,7 @@ export function DataChart({ data, title, units = {} }: DataChartProps) {
                   key={type}
                   type="monotone"
                   dataKey={type}
+                  yAxisId={type}
                   stroke={COLORS[index % COLORS.length]}
                   strokeWidth={1.5}
                   dot={false}

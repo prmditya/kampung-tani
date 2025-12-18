@@ -26,9 +26,16 @@ import { useGateways } from '@/hooks/use-gateways';
 import {
   useSensorsByGateway,
   useSensorData,
+  usePivotedSensorData,
 } from '@/features/data/hooks/use-sensors';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import { parseUTCTimestamp, formatTimeToWIB } from '@/lib/date-utils';
+import {
+  CHART_GROUPS,
+  groupChartData,
+  getActiveGroups,
+  type ChartGroupId,
+} from '@/lib/sensor-config';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGetUsers } from '@/features/settings/hooks/use-users';
@@ -240,13 +247,13 @@ export default function DataPage() {
     }));
   }, [usersData]);
 
-  // Fetch sensor data for table (paginated) with all filters
+  // Fetch pivoted sensor data for table (paginated) with all filters
   const {
-    data: sensorDataResponse,
-    isLoading: isLoadingData,
+    data: pivotedDataResponse,
+    isLoading: isLoadingPivotedData,
     isFetching: isFetchingTable,
     refetch: refetchTable,
-  } = useSensorData(sensorId, {
+  } = usePivotedSensorData(sensorId, {
     page,
     size: pageSize,
     hours: calculatedHours,
@@ -276,10 +283,10 @@ export default function DataPage() {
     assigned_by_id: assignedById,
   });
 
-  // Process sensor data for table display
-  const sensorReadings: SensorDataResponse[] = useMemo(() => {
-    return sensorDataResponse?.items || [];
-  }, [sensorDataResponse]);
+  // Process pivoted data for table display
+  const pivotedReadings = useMemo(() => {
+    return pivotedDataResponse?.items || [];
+  }, [pivotedDataResponse]);
 
   // Process sensor data for chart display
   const chartSensorReadings: SensorDataResponse[] = useMemo(() => {
@@ -418,6 +425,24 @@ export default function DataPage() {
     return units;
   }, [chartSensorReadings]);
 
+  // Group chart data by categories
+  const groupedChartData = useMemo(() => {
+    if (!unifiedChartData.length || !selectedMeasurementTypes.length) {
+      return null;
+    }
+    return groupChartData(
+      unifiedChartData,
+      selectedMeasurementTypes,
+      chartUnits,
+    );
+  }, [unifiedChartData, selectedMeasurementTypes, chartUnits]);
+
+  // Get active chart groups (groups that have data)
+  const activeChartGroups = useMemo(() => {
+    if (!groupedChartData) return [];
+    return getActiveGroups(groupedChartData);
+  }, [groupedChartData]);
+
   const handleRefresh = async () => {
     await Promise.all([refetchTable(), refetchChart()]);
   };
@@ -527,7 +552,7 @@ export default function DataPage() {
   };
 
   const handleExport = () => {
-    if (!sensorReadings.length) return;
+    if (!chartSensorReadings.length) return;
 
     // Create CSV content
     const headers = [
@@ -540,7 +565,7 @@ export default function DataPage() {
       'Farmer',
       'Farm',
     ];
-    const rows = sensorReadings.map((r) => {
+    const rows = chartSensorReadings.map((r: SensorDataResponse) => {
       // Find assignment for this gateway
       const assignment = assignmentsData?.items.find(
         (a) => a.gateway_id === r.gateway_id && a.is_active,
@@ -564,9 +589,10 @@ export default function DataPage() {
       ];
     });
 
-    const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join(
-      '\n',
-    );
+    const csv = [
+      headers.join(','),
+      ...rows.map((row: (string | number)[]) => row.join(',')),
+    ].join('\n');
 
     // Download CSV
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -580,7 +606,8 @@ export default function DataPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  const isLoading = isLoadingGateways || isLoadingSensors || isLoadingData;
+  const isLoading =
+    isLoadingGateways || isLoadingSensors || isLoadingPivotedData;
   const isChartLoading = isLoadingChartData;
   const isRefreshing = isFetchingTable || isFetchingChart;
 
@@ -1142,7 +1169,7 @@ export default function DataPage() {
 
       {!isLoading &&
         !isChartLoading &&
-        sensorReadings.length === 0 &&
+        pivotedReadings.length === 0 &&
         chartSensorReadings.length === 0 && (
           <Card>
             <CardContent className="py-8">
@@ -1195,19 +1222,35 @@ export default function DataPage() {
               </CardContent>
             </Card>
           )}
-          {/* Unified Sensor Chart */}
+          {/* Grouped Sensor Charts */}
           {isChartLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : unifiedChartData.length > 0 ? (
+          ) : activeChartGroups.length > 0 && groupedChartData ? (
             <div className="grid gap-4 grid-cols-1">
-              <DataChart
-                data={unifiedChartData}
-                units={chartUnits}
-                title="Unified Sensor Overview"
-                durationHours={calculatedHours}
-              />
+              {activeChartGroups.map((groupId) => {
+                const group = CHART_GROUPS[groupId];
+                const groupData = groupedChartData[groupId];
+                // Filter units for this group only
+                const groupUnits: Record<string, string> = {};
+                groupData.types.forEach((type) => {
+                  if (chartUnits[type]) {
+                    groupUnits[type] = chartUnits[type];
+                  }
+                });
+                return (
+                  <DataChart
+                    key={groupId}
+                    data={groupData.data}
+                    units={groupUnits}
+                    title={group.title}
+                    durationHours={calculatedHours}
+                    groupId={groupId}
+                    groupColor={group.color}
+                  />
+                );
+              })}
             </div>
           ) : (
             <Card>
@@ -1256,21 +1299,14 @@ export default function DataPage() {
               </form>
             </CardHeader>
             <CardContent>
-              <ReadingsTable
-                readings={sensorReadings}
-                sensors={sensorsData?.items || []}
-                farmers={farmersData?.items || []}
-                farms={farmsData?.items || []}
-                assignments={assignmentsData?.items || []}
-                gateways={gatewaysData?.items || []}
-              />
+              <ReadingsTable readings={pivotedReadings} />
 
               {/* Pagination Controls */}
               <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="text-sm text-muted-foreground text-center sm:text-left">
                   Showing {(page - 1) * pageSize + 1} to{' '}
-                  {Math.min(page * pageSize, sensorDataResponse?.total || 0)} of{' '}
-                  {sensorDataResponse?.total || 0} results
+                  {Math.min(page * pageSize, pivotedDataResponse?.total || 0)}{' '}
+                  of {pivotedDataResponse?.total || 0} results
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Button
@@ -1278,7 +1314,7 @@ export default function DataPage() {
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage(1)}
-                    disabled={page === 1 || isLoadingData}
+                    disabled={page === 1 || isLoadingPivotedData}
                     title="First page"
                   >
                     <span className="sr-only sm:not-sr-only sm:mr-1">
@@ -1303,7 +1339,7 @@ export default function DataPage() {
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1 || isLoadingData}
+                    disabled={page === 1 || isLoadingPivotedData}
                     title="Previous page"
                   >
                     <span className="sr-only sm:not-sr-only">Prev</span>
@@ -1321,7 +1357,7 @@ export default function DataPage() {
                     </svg>
                   </Button>
                   <div className="text-sm px-2 min-w-[80px] text-center">
-                    {page} / {sensorDataResponse?.pages || 1}
+                    {page} / {pivotedDataResponse?.pages || 1}
                   </div>
                   <Button
                     variant="outline"
@@ -1329,7 +1365,8 @@ export default function DataPage() {
                     className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     onClick={() => setPage((p) => p + 1)}
                     disabled={
-                      page >= (sensorDataResponse?.pages || 1) || isLoadingData
+                      page >= (pivotedDataResponse?.pages || 1) ||
+                      isLoadingPivotedData
                     }
                     title="Next page"
                   >
@@ -1351,9 +1388,10 @@ export default function DataPage() {
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
-                    onClick={() => setPage(sensorDataResponse?.pages || 1)}
+                    onClick={() => setPage(pivotedDataResponse?.pages || 1)}
                     disabled={
-                      page >= (sensorDataResponse?.pages || 1) || isLoadingData
+                      page >= (pivotedDataResponse?.pages || 1) ||
+                      isLoadingPivotedData
                     }
                     title="Last page"
                   >

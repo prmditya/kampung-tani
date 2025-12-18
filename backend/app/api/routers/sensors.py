@@ -16,7 +16,6 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.models.gateway import Gateway
 from app.models.gateway_assignment import GatewayAssignment
-from app.models.summary_share import SummaryShare
 from app.models.farm import Farm
 from app.api.repositories.gateway_repository import GatewayRepository
 from app.api.repositories.sensor_repository import SensorRepository
@@ -30,6 +29,8 @@ from app.api.schemas import (
     SensorDataResponse,
     PaginatedResponse,
     MessageResponse,
+    PivotedMeasurement,
+    PivotedSensorDataResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -466,6 +467,134 @@ async def get_sensor_data(
     )
 
 
+@router.get(
+    "/{sensor_id}/data/pivoted",
+    response_model=PaginatedResponse[PivotedSensorDataResponse],
+    summary="Get Pivoted Sensor Data",
+    description="Get sensor readings grouped by timestamp for wide table display"
+)
+async def get_sensor_data_pivoted(
+    sensor_id: int,
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page (grouped rows)"),
+    hours: Optional[int] = Query(None, ge=1, le=8760, description="Last N hours of data"),
+    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
+    search: Optional[str] = Query(None, description="Search in measurement type, sensor name, or value"),
+    farmer_id: Optional[int] = Query(None, description="Filter by farmer ID"),
+    farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
+    assigned_by_id: Optional[int] = Query(None, description="Filter by user ID who assigned the gateway"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get sensor data grouped by timestamp for wide table display.
+    
+    Each row represents a unique timestamp with all measurements from that time.
+    Pagination is per grouped row, not per individual reading.
+    """
+    gateway_repo = GatewayRepository(db)
+    sensor_repo = SensorRepository(db)
+    sensor_data_repo = SensorDataRepository(db)
+
+    # Check if sensor exists
+    sensor = await sensor_repo.get_by_id(sensor_id)
+    if not sensor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sensor not found"
+        )
+
+    # Verify user has access to gateway
+    gateway = await gateway_repo.get_by_id(sensor.gateway_id)
+    if not gateway or not await user_has_gateway_access(db, gateway, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sensor not found"
+        )
+
+    # Calculate date filters
+    if start_date is None and end_date is None and hours:
+        start_date = datetime.utcnow() - timedelta(hours=hours)
+
+    if start_date and start_date.tzinfo:
+        start_date = start_date.replace(tzinfo=None)
+    if end_date and end_date.tzinfo:
+        end_date = end_date.replace(tzinfo=None)
+
+    # Fetch ALL readings matching filters (we need to group in Python)
+    all_readings = await sensor_data_repo.get_by_sensor(
+        sensor_id=sensor_id,
+        skip=0,
+        limit=10000,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        farmer_id=farmer_id,
+        farm_id=farm_id,
+        assigned_by_id=assigned_by_id
+    )
+
+    # Group readings by timestamp
+    grouped: dict[datetime, dict] = {}
+    for reading in all_readings:
+        ts = reading.timestamp
+        if ts not in grouped:
+            farm = reading.farm
+            farmer_name = None
+            if farm:
+                from app.api.repositories.farmer_repository import FarmerRepository
+                farmer_repo = FarmerRepository(db)
+                farmer = await farmer_repo.get_by_id(farm.farmer_id)
+                farmer_name = farmer.name if farmer else None
+
+            grouped[ts] = {
+                "timestamp": ts,
+                "sensor_id": reading.sensor_id,
+                "sensor_name": sensor.name,
+                "sensor_uid": sensor.sensor_uid,
+                "gateway_id": reading.gateway_id,
+                "gateway_uid": gateway.gateway_uid,
+                "farm_id": reading.farm_id,
+                "farm_name": farm.name if farm else None,
+                "farmer_id": farm.farmer_id if farm else None,
+                "farmer_name": farmer_name,
+                "assigned_by": reading.assigned_by,
+                "assigned_by_username": reading.assigned_by_user.username if reading.assigned_by_user else None,
+                "measurements": []
+            }
+
+        measurement_type = "Unknown"
+        if hasattr(reading, 'metadata_') and reading.metadata_:
+            measurement_type = reading.metadata_.get('measurement_type', 'Unknown')
+        elif reading.metadata:
+            measurement_type = reading.metadata.get('measurement_type', 'Unknown')
+
+        grouped[ts]["measurements"].append(
+            PivotedMeasurement(
+                measurement_type=measurement_type,
+                value=reading.value,
+                unit=reading.unit
+            )
+        )
+
+    # Sort by timestamp descending and paginate
+    sorted_groups = sorted(grouped.values(), key=lambda x: x["timestamp"], reverse=True)
+    total_groups = len(sorted_groups)
+    
+    skip = (page - 1) * size
+    paginated_groups = sorted_groups[skip:skip + size]
+    items = [PivotedSensorDataResponse(**g) for g in paginated_groups]
+
+    return PaginatedResponse(
+        items=items,
+        total=total_groups,
+        page=page,
+        size=size,
+        pages=math.ceil(total_groups / size) if total_groups > 0 else 0
+    )
+
+
 @router.post(
     "/{sensor_id}/data",
     response_model=SensorDataResponse,
@@ -591,302 +720,3 @@ async def get_sensor_stats(
         "statistics": stats
     }
 
-
-@router.get(
-    "/summary/farm/{farm_id}",
-    summary="Get Farm Summary",
-    description="Get aggregated sensor data summary for a farm"
-)
-async def get_farm_summary(
-    farm_id: int,
-    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
-    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get summary statistics for all sensor data in a farm.
-
-    - **farm_id**: Farm ID (required)
-    - **start_date**: Start date filter in ISO format (optional)
-    - **end_date**: End date filter in ISO format (optional)
-
-    Returns aggregated statistics (min, max, avg, count) grouped by measurement type.
-    """
-    farm_repo = FarmRepository(db)
-    sensor_data_repo = SensorDataRepository(db)
-
-    # Check if farm exists
-    farm = await farm_repo.get_by_id(farm_id)
-
-    if not farm:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farm with ID {farm_id} not found"
-        )
-
-    # Strip timezone info to make datetime timezone-naive
-    if start_date and start_date.tzinfo:
-        start_date = start_date.replace(tzinfo=None)
-    if end_date and end_date.tzinfo:
-        end_date = end_date.replace(tzinfo=None)
-
-    # Get summary statistics
-    summary = await sensor_data_repo.get_farm_summary_statistics(
-        farm_id=farm_id,
-        start_date=start_date,
-        end_date=end_date
-    )
-
-    return {
-        "farm_id": farm_id,
-        "farm_name": farm.name,
-        "farmer_id": farm.farmer_id,
-        "start_date": start_date,
-        "end_date": end_date,
-        "summary": summary
-    }
-
-
-# ============ Summary Share Endpoints ============
-
-@router.post(
-    "/summary/share",
-    summary="Create Share Link",
-    description="Generate a shareable link for a farm summary report"
-)
-async def create_summary_share(
-    farm_id: int,
-    start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
-    end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
-    expires_in_days: int = Query(30, ge=1, le=365, description="Link expiration in days"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Create a shareable link for a farm summary.
-    
-    - **farm_id**: Farm ID (required)
-    - **start_date**: Start date filter (optional)
-    - **end_date**: End date filter (optional)
-    - **expires_in_days**: Link expiration in days (default: 30, max: 365)
-    
-    Returns the share token and URL.
-    """
-    farm_repo = FarmRepository(db)
-    
-    # Check if farm exists
-    farm = await farm_repo.get_by_id(farm_id)
-    if not farm:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Farm with ID {farm_id} not found"
-        )
-    
-    # Strip timezone info
-    if start_date and start_date.tzinfo:
-        start_date = start_date.replace(tzinfo=None)
-    if end_date and end_date.tzinfo:
-        end_date = end_date.replace(tzinfo=None)
-    
-    # Create share record
-    share = SummaryShare(
-        farm_id=farm_id,
-        created_by=current_user.id,
-        start_date=start_date,
-        end_date=end_date,
-        expires_at=datetime.utcnow() + timedelta(days=expires_in_days)
-    )
-    
-    db.add(share)
-    await db.commit()
-    await db.refresh(share)
-    
-    return {
-        "token": share.token,
-        "url": f"/share/summary/{share.token}",
-        "farm_id": farm_id,
-        "farm_name": farm.name,
-        "expires_at": share.expires_at,
-        "created_at": share.created_at
-    }
-
-
-@router.get(
-    "/summary/share/{token}",
-    summary="Get Shared Summary (Public)",
-    description="Get a shared summary report by token - no authentication required"
-)
-async def get_shared_summary(
-    token: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get shared summary by token. This endpoint is PUBLIC (no auth required).
-    
-    - **token**: The share token from the URL
-    
-    Returns the farm summary data including farm info.
-    """
-    # Find share by token
-    result = await db.execute(
-        select(SummaryShare).where(SummaryShare.token == token)
-    )
-    share = result.scalar_one_or_none()
-    
-    if not share:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Share link not found"
-        )
-    
-    if not share.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="This share link has been revoked"
-        )
-    
-    if share.is_expired:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="This share link has expired"
-        )
-    
-    # Get farm data
-    farm_repo = FarmRepository(db)
-    farm = await farm_repo.get_by_id(share.farm_id)
-    
-    if not farm:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Farm not found"
-        )
-    
-    # Get farmer data
-    from app.api.repositories.farmer_repository import FarmerRepository
-    farmer_repo = FarmerRepository(db)
-    farmer = await farmer_repo.get_by_id(farm.farmer_id)
-    
-    # Get summary statistics
-    sensor_data_repo = SensorDataRepository(db)
-    summary = await sensor_data_repo.get_farm_summary_statistics(
-        farm_id=share.farm_id,
-        start_date=share.start_date,
-        end_date=share.end_date
-    )
-    
-    return {
-        "farm_id": share.farm_id,
-        "farm_name": farm.name,
-        "farm_location": farm.location,
-        "farm_latitude": farm.latitude,
-        "farm_longitude": farm.longitude,
-        "farmer_id": farm.farmer_id,
-        "farmer_name": farmer.name if farmer else None,
-        "start_date": share.start_date,
-        "end_date": share.end_date,
-        "summary": summary,
-        "created_at": share.created_at,
-        "expires_at": share.expires_at
-    }
-
-
-@router.get(
-    "/summary/shares",
-    summary="List My Shares",
-    description="Get all share links created by the current user"
-)
-async def list_my_shares(
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    List all share links created by the current user.
-    
-    - **page**: Page number (default: 1)
-    - **size**: Items per page (default: 20)
-    
-    Returns paginated list of share links.
-    """
-    # Count total
-    from sqlalchemy import func
-    count_result = await db.execute(
-        select(func.count(SummaryShare.id)).where(
-            SummaryShare.created_by == current_user.id
-        )
-    )
-    total = count_result.scalar() or 0
-    
-    # Get shares with pagination
-    result = await db.execute(
-        select(SummaryShare)
-        .where(SummaryShare.created_by == current_user.id)
-        .order_by(SummaryShare.created_at.desc())
-        .offset((page - 1) * size)
-        .limit(size)
-    )
-    shares = result.scalars().all()
-    
-    items = []
-    for share in shares:
-        items.append({
-            "id": share.id,
-            "token": share.token,
-            "url": f"/share/summary/{share.token}",
-            "farm_id": share.farm_id,
-            "farm_name": share.farm.name if share.farm else None,
-            "start_date": share.start_date,
-            "end_date": share.end_date,
-            "is_active": share.is_active,
-            "is_expired": share.is_expired,
-            "is_valid": share.is_valid,
-            "created_at": share.created_at,
-            "expires_at": share.expires_at
-        })
-    
-    return {
-        "items": items,
-        "total": total,
-        "page": page,
-        "size": size,
-        "pages": math.ceil(total / size) if total > 0 else 0
-    }
-
-
-@router.delete(
-    "/summary/share/{token}",
-    response_model=MessageResponse,
-    summary="Delete Share Link",
-    description="Permanently delete a share link"
-)
-async def delete_summary_share(
-    token: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Delete a share link. Only the creator can delete their links.
-    
-    - **token**: The share token to delete
-    """
-    # Find share by token
-    result = await db.execute(
-        select(SummaryShare).where(
-            SummaryShare.token == token,
-            SummaryShare.created_by == current_user.id
-        )
-    )
-    share = result.scalar_one_or_none()
-    
-    if not share:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Share link not found or you don't have permission to delete it"
-        )
-    
-    await db.delete(share)
-    await db.commit()
-    
-    return {"message": "Share link deleted successfully"}

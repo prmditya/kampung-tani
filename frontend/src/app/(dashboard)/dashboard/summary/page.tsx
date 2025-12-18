@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -147,6 +148,13 @@ const measurementConfig: Record<
   Salinity: { icon: Waves, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
 };
 
+// Form validation schema
+const summaryFormSchema = z.object({
+  farmId: z.string().min(1, 'Farm is required'),
+  dateFrom: z.date({ message: 'Start date is required' }),
+  dateTo: z.date({ message: 'End date is required' }),
+});
+
 export default function SummaryPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -185,7 +193,7 @@ export default function SummaryPage() {
       if (dateTo) params.append('end_date', dateTo.toISOString());
 
       const response = await apiClient.post(
-        `/sensors/summary/share?${params.toString()}`,
+        `/summary/share?${params.toString()}`,
       );
       return response.data;
     },
@@ -214,7 +222,7 @@ export default function SummaryPage() {
   const { data: sharesData, refetch: refetchShares } = useQuery({
     queryKey: ['my-shares'],
     queryFn: async () => {
-      const response = await apiClient.get('/sensors/summary/shares?size=50');
+      const response = await apiClient.get('/summary/shares?size=50');
       return response.data;
     },
     enabled: shareDialogOpen, // Only fetch when dialog is open
@@ -223,7 +231,7 @@ export default function SummaryPage() {
   // Delete share mutation
   const deleteShareMutation = useMutation({
     mutationFn: async (token: string) => {
-      await apiClient.delete(`/sensors/summary/share/${token}`);
+      await apiClient.delete(`/summary/share/${token}`);
     },
     onSuccess: () => {
       toast.success('Link deleted successfully');
@@ -286,7 +294,7 @@ export default function SummaryPage() {
         params.append('end_date', `${y}-${m}-${d}T23:59:59`);
       }
       const response = await apiClient.get<FarmSummaryResponse>(
-        `/sensors/summary/farm/${selectedFarm}?${params}`,
+        `/summary/farm/${selectedFarm}?${params}`,
       );
       return response.data;
     },
@@ -294,12 +302,7 @@ export default function SummaryPage() {
   });
 
   // Auto-generate summary if farm is in URL on initial load
-  useEffect(() => {
-    if (initialFarm && !summaryGenerated) {
-      setSummaryGenerated(true);
-      refetchSummary();
-    }
-  }, [initialFarm, summaryGenerated, refetchSummary]);
+  // Auto-generate removed - user must click button manually
 
   const handleFarmerChange = (value: string) => {
     setSelectedFarmer(value);
@@ -323,10 +326,28 @@ export default function SummaryPage() {
   };
 
   const handleGenerateSummary = () => {
-    if (!selectedFarm) return;
+    const result = summaryFormSchema.safeParse({
+      farmId: selectedFarm,
+      dateFrom,
+      dateTo,
+    });
+
+    if (!result.success) {
+      return;
+    }
+
     setSummaryGenerated(true);
     refetchSummary();
   };
+
+  // Validate form state
+  const formValidation = useMemo(() => {
+    return summaryFormSchema.safeParse({
+      farmId: selectedFarm,
+      dateFrom,
+      dateTo,
+    });
+  }, [selectedFarm, dateFrom, dateTo]);
 
   const handleReset = () => {
     setSelectedFarmer('');
@@ -531,10 +552,15 @@ export default function SummaryPage() {
               </Popover>
             </div>
           </div>
+          {!formValidation.success && selectedFarm && (
+            <p className="text-xs text-destructive">
+              {formValidation.error.issues.map((i) => i.message).join('. ')}
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2">
             <Button
               onClick={handleGenerateSummary}
-              disabled={!selectedFarm || isLoadingSummary}
+              disabled={!formValidation.success || isLoadingSummary}
               className="col-span-1 md:col-span-2"
             >
               {isLoadingSummary ? (

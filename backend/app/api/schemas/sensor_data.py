@@ -90,3 +90,35 @@ class SensorDataResponse(SensorDataBase):
             }
             return super().model_validate(obj_dict, **kwargs)
         return super().model_validate(obj, **kwargs)
+
+
+# ==================== PIVOTED SENSOR DATA SCHEMAS ====================
+
+class PivotedMeasurement(BaseSchema):
+    """Single measurement within a pivoted row"""
+    measurement_type: str
+    value: float
+    unit: Optional[str] = None
+
+
+class PivotedSensorDataResponse(BaseSchema):
+    """
+    Pivoted sensor data response.
+    Groups multiple measurements by (sensor_id, timestamp) into one row.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    timestamp: datetime
+    sensor_id: int
+    sensor_name: Optional[str] = None
+    sensor_uid: Optional[str] = None
+    gateway_id: int
+    gateway_uid: Optional[str] = None
+    farm_id: Optional[int] = None
+    farm_name: Optional[str] = None
+    farmer_id: Optional[int] = None
+    farmer_name: Optional[str] = None
+    assigned_by: Optional[int] = None
+    assigned_by_username: Optional[str] = None
+    measurements: List[PivotedMeasurement] = Field(default_factory=list)
+

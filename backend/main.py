@@ -22,6 +22,7 @@ from app.api.routers import (
     gateway_assignments,
     gateway_status_history,
     dashboard,
+    summary,
 )
 from app.core.config import get_settings
 from app.core.database import check_database_health, close_db
@@ -115,7 +116,7 @@ app = FastAPI(
         "email": "t.paramaditya@gmail.com",
     },
     license_info={
-        "name": "Private",
+        "name": "Private License",
     },
     lifespan=lifespan,
     docs_url=settings.DOCS_URL,
@@ -162,6 +163,11 @@ app.include_router(
     gateway_status_history.router,
     prefix=f"{settings.API_PREFIX}/gateway-status-history",
     tags=["Gateway Status History"],
+)
+app.include_router(
+    summary.router,
+    prefix=f"{settings.API_PREFIX}/summary",
+    tags=["Summary"],
 )
 
 
