@@ -1,108 +1,124 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Legend,
+  ResponsiveContainer,
+  Brush,
 } from 'recharts';
-import { useMemo } from 'react';
 
 interface ChartDataPoint {
   time: string;
-  [key: string]: string | number | null;
+  [key: string]: string | number | null | undefined;
 }
 
 interface DataChartProps {
   data: ChartDataPoint[];
   title?: string;
-  labelInterval?: number; // in minutes (15, 30, 60, 120)
+  units?: Record<string, string>;
+  durationHours?: number;
 }
 
-export function DataChart({ data, title, labelInterval = 60 }: DataChartProps) {
-  // Extract unique sensor types from data
+// Minimalist color palette - softer, professional colors
+const COLORS = [
+  '#10b981', // Emerald
+  '#3b82f6', // Blue
+  '#f59e0b', // Amber
+  '#ef4444', // Red
+  '#8b5cf6', // Violet
+  '#06b6d4', // Cyan
+  '#ec4899', // Pink
+  '#84cc16', // Lime
+];
+
+export function DataChart({ data, title, units = {} }: DataChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
+
+  // Extract sensor types from data
   const sensorTypes = useMemo(() => {
-    if (!data.length) return [];
+    if (!data || !data.length) return [];
     const types = new Set<string>();
-    data.forEach((point) => {
+    data.slice(0, Math.min(100, data.length)).forEach((point) => {
       Object.keys(point).forEach((key) => {
-        if (key !== 'time') {
+        if (key !== 'time' && key !== 'unit' && key !== 'timestamp') {
           types.add(key);
         }
       });
     });
-    return Array.from(types);
+    return Array.from(types).sort();
   }, [data]);
 
-  // Calculate tick interval - how many data points to skip between labels
-  const tickInterval = useMemo(() => {
-    if (!data.length) return 0;
-    if (data.length <= 3) return 0; // Show all ticks
+  // Downsample for performance
+  const displayData = useMemo(() => {
+    if (!data || !data.length) return [];
+    const maxPoints = 1000;
+    if (data.length <= maxPoints) return data;
+    const step = Math.ceil(data.length / maxPoints);
+    return data.filter((_, i) => i % step === 0);
+  }, [data]);
 
-    // Parse first and last time to get total span
-    const parseTime = (timeStr: string): number => {
-      const parts = timeStr.toString().split(':');
-      if (parts.length === 3) {
-        const hours = parseInt(parts[0], 10);
-        const minutes = parseInt(parts[1], 10);
-        const seconds = parseInt(parts[2], 10);
-        return hours * 60 + minutes + seconds / 60;
-      }
-      return 0;
-    };
+  // Theme colors - dark green for dark mode tooltip
+  const textColor = isDarkMode ? '#a1a1aa' : '#71717a';
+  const gridColor = isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  const tooltipBg = isDarkMode ? '#08120d' : '#ffffff';
+  const tooltipBorder = isDarkMode ? '#1c2b22' : '#e4e4e7'; // Match card border style
+  const tooltipText = isDarkMode ? '#d1fae5' : '#374151';
+  const brushColor = isDarkMode ? '#3f3f46' : '#e4e4e7';
 
-    const firstTime = parseTime(data[0].time as string);
-    const lastTime = parseTime(data[data.length - 1].time as string);
-    const totalSpanMinutes = lastTime - firstTime;
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
 
-    if (totalSpanMinutes <= 0) {
-      return Math.max(1, Math.floor(data.length / 8));
-    }
+    // Filter out null values
+    const validPayload = payload.filter((entry: any) => entry.value !== null);
+    if (!validPayload.length) return null;
 
-    // Calculate how many data points represent the desired label interval
-    const minutesPerDataPoint = totalSpanMinutes / data.length;
-    const dataPointsPerInterval = Math.round(
-      labelInterval / minutesPerDataPoint,
+    return (
+      <div
+        className="rounded-lg border px-3 py-2 shadow-xl"
+        style={{
+          backgroundColor: tooltipBg,
+          borderColor: tooltipBorder,
+        }}
+      >
+        <p
+          className="font-medium mb-1.5 text-xs"
+          style={{ color: tooltipText }}
+        >
+          {label}
+        </p>
+        {validPayload.map((entry: any, index: number) => (
+          <p
+            key={index}
+            style={{ color: entry.color }}
+            className="text-xs leading-relaxed"
+          >
+            {entry.name}: {entry.value.toFixed(2)}
+            {units[entry.name] ? ` ${units[entry.name]}` : ''}
+          </p>
+        ))}
+      </div>
     );
+  };
 
-    // Return the interval (how many points to skip)
-    return Math.max(1, dataPointsPerInterval);
-  }, [data, labelInterval]);
-
-  // Generate custom ticks based on the interval
-  const customTicks = useMemo(() => {
-    if (!data.length) return [];
-    if (data.length <= 3) return data.map((d) => d.time.toString());
-
-    const ticks: string[] = [];
-
-    // Always include first tick
-    ticks.push(data[0].time.toString());
-
-    // Add ticks at interval steps
-    for (let i = tickInterval; i < data.length - 1; i += tickInterval) {
-      ticks.push(data[i].time.toString());
-    }
-
-    // Always include last tick
-    if (data.length > 1) {
-      ticks.push(data[data.length - 1].time.toString());
-    }
-
-    return ticks;
-  }, [data, tickInterval]);
-
-  if (!data.length) {
+  // Empty state
+  if (!data || !data.length) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>{title || 'Sensor Data Trends'}</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">{title || 'Sensor Data'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-[250px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[400px] items-center justify-center text-muted-foreground">
             No data available
           </div>
         </CardContent>
@@ -110,94 +126,89 @@ export function DataChart({ data, title, labelInterval = 60 }: DataChartProps) {
     );
   }
 
+  if (!sensorTypes.length) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">{title || 'Sensor Data'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-[400px] items-center justify-center text-muted-foreground">
+            No sensor types found
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">
-          {title || 'Sensor Data Trends (10s intervals)'}
-        </CardTitle>
+    <Card className="col-span-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">{title || 'Sensor Overview'}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={150}>
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="colorQty" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--chart-1)"
-                  stopOpacity={0.4}
-                />
-                <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              className="stroke-border"
-              horizontal={true}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="time"
-              className="text-xs"
-              tick={{ fill: 'currentColor', fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              angle={0}
-              textAnchor="middle"
-              height={20}
-              ticks={customTicks}
-              tickFormatter={(value) => {
-                // Format to show only HH:MM
-                if (typeof value === 'string' && value.includes(':')) {
-                  const parts = value.split(':');
-                  if (parts.length >= 2) {
-                    return `${parts[0]}:${parts[1]}`;
-                  }
-                }
-                return value;
-              }}
-            />
-            <YAxis
-              className="text-xs"
-              tick={{ fill: 'currentColor', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={40}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--popover)',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                color: 'var(--popover-foreground)',
-              }}
-              labelStyle={{
-                color: 'var(--popover-foreground)',
-                fontWeight: 'bold',
-              }}
-            />
-            {sensorTypes.length > 1 && <Legend />}
-            {sensorTypes.map((type, index) => (
-              <Area
-                key={type}
-                type="monotone"
-                dataKey={type}
-                stroke="var(--chart-1)"
-                fill="url(#colorQty)"
-                strokeWidth={2}
-                name={type}
-                activeDot={{
-                  r: 5,
-                  fill: 'var(--chart-1)',
-                  strokeWidth: 2,
-                  stroke: 'var(--background)',
-                }}
-                connectNulls={false}
-                animationDuration={300}
+      <CardContent className="pt-0">
+        <div className="w-full h-[450px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={displayData}
+              margin={{ top: 20, right: 20, left: 10, bottom: 60 }}
+            >
+              <CartesianGrid
+                strokeDasharray="4 4"
+                stroke={gridColor}
+                vertical={false}
               />
-            ))}
-          </AreaChart>
-        </ResponsiveContainer>
+              <XAxis
+                dataKey="time"
+                stroke={textColor}
+                tick={{ fontSize: 9, fill: textColor }}
+                angle={-45}
+                textAnchor="end"
+                height={40}
+                interval="preserveStartEnd"
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                stroke={gridColor}
+                tick={false}
+                axisLine={{ stroke: gridColor }}
+                tickLine={false}
+                width={1}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ paddingTop: '8px', fontSize: '12px' }}
+                formatter={(value: string) => (
+                  <span style={{ color: textColor }}>{value}</span>
+                )}
+              />
+
+              {/* Lines for each sensor type */}
+              {sensorTypes.map((type, index) => (
+                <Line
+                  key={type}
+                  type="monotone"
+                  dataKey={type}
+                  stroke={COLORS[index % COLORS.length]}
+                  strokeWidth={1.5}
+                  dot={false}
+                  activeDot={{ r: 3, strokeWidth: 0 }}
+                  connectNulls={false}
+                  isAnimationActive={displayData.length < 200}
+                />
+              ))}
+
+              <Brush
+                dataKey="time"
+                height={20}
+                stroke={brushColor}
+                fill={isDarkMode ? '#18181b' : '#fafafa'}
+                tickFormatter={() => ''}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
