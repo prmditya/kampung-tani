@@ -30,6 +30,12 @@ import {
 } from '@/features/data/hooks/use-sensors';
 import { useFarmers } from '@/features/farmers/hooks/use-farmers';
 import { parseUTCTimestamp, formatTimeToWIB } from '@/lib/date-utils';
+import {
+  CHART_GROUPS,
+  groupChartData,
+  getActiveGroups,
+  type ChartGroupId,
+} from '@/lib/sensor-config';
 import { useFarms } from '@/features/farmers/hooks/use-farms';
 import useAssignments from '@/features/assignments/hooks/use-assignment';
 import { useGetUsers } from '@/features/settings/hooks/use-users';
@@ -418,6 +424,24 @@ export default function DataPage() {
     });
     return units;
   }, [chartSensorReadings]);
+
+  // Group chart data by categories
+  const groupedChartData = useMemo(() => {
+    if (!unifiedChartData.length || !selectedMeasurementTypes.length) {
+      return null;
+    }
+    return groupChartData(
+      unifiedChartData,
+      selectedMeasurementTypes,
+      chartUnits,
+    );
+  }, [unifiedChartData, selectedMeasurementTypes, chartUnits]);
+
+  // Get active chart groups (groups that have data)
+  const activeChartGroups = useMemo(() => {
+    if (!groupedChartData) return [];
+    return getActiveGroups(groupedChartData);
+  }, [groupedChartData]);
 
   const handleRefresh = async () => {
     await Promise.all([refetchTable(), refetchChart()]);
@@ -1198,19 +1222,35 @@ export default function DataPage() {
               </CardContent>
             </Card>
           )}
-          {/* Unified Sensor Chart */}
+          {/* Grouped Sensor Charts */}
           {isChartLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : unifiedChartData.length > 0 ? (
+          ) : activeChartGroups.length > 0 && groupedChartData ? (
             <div className="grid gap-4 grid-cols-1">
-              <DataChart
-                data={unifiedChartData}
-                units={chartUnits}
-                title="Unified Sensor Overview"
-                durationHours={calculatedHours}
-              />
+              {activeChartGroups.map((groupId) => {
+                const group = CHART_GROUPS[groupId];
+                const groupData = groupedChartData[groupId];
+                // Filter units for this group only
+                const groupUnits: Record<string, string> = {};
+                groupData.types.forEach((type) => {
+                  if (chartUnits[type]) {
+                    groupUnits[type] = chartUnits[type];
+                  }
+                });
+                return (
+                  <DataChart
+                    key={groupId}
+                    data={groupData.data}
+                    units={groupUnits}
+                    title={group.title}
+                    durationHours={calculatedHours}
+                    groupId={groupId}
+                    groupColor={group.color}
+                  />
+                );
+              })}
             </div>
           ) : (
             <Card>

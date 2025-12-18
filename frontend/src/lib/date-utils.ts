@@ -84,12 +84,13 @@ export function formatTimeToWIB(
 export function formatDateTimeToWIB(timestamp: string | Date): string {
   const date = parseUTCTimestamp(timestamp);
 
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString('en-GB', {
     timeZone: 'Asia/Jakarta',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hour12: false,
   });
 }
