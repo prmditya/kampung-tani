@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 import logging
 
 # Import v1 routers
-from app.api.v1.routers import (
+from app.api.routers import (
     auth,
     users,
     gateways,
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events
     """
     # Startup
-    logger.info("🚀 Starting Kampung Tani IoT API v1")
+    logger.info("🚀 Starting Kampung Tani IoT API")
     settings = get_settings()
 
     # Test database connection
@@ -112,11 +112,10 @@ app = FastAPI(
     version=settings.VERSION,
     contact={
         "name": "Kampung Tani Development Team",
-        "email": "dev@kampungtani.com",
+        "email": "t.paramaditya@gmail.com",
     },
     license_info={
-        "name": "MIT",
-        "url": "https://opensource.org/licenses/MIT",
+        "name": "Private",
     },
     lifespan=lifespan,
     docs_url=settings.DOCS_URL,
@@ -127,8 +126,8 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use configured origins
-    allow_credentials=False,  # Change to True if cookies or auth headers are needed
+    allow_origins=[settings.ALLOWED_ORIGINS],  
+    allow_credentials=False,  
     allow_methods=["*"],
     allow_headers=["*"],
 )

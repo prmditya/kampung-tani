@@ -15,7 +15,7 @@ import logging
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.user import User
-from app.api.v1.repositories.user_repository import UserRepository
+from app.api.repositories.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

@@ -12,6 +12,7 @@ from app.models.sensor import Sensor
 from app.models.sensor_data import SensorData
 from app.models.gateway_assignment import GatewayAssignment
 from app.models.gateway_status_history import GatewayStatusHistory
+from app.models.summary_share import SummaryShare
 
 __all__ = [
     "Base",
@@ -23,4 +24,6 @@ __all__ = [
     "SensorData",
     "GatewayAssignment",
     "GatewayStatusHistory",
+    "SummaryShare",
 ]
+
