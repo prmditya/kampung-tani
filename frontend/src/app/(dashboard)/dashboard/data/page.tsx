@@ -366,15 +366,19 @@ export default function DataPage() {
       // Use selected range boundaries if they are wider than data boundaries or to enforce the view
       if (startDate) {
         const startTs = new Date(startDate).getTime();
-        if (startTs < minTimestamp) minTimestamp = startTs;
-        // Or strictly use startTs? Users usually expect the chart to start at the selected time.
-        minTimestamp = startTs;
+        // Round down to nearest 10s to ensure alignment with data grid
+        const alignedStartTs = Math.floor(startTs / 10000) * 10000;
+
+        if (alignedStartTs < minTimestamp) minTimestamp = alignedStartTs;
+        minTimestamp = alignedStartTs;
       }
       if (endDate) {
         const endTs = new Date(endDate).getTime();
-        if (endTs > maxTimestamp) maxTimestamp = endTs;
-        // Strictly use endTs?
-        maxTimestamp = endTs;
+        // Round up to nearest 10s for end time
+        const alignedEndTs = Math.ceil(endTs / 10000) * 10000;
+
+        if (alignedEndTs > maxTimestamp) maxTimestamp = alignedEndTs;
+        maxTimestamp = alignedEndTs;
       }
     }
 
