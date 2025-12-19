@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import apiClient from "@/lib/api-client";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import apiClient from '@/lib/api-client';
 import type {
   GatewayResponse,
   GatewayCreate,
@@ -7,31 +7,34 @@ import type {
   MessageResponse,
   FarmResponse,
   PaginatedResponse,
-} from "@/types/api";
+} from '@/types/api';
 
 // Query Keys
 export const gatewayKeys = {
-  all: ["gateways"] as const,
-  lists: () => [...gatewayKeys.all, "list"] as const,
+  all: ['gateways'] as const,
+  lists: () => [...gatewayKeys.all, 'list'] as const,
   list: (filters?: Record<string, any>) =>
     [...gatewayKeys.lists(), filters] as const,
-  details: () => [...gatewayKeys.all, "detail"] as const,
+  details: () => [...gatewayKeys.all, 'detail'] as const,
   detail: (id: number) => [...gatewayKeys.details(), id] as const,
 };
 
 // ==================== GET ALL GATEWAYS ====================
-export function useGateways(filters?: {
-  page?: number;
-  size?: number;
-  search?: string;
-}) {
+export function useGateways(
+  filters?: {
+    page?: number;
+    size?: number;
+    search?: string;
+  },
+  options?: { refetchInterval?: number },
+) {
   return useQuery({
     queryKey: gatewayKeys.list(filters),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.size) params.append("size", filters.size.toString());
-      if (filters?.search) params.append("search", filters.search);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.size) params.append('size', filters.size.toString());
+      if (filters?.search) params.append('search', filters.search);
 
       const response = await apiClient.get<PaginatedResponse<GatewayResponse>>(
         `/gateways?${params}`,
@@ -41,6 +44,7 @@ export function useGateways(filters?: {
     // TODO: Integrate with API
     // Uncomment when ready to integrate
     enabled: true, // Set to true when integrating
+    refetchInterval: options?.refetchInterval,
   });
 }
 
@@ -63,7 +67,7 @@ export function useCreateGateway() {
 
   return useMutation({
     mutationFn: async (data: GatewayCreate) => {
-      const response = await apiClient.post<GatewayResponse>("/gateways", data);
+      const response = await apiClient.post<GatewayResponse>('/gateways', data);
       return response.data;
     },
     onSuccess: () => {

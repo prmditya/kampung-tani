@@ -20,7 +20,6 @@ class DataService:
         gateway_uid: str,
         sensor_uid: str,
         readings: List[Dict[str, Any]],
-        uptime_seconds: Optional[int] = None,
     ) -> int:
         """
         Save data to database
@@ -49,8 +48,7 @@ class DataService:
                 logger.error(f"Failed get/create sensor: {sensor_uid}")
                 return 0
 
-            # 4. Update gateway status (skip if in maintenance mode)
-            self._update_gateway_status(db, gateway, uptime_seconds)
+
 
             # 5. Determine active assignment (which farm/farmer owns this gateway right now)
             assignment = get_active_assignment(db, gateway.gateway_uid)
@@ -119,6 +117,26 @@ class DataService:
             db.rollback()
             return 0
 
+    def process_gateway_heartbeat(
+        self, db: Session, gateway_uid: str, uptime_seconds: Optional[int] = None
+    ) -> bool:
+        """
+        Update gateway status to online.
+        Returns True if gateway exists and status updated (or already online),
+        False if gateway not found.
+        """
+        try:
+            gateway = self._get_gateway(db, gateway_uid)
+            if not gateway:
+                # Gateway not registered yet
+                return False
+
+            self._update_gateway_status(db, gateway, uptime_seconds)
+            return True
+        except Exception as e:
+            logger.error(f"Error processing heartbeat for {gateway_uid}: {e}")
+            return False
+
     def _get_or_create_gateway(self, db: Session, gateway_uid: str) -> Gateway:
         """Get gateway, kalau tidak ada buat baru"""
         # Do NOT auto-create gateways here. Gateways must be registered via API.
@@ -183,8 +201,8 @@ class DataService:
         gateway.status = "online"
         gateway.last_seen = datetime.now()
 
-        # Create status history entry if status changed or uptime is available
-        if old_status != "online" or uptime_seconds is not None:
+        # Create status history entry ONLY if status changed
+        if old_status != "online":
             try:
                 history = GatewayStatusHistory(
                     gateway_id=gateway.id,

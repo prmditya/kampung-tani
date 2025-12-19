@@ -37,6 +37,15 @@ class IngestionService:
             sensor_uid = match.group(2)
             logger.info(f"Parsed topic - Gateway: {gateway_uid}, Sensor: {sensor_uid}")
 
+            # Parse sensor readings early to get uptime (and potential readings)
+            parse_result = self.parser.parse(gateway_uid, sensor_uid, data)
+            parsed_readings = parse_result.get("readings", [])
+            uptime_seconds = parse_result.get("uptime_seconds")
+
+            # Update gateway status immediately (heartbeat)
+            # This ensures gateway is marked online even if no readings are saved
+            self.data_service.process_gateway_heartbeat(db, gateway_uid, uptime_seconds)
+
             # Validate assignment (ensure gateway currently assigned to a farm)
             assignment = get_active_assignment(db, gateway_uid)
             if not assignment:
@@ -44,11 +53,6 @@ class IngestionService:
                     f"Gateway {gateway_uid} has no active assignment — skipping message"
                 )
                 return 0
-
-            # Parse sensor readings
-            parse_result = self.parser.parse(gateway_uid, sensor_uid, data)
-            parsed_readings = parse_result.get("readings", [])
-            uptime_seconds = parse_result.get("uptime_seconds")
 
             if not parsed_readings:
                 logger.warning("No valid readings to save")
@@ -63,9 +67,9 @@ class IngestionService:
                     # assignment may be a plain row; best-effort
                     r["metadata"]["farm_id"] = getattr(assignment, "farm_id", None)
 
-            # Save via data service (pass uptime_seconds for status tracking)
+            # Save via data service
             saved = self.data_service.save_sensor_readings(
-                db, gateway_uid, sensor_uid, parsed_readings, uptime_seconds
+                db, gateway_uid, sensor_uid, parsed_readings
             )
             return saved
 

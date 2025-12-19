@@ -5,19 +5,24 @@ import { Calendar, Loader2 } from 'lucide-react';
 import {
   StatsCards,
   ActivityChart,
-  RecentActivity,
+  DeviceStatusWidget,
   QuickActions,
 } from '@/features/dashboard';
 import { useDashboard } from '@/features/dashboard/hooks/use-dashboard';
-import { useRecentStatusChanges } from '@/hooks/use-gateway-status-history';
+import { useGateways } from '@/hooks/use-gateways';
 
 export default function DashboardPage() {
   // Fetch dashboard data from new aggregated endpoint
   const { data: dashboardData, isLoading: isLoadingDashboard } = useDashboard();
 
-  // Fetch recent device status changes
-  const { data: statusChanges, isLoading: isLoadingStatusChanges } =
-    useRecentStatusChanges(10);
+  // Fetch active gateways for status widget
+  const { data: gatewaysData, isLoading: isLoadingGateways } = useGateways(
+    {
+      size: 10,
+      page: 1,
+    },
+    { refetchInterval: 10000 },
+  );
 
   // Prepare stats from dashboard data
   const stats = useMemo(() => {
@@ -46,7 +51,7 @@ export default function DashboardPage() {
     return dashboardData.activity.data;
   }, [dashboardData]);
 
-  const isLoading = isLoadingDashboard || isLoadingStatusChanges;
+  const isLoading = isLoadingDashboard || isLoadingGateways;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -95,9 +100,9 @@ export default function DashboardPage() {
 
           {/* Right Column - Sidebar */}
           <div className="lg:col-span-3 space-y-6 flex flex-col">
-            <RecentActivity
+            <DeviceStatusWidget
               className="h-[300px]"
-              statusChanges={statusChanges || []}
+              gateways={gatewaysData?.items || []}
             />
             <QuickActions className="hidden lg:block h-full" />
           </div>

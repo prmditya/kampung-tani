@@ -1,4 +1,5 @@
-export { StatsCards } from "./components/stats-cards";
-export { ActivityChart } from "./components/activity-chart";
-export { RecentActivity } from "./components/recent-activity";
-export { QuickActions } from "./components/quick-actions";
+export { StatsCards } from './components/stats-cards';
+export { ActivityChart } from './components/activity-chart';
+export { RecentActivity } from './components/recent-activity';
+export { DeviceStatusWidget } from './components/device-status-widget';
+export { QuickActions } from './components/quick-actions';

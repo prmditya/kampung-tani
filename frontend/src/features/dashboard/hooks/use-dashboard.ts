@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import apiClient from "@/lib/api-client";
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '@/lib/api-client';
 
 // ==================== TYPES ====================
 
@@ -36,12 +36,12 @@ export interface DashboardResponse {
 
 export function useDashboard() {
   return useQuery<DashboardResponse>({
-    queryKey: ["dashboard"],
+    queryKey: ['dashboard'],
     queryFn: async () => {
-      const response = await apiClient.get<DashboardResponse>("/dashboard");
+      const response = await apiClient.get<DashboardResponse>('/dashboard');
       return response.data;
     },
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000, // Auto-refetch every minute
+    staleTime: 0, // Always fetch fresh data
+    refetchInterval: 10000, // Auto-refetch every 10 seconds
   });
 }
