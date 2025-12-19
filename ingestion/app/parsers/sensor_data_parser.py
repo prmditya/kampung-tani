@@ -17,8 +17,6 @@ class SensorDataParser:
         "nitrogen": "Nitrogen",
         "phosphorus": "Phosphorus",
         "potassium": "Potassium",
-        "device_address": "Device_Address",
-        "device_baud_rate": "Device_Baud_Rate",
     }
 
     # Mapping Sensor Units
@@ -32,8 +30,6 @@ class SensorDataParser:
         "Nitrogen": "mg/kg",
         "Phosphorus": "mg/kg",
         "Potassium": "mg/kg",
-        "Device_Address": "",
-        "Device_Baud_Rate": "bps",
     }
 
     # Sensor value that need to be scaled
@@ -41,7 +37,6 @@ class SensorDataParser:
         "Temperature",
         "Moisture",
         "PH",
-        "Humidity",
         "TDS",
         "Salinity",
     }

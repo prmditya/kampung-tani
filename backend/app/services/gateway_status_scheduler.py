@@ -28,7 +28,7 @@ def check_offline_gateways():
     db: Session = SessionLocal()
     try:
         # Get gateways that should be offline (no activity in 2 minutes, not in maintenance)
-        offline_threshold_minutes = 2
+        offline_threshold_minutes = 1
         threshold_time = datetime.now() - timedelta(
             minutes=offline_threshold_minutes
         )
