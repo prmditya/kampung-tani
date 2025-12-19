@@ -247,6 +247,13 @@ export default function DataPage() {
     }));
   }, [usersData]);
 
+  // Calculate aggregation interval based on duration
+  const aggregationInterval = useMemo(() => {
+    if (calculatedHours > 24 * 30) return 'day'; // > 30 days
+    if (calculatedHours > 24) return 'hour'; // > 24 hours
+    return undefined; // Raw data
+  }, [calculatedHours]);
+
   // Fetch pivoted sensor data for table (paginated) with all filters
   const {
     data: pivotedDataResponse,
@@ -273,7 +280,7 @@ export default function DataPage() {
     refetch: refetchChart,
   } = useSensorData(sensorId, {
     page: 1,
-    size: 10000, // Get more data for chart visualization
+    size: 20000, // Increased size to handle up to ~2 years of daily data (365*2 = 730) or ~2 years hourly (17520)
     hours: calculatedHours,
     start_date: startDate,
     end_date: endDate,
@@ -281,6 +288,7 @@ export default function DataPage() {
     farmer_id: farmerId,
     farm_id: farmId,
     assigned_by_id: assignedById,
+    interval: aggregationInterval as 'hour' | 'day' | undefined,
   });
 
   // Process pivoted data for table display
@@ -373,22 +381,32 @@ export default function DataPage() {
     // Calculate a smart interval based on time range to avoid too many points
     const timeRangeMs = maxTimestamp - minTimestamp;
     const maxPoints = 1000; // Performance limit
-    const minIntervalMs = Math.max(10000, Math.ceil(timeRangeMs / maxPoints)); // At least 10 seconds
 
-    // Round interval to a nice value (10s, 30s, 1m, 5m, 15m, 30m, 1h)
-    let intervalMs = 10000;
-    const niceIntervals = [
-      10000, 30000, 60000, 300000, 900000, 1800000, 3600000,
-    ];
-    for (const nice of niceIntervals) {
-      if (nice >= minIntervalMs) {
-        intervalMs = nice;
-        break;
+    let intervalMs = 10000; // Default 10s
+
+    // If we have aggregated data, use the aggregation interval as the base
+    if (aggregationInterval === 'day') {
+      intervalMs = 24 * 60 * 60 * 1000; // 1 Day
+    } else if (aggregationInterval === 'hour') {
+      intervalMs = 60 * 60 * 1000; // 1 Hour
+    } else {
+      // Dynamic calculation for raw data
+      const minIntervalMs = Math.max(10000, Math.ceil(timeRangeMs / maxPoints)); // At least 10 seconds
+
+      // Round interval to a nice value (10s, 30s, 1m, 5m, 15m, 30m, 1h)
+      const niceIntervals = [
+        10000, 30000, 60000, 300000, 900000, 1800000, 3600000,
+      ];
+      for (const nice of niceIntervals) {
+        if (nice >= minIntervalMs) {
+          intervalMs = nice;
+          break;
+        }
       }
-    }
-    // If even 1 hour isn't enough, just use the calculated interval
-    if (minIntervalMs > 3600000) {
-      intervalMs = minIntervalMs;
+      // If even 1 hour isn't enough, just use the calculated interval
+      if (minIntervalMs > 3600000) {
+        intervalMs = minIntervalMs;
+      }
     }
 
     // Generate continuous timeline with gaps
@@ -417,18 +435,35 @@ export default function DataPage() {
         let found = false;
         let sum = 0;
         let count = 0;
-        for (let lookupTs = ts; lookupTs < ts + intervalMs; lookupTs += 10000) {
-          if (typeMap.has(lookupTs)) {
-            sum += typeMap.get(lookupTs)!;
-            count++;
-            found = true;
-          }
-        }
 
-        if (found && count > 0) {
-          point[type] = Math.round((sum / count) * 100) / 100; // Average if multiple points
+        // If aggregated, we expect exact timestamp match or close to it
+        if (aggregationInterval) {
+          // Aggregated timestamps should be exactly on the hour/day
+          // But let's allow a small window just in case of rounding
+          if (typeMap.has(ts)) {
+            point[type] = typeMap.get(ts)!;
+          } else {
+            point[type] = null;
+          }
         } else {
-          point[type] = null; // Gap - Recharts will break the line here
+          // Raw data: search range
+          for (
+            let lookupTs = ts;
+            lookupTs < ts + intervalMs;
+            lookupTs += 10000
+          ) {
+            if (typeMap.has(lookupTs)) {
+              sum += typeMap.get(lookupTs)!;
+              count++;
+              found = true;
+            }
+          }
+
+          if (found && count > 0) {
+            point[type] = Math.round((sum / count) * 100) / 100; // Average if multiple points
+          } else {
+            point[type] = null; // Gap - Recharts will break the line here
+          }
         }
       });
 
@@ -436,7 +471,13 @@ export default function DataPage() {
     }
 
     return result;
-  }, [chartSensorReadings, selectedMeasurementTypes]);
+  }, [
+    chartSensorReadings,
+    selectedMeasurementTypes,
+    startDate,
+    endDate,
+    aggregationInterval,
+  ]);
 
   // Extract units from readings for display
   const chartUnits = useMemo(() => {

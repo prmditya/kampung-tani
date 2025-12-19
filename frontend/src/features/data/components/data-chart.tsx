@@ -212,6 +212,7 @@ export function DataChart({
                 textAnchor="end"
                 height={40}
                 interval="preserveStartEnd"
+                minTickGap={50}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value: string) => {
@@ -228,7 +229,7 @@ export function DataChart({
 
                     // If duration is more than 24 hours (or not specified), show date
                     if (durationHours && durationHours > 24) {
-                      return format(date, 'MMM dd HH:mm');
+                      return format(date, 'd MMM');
                     }
                     // Otherwise just show time
                     return format(date, 'HH:mm');
