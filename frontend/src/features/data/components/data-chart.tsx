@@ -31,6 +31,8 @@ interface DataChartProps {
   groupColor?: string;
 }
 
+import { format, parseISO, isValid } from 'date-fns';
+
 // Minimalist color palette - softer, professional colors
 const COLORS = [
   '#10b981', // Emerald
@@ -47,6 +49,7 @@ export function DataChart({
   data,
   title,
   units = {},
+  durationHours = 24,
   groupId,
   groupColor,
 }: DataChartProps) {
@@ -84,6 +87,22 @@ export function DataChart({
   const tooltipText = isDarkMode ? '#d1fae5' : '#374151';
   const brushColor = isDarkMode ? '#3f3f46' : '#e4e4e7';
 
+  // Format Helper
+  const formatLabel = (label: string) => {
+    try {
+      if (!label) return '';
+      // If it looks like a time string (HH:mm), return as is (legacy support)
+      if (label.includes(':') && !label.includes('T')) return label;
+
+      const date = parseISO(label);
+      if (!isValid(date)) return label;
+
+      return format(date, 'MMM dd, HH:mm:ss');
+    } catch (e) {
+      return label;
+    }
+  };
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
@@ -104,7 +123,7 @@ export function DataChart({
           className="font-medium mb-1.5 text-xs"
           style={{ color: tooltipText }}
         >
-          {label}
+          {formatLabel(label)}
         </p>
         {validPayload.map((entry: any, index: number) => (
           <p
@@ -193,15 +212,30 @@ export function DataChart({
                 textAnchor="end"
                 height={40}
                 interval="preserveStartEnd"
+                minTickGap={50}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(value: string) => {
-                  // Extract HH:mm from time string (e.g., "14:15:30" -> "14:15")
-                  const parts = value.split(':');
-                  if (parts.length >= 2) {
-                    return `${parts[0]}:${parts[1]}`;
+                  try {
+                    // Legacy support
+                    if (value.includes(':') && !value.includes('T')) {
+                      const parts = value.split(':');
+                      if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+                      return value;
+                    }
+
+                    const date = parseISO(value);
+                    if (!isValid(date)) return value;
+
+                    // If duration is more than 24 hours (or not specified), show date
+                    if (durationHours && durationHours > 24) {
+                      return format(date, 'd MMM');
+                    }
+                    // Otherwise just show time
+                    return format(date, 'HH:mm');
+                  } catch (e) {
+                    return value;
                   }
-                  return value;
                 }}
               />
 

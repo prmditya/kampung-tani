@@ -374,7 +374,7 @@ async def delete_sensor(
 async def get_sensor_data(
     sensor_id: int,
     page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(50, ge=1, le=1000, description="Items per page"),
+    size: int = Query(50, ge=1, le=50000, description="Items per page"),
     hours: Optional[int] = Query(None, ge=1, le=8760, description="Last N hours of data"),
     start_date: Optional[datetime] = Query(None, description="Start date filter (ISO format)"),
     end_date: Optional[datetime] = Query(None, description="End date filter (ISO format)"),
@@ -382,6 +382,7 @@ async def get_sensor_data(
     farmer_id: Optional[int] = Query(None, description="Filter by farmer ID"),
     farm_id: Optional[int] = Query(None, description="Filter by farm ID"),
     assigned_by_id: Optional[int] = Query(None, description="Filter by user ID who assigned the gateway"),
+    interval: Optional[str] = Query(None, description="Aggregation interval: 'hour', 'day', or 'raw'"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -398,6 +399,7 @@ async def get_sensor_data(
     - **farmer_id**: Filter by farmer ID (optional)
     - **farm_id**: Filter by farm ID (optional)
     - **assigned_by_id**: Filter by user ID who assigned the gateway (optional)
+    - **interval**: Aggregation interval (optional: 'hour', 'day')
 
     Note: If both hours and start_date/end_date are provided, start_date/end_date take precedence.
     """
@@ -445,7 +447,8 @@ async def get_sensor_data(
         search=search,
         farmer_id=farmer_id,
         farm_id=farm_id,
-        assigned_by_id=assigned_by_id
+        assigned_by_id=assigned_by_id,
+        interval=interval
     )
 
     total = await sensor_data_repo.count_by_sensor(
@@ -543,10 +546,10 @@ async def get_sensor_data_pivoted(
             farm = reading.farm
             farmer_name = None
             if farm:
-                from app.api.repositories.farmer_repository import FarmerRepository
-                farmer_repo = FarmerRepository(db)
-                farmer = await farmer_repo.get_by_id(farm.farmer_id)
-                farmer_name = farmer.name if farmer else None
+                farm = reading.farm
+                farmer_name = None
+            if farm and farm.farmer:
+                farmer_name = farm.farmer.name
 
             grouped[ts] = {
                 "timestamp": ts,

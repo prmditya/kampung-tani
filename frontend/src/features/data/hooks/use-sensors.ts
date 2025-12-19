@@ -162,6 +162,7 @@ export function useSensorData(
     farmer_id?: number;
     farm_id?: number;
     assigned_by_id?: number;
+    interval?: 'hour' | 'day' | 'raw';
   },
 ) {
   return useQuery({
@@ -180,6 +181,7 @@ export function useSensorData(
         params.append('farm_id', filters.farm_id.toString());
       if (filters?.assigned_by_id)
         params.append('assigned_by_id', filters.assigned_by_id.toString());
+      if (filters?.interval) params.append('interval', filters.interval);
 
       const response = await apiClient.get<
         PaginatedResponse<SensorDataResponse>
