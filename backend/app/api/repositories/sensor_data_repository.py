@@ -117,7 +117,7 @@ class SensorDataRepository(BaseRepository[SensorData]):
         
         # Eager load farm and assigned_by_user relationships
         query = query.options(
-            selectinload(SensorData.farm),
+            selectinload(SensorData.farm).selectinload(Farm.farmer),
             selectinload(SensorData.assigned_by_user)
         )
 

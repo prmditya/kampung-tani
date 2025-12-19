@@ -210,7 +210,7 @@ export default function DataPage() {
       return {
         startDate: startOfDay.toISOString(),
         endDate: endTime.toISOString(),
-        calculatedHours: diffHours > 0 ? diffHours : 24,
+        calculatedHours: diffHours > 0 ? Math.ceil(diffHours) : 24,
       };
     }
 
@@ -273,7 +273,7 @@ export default function DataPage() {
     refetch: refetchChart,
   } = useSensorData(sensorId, {
     page: 1,
-    size: 1000, // Get more data for chart visualization
+    size: 10000, // Get more data for chart visualization
     hours: calculatedHours,
     start_date: startDate,
     end_date: endDate,
@@ -346,7 +346,29 @@ export default function DataPage() {
       rawDataByType[type].set(timestamp, reading.value);
     });
 
-    if (minTimestamp === Infinity) return [];
+    if (minTimestamp === Infinity) {
+      // If no data, but we have a date range, use that
+      if (startDate && endDate) {
+        minTimestamp = new Date(startDate).getTime();
+        maxTimestamp = new Date(endDate).getTime();
+      } else {
+        return [];
+      }
+    } else {
+      // Use selected range boundaries if they are wider than data boundaries or to enforce the view
+      if (startDate) {
+        const startTs = new Date(startDate).getTime();
+        if (startTs < minTimestamp) minTimestamp = startTs;
+        // Or strictly use startTs? Users usually expect the chart to start at the selected time.
+        minTimestamp = startTs;
+      }
+      if (endDate) {
+        const endTs = new Date(endDate).getTime();
+        if (endTs > maxTimestamp) maxTimestamp = endTs;
+        // Strictly use endTs?
+        maxTimestamp = endTs;
+      }
+    }
 
     // Calculate a smart interval based on time range to avoid too many points
     const timeRangeMs = maxTimestamp - minTimestamp;
@@ -377,7 +399,8 @@ export default function DataPage() {
 
     for (let ts = minTimestamp; ts <= maxTimestamp; ts += intervalMs) {
       const date = new Date(ts);
-      const time = formatTimeToWIB(date);
+      // Use ISO string to ensure uniqueness across days and full date context
+      const time = date.toISOString();
       const point: { time: string; [key: string]: string | number | null } = {
         time,
       };
