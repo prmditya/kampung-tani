@@ -12,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { DeleteFarmerButton } from '@/features/farmers';
 import { FarmerResponse, FarmResponse } from '@/types/api';
+import { formatToWIB } from '@/lib/date-utils';
 
 interface FarmersTableProps {
   farmers: FarmerResponse[];
@@ -99,7 +100,7 @@ export default function FarmersTable({
                 )}
               </TableCell>
               <TableCell>
-                {new Date(farmer.created_at).toLocaleDateString('id-ID', {
+                {formatToWIB(farmer.created_at, {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',

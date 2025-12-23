@@ -13,6 +13,7 @@ import type {
   FarmResponse,
 } from '@/types/api';
 import { DeleteAssignmentButton } from './delete-assignment-button';
+import { formatToWIB } from '@/lib/date-utils';
 
 interface AssignmentsTableProps {
   assignments: GatewayAssignmentResponse[];
@@ -111,12 +112,20 @@ export function AssignmentsTable({
                 </TableCell>
                 <TableCell>
                   {assignment.start_date
-                    ? new Date(assignment.start_date).toLocaleDateString()
+                    ? formatToWIB(assignment.start_date, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })
                     : '-'}
                 </TableCell>
                 <TableCell>
                   {assignment.end_date
-                    ? new Date(assignment.end_date).toLocaleDateString()
+                    ? formatToWIB(assignment.end_date, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })
                     : '-'}
                 </TableCell>
                 <TableCell>

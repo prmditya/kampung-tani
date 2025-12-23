@@ -52,6 +52,7 @@ import {
   useDeleteUser,
 } from '@/features/settings/hooks/use-users';
 import type { UserCreate, UserRole } from '@/types/api';
+import { formatToWIB } from '@/lib/date-utils';
 
 export default function AdminTab() {
   const { data: users, isLoading, error } = useGetUsers();
@@ -292,7 +293,11 @@ export default function AdminTab() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {formatToWIB(user.created_at, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
