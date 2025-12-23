@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, Circle } from 'lucide-react';
 import { GatewayResponse } from '@/types/api';
 import { formatDistanceToNow } from 'date-fns';
+import { parseUTCTimestamp } from '@/lib/date-utils';
 
 interface DeviceStatusWidgetProps {
   className?: string;
@@ -42,7 +43,9 @@ export function DeviceStatusWidget({
   const getLastSeenText = (lastSeen: string | null) => {
     if (!lastSeen) return 'Never seen';
     try {
-      return formatDistanceToNow(new Date(lastSeen), { addSuffix: true });
+      return formatDistanceToNow(parseUTCTimestamp(lastSeen), {
+        addSuffix: true,
+      });
     } catch (e) {
       return 'Unknown';
     }
@@ -54,8 +57,8 @@ export function DeviceStatusWidget({
     if (a.status !== 'online' && b.status === 'online') return 1;
 
     // If status is same, sort by last_seen (recent first)
-    const dateA = a.last_seen ? new Date(a.last_seen).getTime() : 0;
-    const dateB = b.last_seen ? new Date(b.last_seen).getTime() : 0;
+    const dateA = a.last_seen ? parseUTCTimestamp(a.last_seen).getTime() : 0;
+    const dateB = b.last_seen ? parseUTCTimestamp(b.last_seen).getTime() : 0;
     return dateB - dateA;
   });
 

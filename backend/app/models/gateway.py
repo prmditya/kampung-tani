@@ -55,13 +55,13 @@ class Gateway(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
+        default=datetime.utcnow,
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
-        onupdate=datetime.now,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False
     )
 

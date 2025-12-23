@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Circle } from 'lucide-react';
+import { parseUTCTimestamp } from '@/lib/date-utils';
 
 interface DeviceStatusChange {
   id: number;
@@ -83,7 +84,7 @@ export function RecentActivity({
     } else {
       // For offline/maintenance, calculate time since status changed
       const now = new Date();
-      const past = new Date(change.created_at);
+      const past = parseUTCTimestamp(change.created_at);
       const diffSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
       return formatSecondsToCompact(diffSeconds);
     }
@@ -97,7 +98,8 @@ export function RecentActivity({
       const existing = gatewayMap.get(change.gateway_id);
       if (
         !existing ||
-        new Date(change.created_at) > new Date(existing.created_at)
+        parseUTCTimestamp(change.created_at) >
+          parseUTCTimestamp(existing.created_at)
       ) {
         gatewayMap.set(change.gateway_id, change);
       }
@@ -106,7 +108,8 @@ export function RecentActivity({
     return Array.from(gatewayMap.values())
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          parseUTCTimestamp(b.created_at).getTime() -
+          parseUTCTimestamp(a.created_at).getTime(),
       )
       .slice(0, 5);
   };
