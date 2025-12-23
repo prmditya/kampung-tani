@@ -128,6 +128,12 @@ export default function SharedSummaryPage() {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/summary/share/${token}`,
+          {
+            headers: {
+              'ngrok-skip-browser-warning': 'true',
+              'Content-Type': 'application/json',
+            },
+          },
         );
 
         if (!response.ok) {
