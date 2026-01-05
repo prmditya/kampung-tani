@@ -199,7 +199,7 @@ class DataService:
         # Update to online and record last_seen
         old_status = gateway.status
         gateway.status = "online"
-        gateway.last_seen = datetime.now()
+        gateway.last_seen = datetime.utcnow()
 
         # Create status history entry ONLY if status changed
         if old_status != "online":
