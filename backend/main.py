@@ -7,6 +7,7 @@ Modern, fast, and clean RESTful API with automatic OpenAPI documentation
 import textwrap
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from contextlib import asynccontextmanager
 import logging
 
@@ -123,6 +124,8 @@ app = FastAPI(
     redoc_url=settings.REDOC_URL,
     openapi_url=f"{settings.API_PREFIX}/openapi.json",
 )
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Configure CORS
 app.add_middleware(
